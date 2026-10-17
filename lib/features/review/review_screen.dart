@@ -77,7 +77,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           ),
           title: widget.targetCardId != null
               ? const Text('Ôn thẻ được nhắc')
-              : Text('Ôn tập ${_controller.progress >= 1 ? '' : ''}'),
+              : const Text('Ôn tập'),
           bottom: _controller.loading || _controller.total == 0
               ? null
               : PreferredSize(

@@ -81,7 +81,8 @@ class _TopicsScreenState extends State<TopicsScreen> {
       setState(() {
         _topics = topics;
         _stats = <String, TopicStats>{
-          for (final MapEntry<String, TopicStats> e in stats.entries) e.key: e.value,
+          for (final MapEntry<String, TopicStats> e in stats.entries)
+            e.key: e.value,
         };
         _loading = false;
       });
@@ -129,15 +130,15 @@ class _TopicsScreenState extends State<TopicsScreen> {
       body: SafeArea(
         child: Column(
           children: <Widget>[
+            // Tìm kiếm
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
-                AppSpacing.xs,
+                AppSpacing.sm,
                 AppSpacing.lg,
                 AppSpacing.sm,
               ),
               child: AppSearchField(
-                hint: 'Tìm chủ đề...',
                 onChanged: (String value) {
                   _query = value;
                   _load();
@@ -148,6 +149,8 @@ class _TopicsScreenState extends State<TopicsScreen> {
                 },
               ),
             ),
+
+            // Bộ lọc
             SizedBox(
               height: AppSizes.controlHeightSm + 8,
               child: ListView(
@@ -173,7 +176,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   AppChip(
-                    label: 'Đã học',
+                    label: 'Đã khám phá',
                     selected: _filter == _TopicFilter.learned,
                     onTap: () {
                       setState(() => _filter = _TopicFilter.learned);
@@ -233,12 +236,22 @@ class _TopicsScreenState extends State<TopicsScreen> {
           final TopicStats s =
               _stats[topic.id] ?? const TopicStats(knowledgeCount: 0, dueCount: 0);
           return AppCard(
+            semanticsLabel: 'Mở chủ đề ${topic.name}',
             onTap: () => _openDetail(topic.id),
             child: Row(
               children: <Widget>[
-                Text(
-                  topic.icon.isEmpty ? '📗' : topic.icon,
-                  style: const TextStyle(fontSize: 26),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.folder_outlined,
+                    size: 20,
+                    color: AppColors.primary,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -251,16 +264,25 @@ class _TopicsScreenState extends State<TopicsScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        s.dueCount > 0
-                            ? '${s.knowledgeCount} kiến thức · ${s.dueCount} đến hạn'
-                            : '${s.knowledgeCount} kiến thức',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: s.dueCount > 0
-                                  ? AppColors.warning
-                                  : AppColors.textSecondary,
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: <Widget>[
+                          if (s.dueCount > 0) ...<Widget>[
+                            AppTag(
+                              label: '${s.dueCount} đến hạn',
+                              tone: AppTagTone.warning,
                             ),
+                            const SizedBox(width: AppSpacing.xs),
+                          ],
+                          Expanded(
+                            child: Text(
+                              '${s.knowledgeCount} kiến thức',
+                              style: Theme.of(context).textTheme.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

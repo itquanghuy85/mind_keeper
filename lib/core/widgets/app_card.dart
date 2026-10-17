@@ -14,6 +14,7 @@ class AppCard extends StatelessWidget {
     this.border,
     this.radius = AppRadius.lg,
     this.highlighted = false,
+    this.semanticsLabel,
   });
 
   final Widget child;
@@ -24,6 +25,7 @@ class AppCard extends StatelessWidget {
   final Color? border;
   final double radius;
   final bool highlighted;
+  final String? semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +34,7 @@ class AppCard extends StatelessWidget {
 
     final Widget content = Padding(padding: padding, child: child);
 
-    return Padding(
+    final Widget card = Padding(
       padding: margin,
       child: Material(
         color: color,
@@ -52,6 +54,15 @@ class AppCard extends StatelessWidget {
         ),
       ),
     );
+
+    if (onTap != null) {
+      return Semantics(
+        button: true,
+        label: semanticsLabel,
+        child: card,
+      );
+    }
+    return card;
   }
 }
 

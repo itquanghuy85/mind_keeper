@@ -9,6 +9,7 @@ import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_feedback.dart';
 import '../../data/models/topic.dart';
+import '../../data/repositories/topic_repository.dart';
 import '../../features/discover/discover_screen.dart';
 import '../../features/lessons/lesson_discover_screen.dart';
 import '../../features/review/review_screen.dart';
@@ -34,6 +35,7 @@ class _TodayScreenState extends State<TodayScreen> {
   int _reviewsToday = 0;
   int _dailyGoal = 10;
   List<Topic> _recentTopics = const <Topic>[];
+  Map<String, TopicStats> _topicStats = <String, TopicStats>{};
   DateTime? _loadedAt;
   bool _handledNotification = false;
 
@@ -63,12 +65,16 @@ class _TodayScreenState extends State<TodayScreen> {
       final int goal = services.prefs.dailyGoal;
       final List<Topic> all = await services.topics.list(limit: 20);
       all.sort((Topic a, Topic b) => b.updatedAt.compareTo(a.updatedAt));
+      final Map<String, TopicStats> stats = await services.topics.statsForTopics(
+        all.map((Topic t) => t.id).toList(),
+      );
       if (!mounted) return;
       setState(() {
         _dueCount = due;
         _reviewsToday = reviews;
         _dailyGoal = goal;
         _recentTopics = all.take(3).toList(growable: false);
+        _topicStats = stats;
         _loadedAt = now;
         _loading = false;
       });
@@ -151,6 +157,7 @@ class _TodayScreenState extends State<TodayScreen> {
         AppSpacing.xxxl,
       ),
       children: <Widget>[
+        // Header
         Text(
           'Chào bạn',
           style: Theme.of(context)
@@ -178,61 +185,73 @@ class _TodayScreenState extends State<TodayScreen> {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.xl),
+        const SizedBox(height: AppSpacing.xxl),
+
+        // 1. Kiến thức đến hạn — ưu tiên cao nhất
+        AppSectionHeader(
+          title: 'Ôn kiến thức đến hạn',
+          padding: EdgeInsets.zero,
+        ),
+        const SizedBox(height: AppSpacing.sm),
         AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          semanticsLabel: '$_dueCount thẻ đến hạn',
+          onTap: _startReview,
+          child: Row(
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: AppColors.warningSoft,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.local_fire_department_rounded,
-                      color: AppColors.warning,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          'Ôn kiến thức đến hạn',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        Text(
-                          _dueCount == 0
-                              ? 'Không có thẻ nào đến hạn. Tuyệt vời!'
-                              : 'Dành 5–10 phút để củng cố trí nhớ',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '$_dueCount',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: AppColors.primary,
-                        ),
-                  ),
-                ],
+              Container(
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  color: AppColors.warningSoft,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.schedule_rounded,
+                  color: AppColors.warning,
+                  size: 28,
+                ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              AppButton(
-                label: _dueCount == 0 ? 'Ôn lại ngẫu nhiên' : 'Bắt đầu ôn tập',
-                icon: Icons.play_arrow_rounded,
-                onPressed: _startReview,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      _dueCount == 0
+                          ? 'Không có thẻ nào đến hạn'
+                          : 'Dành 5–10 phút để củng cố trí nhớ',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      _dueCount == 0
+                          ? 'Tuyệt vời! Hãy quay lại sau khi có thẻ đến hạn.'
+                          : '$_dueCount thẻ đang chờ bạn ôn tập.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '$_dueCount',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(color: AppColors.primary),
               ),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
+        AppButton(
+          label: _dueCount == 0 ? 'Ôn lại ngẫu nhiên' : 'Bắt đầu ôn tập',
+          icon: Icons.play_arrow_rounded,
+          onPressed: _startReview,
+        ),
+
+        const SizedBox(height: AppSpacing.xxl),
+
+        // 2. Tiến độ hôm nay
         AppSectionHeader(
           title: 'Tiến độ hôm nay',
           actionLabel: '$_reviewsToday/$_dailyGoal mục tiêu',
@@ -247,17 +266,105 @@ class _TodayScreenState extends State<TodayScreen> {
             backgroundColor: AppColors.surfaceMuted,
           ),
         ),
-        const SizedBox(height: AppSpacing.xl),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          '${(goalProgress * 100).round()}% đã hoàn thành',
+          style: Theme.of(context).textTheme.labelSmall,
+          textAlign: TextAlign.right,
+        ),
+
+        const SizedBox(height: AppSpacing.xxl),
+
+        // 3. Nhanh tập trung — 3 hành động chính
         AppSectionHeader(
-          title: 'Chủ đề của tôi',
+          title: 'Nhanh tập trung',
+          padding: EdgeInsets.zero,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _QuickActionCard(
+                semanticsLabel: 'Bài học AI',
+                icon: Icons.auto_awesome_rounded,
+                iconColor: AppColors.info,
+                iconBg: AppColors.infoSoft,
+                title: 'Bài học AI',
+                subtitle: 'Soạn bài + quiz ghi nhớ',
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LessonDiscoverScreen(),
+                    ),
+                  );
+                  if (mounted) await _load();
+                },
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _QuickActionCard(
+                semanticsLabel: 'Tạo chủ đề của tôi',
+                icon: Icons.add_rounded,
+                iconColor: AppColors.success,
+                iconBg: AppColors.successSoft,
+                title: 'Tạo chủ đề',
+                subtitle: 'Thêm kiến thức từ ghi chú',
+                onTap: widget.onCreateTopic,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _QuickActionCard(
+                semanticsLabel: 'Khám phá chủ đề mới',
+                icon: Icons.explore_rounded,
+                iconColor: AppColors.primary,
+                iconBg: AppColors.primarySoft,
+                title: 'Khám phá',
+                subtitle: 'Lĩnh vực mới mỗi ngày',
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const DiscoverScreen(),
+                    ),
+                  );
+                  if (mounted) await _load();
+                },
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: AppSpacing.xxl),
+
+        // 4. Chủ đề gần đây
+        AppSectionHeader(
+          title: 'Chủ đề gần đây',
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: AppSpacing.sm),
         if (_recentTopics.isEmpty)
           AppCard(
-            child: Text(
-              'Bạn chưa có chủ đề nào. Tạo chủ đề đầu tiên để bắt đầu ghi nhớ.',
-              style: Theme.of(context).textTheme.bodySmall,
+            semanticsLabel: 'Không có chủ đề',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Bạn chưa có chủ đề nào.',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Tạo chủ đề đầu tiên để bắt đầu ghi nhớ kiến thức.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppButton(
+                  label: 'Tạo chủ đề đầu tiên',
+                  icon: Icons.add_rounded,
+                  onPressed: widget.onCreateTopic,
+                ),
+              ],
             ),
           )
         else
@@ -265,6 +372,7 @@ class _TodayScreenState extends State<TodayScreen> {
             (Topic topic) => Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: AppCard(
+                semanticsLabel: 'Mở chủ đề ${topic.name}',
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -275,17 +383,36 @@ class _TodayScreenState extends State<TodayScreen> {
                 },
                 child: Row(
                   children: <Widget>[
-                    Text(
-                      topic.icon.isEmpty ? '📘' : topic.icon,
-                      style: const TextStyle(fontSize: 22),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.folder_outlined,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
-                      child: Text(
-                        topic.name,
-                        style: Theme.of(context).textTheme.titleSmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            topic.name,
+                            style: Theme.of(context).textTheme.titleSmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            _statsForTopic(topic.id),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
                     ),
                     const Icon(
@@ -297,136 +424,86 @@ class _TodayScreenState extends State<TodayScreen> {
               ),
             ),
           ),
-        const SizedBox(height: AppSpacing.md),
-        AppCard(
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const DiscoverScreen()),
-            );
-            if (mounted) await _load();
-          },
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: AppColors.primarySoft,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.explore_rounded,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Khám phá chủ đề mới',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    Text(
-                      'Đề xuất mỗi ngày theo lĩnh vực bạn quan tâm',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textTertiary,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        AppCard(
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const LessonDiscoverScreen(),
-              ),
-            );
-            if (mounted) await _load();
-          },
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: AppColors.infoSoft,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: AppColors.info,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Bài học AI',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    Text(
-                      'Soạn bài + quiz ghi nhớ theo lĩnh vực bạn chọn',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textTertiary,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        AppCard(
-          onTap: widget.onCreateTopic,
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: AppColors.successSoft,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.add_rounded, color: AppColors.success),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Tạo chủ đề của tôi',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    Text(
-                      'Thêm kiến thức từ ghi chú, tài liệu',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textTertiary,
-              ),
-            ],
-          ),
-        ),
       ],
+    );
+  }
+
+  String _statsForTopic(String topicId) {
+    final s = _topicStats[topicId];
+    if (s == null) return '';
+    if (s.dueCount > 0) {
+      return '${s.knowledgeCount} kiến thức · ${s.dueCount} đến hạn';
+    }
+    return '${s.knowledgeCount} kiến thức';
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  const _QuickActionCard({
+    required this.semanticsLabel,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String semanticsLabel;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      semanticsLabel: semanticsLabel,
+      onTap: onTap,
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: iconBg,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.textTertiary,
+          ),
+        ],
+      ),
     );
   }
 }

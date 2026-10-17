@@ -54,6 +54,18 @@ class AppBootstrap {
   }
 
   Future<void> _scheduleReminder(AppServices services) async {
+    // Không lên lịch khi biết chắc quyền bị chặn (Android 13+ từ chối
+    // POST_NOTIFICATIONS): alarm sẽ chạy mà không hiển thị được, dễ gây hiểu
+    // nhầm "đã bật mà không thấy". Trạng thái null (nền tảng không đọc được)
+    // → vẫn lên lịch. Được cấp lại → lịch tự lập ở lần mở app sau hoặc khi
+    // quay về màn Cài đặt thông báo (resumed).
+    final bool? granted = await services.notifications.areNotificationsEnabled();
+    if (granted == false) {
+      if (kDebugMode) {
+        debugPrint('Bỏ qua lên lịch nhắc ôn: quyền thông báo bị chặn.');
+      }
+      return;
+    }
     final String body = services.prefs.dailyGoal > 0
         ? 'Còn ${services.prefs.dailyGoal} mục tiêu học hôm nay. Chạm để kiểm tra kiến thức.'
         : 'Chạm để kiểm tra kiến thức bạn cần ôn.';

@@ -11,6 +11,7 @@ class AppChip extends StatelessWidget {
     this.onTap,
     this.icon,
     this.count,
+    this.semanticsLabel,
   });
 
   final String label;
@@ -18,6 +19,7 @@ class AppChip extends StatelessWidget {
   final VoidCallback? onTap;
   final IconData? icon;
   final int? count;
+  final String? semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +28,7 @@ class AppChip extends StatelessWidget {
     final Color borderColor =
         selected ? AppColors.primary : AppColors.border;
 
-    return Material(
+    final Widget chip = Material(
       color: background,
       borderRadius: AppRadius.pillAll,
       child: InkWell(
@@ -70,6 +72,15 @@ class AppChip extends StatelessWidget {
         ),
       ),
     );
+
+    if (onTap != null) {
+      return Semantics(
+        button: true,
+        label: semanticsLabel,
+        child: chip,
+      );
+    }
+    return chip;
   }
 }
 

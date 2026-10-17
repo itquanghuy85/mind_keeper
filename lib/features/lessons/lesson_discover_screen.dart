@@ -314,6 +314,7 @@ class _DomainTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
+      semanticsLabel: 'Mở lĩnh vực ${domain.name}',
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -370,6 +371,7 @@ class _LessonTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
+      semanticsLabel: 'Mở bài học ${lesson.title}',
       onTap: onTap,
       child: Row(
         children: <Widget>[

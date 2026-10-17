@@ -29,6 +29,8 @@ Nguồn trạng thái duy nhất. Cập nhật sau mỗi giai đoạn.
 | GĐ11 | Thống kê & cá nhân hóa | PASS | StatsRepository tính từ DB thật, cài đặt lưu qua SharedPreferences |
 | GĐ12 | Tổng kiểm tra | PASS | `flutter analyze` 0 issue; `flutter test` 58/58 pass; `flutter build apk --debug` thành công (app-debug.apk) |
 | GĐ13 | Bài học AI khám phá kiến thức | PASS | Sinh bài AI trọn gói (dedup theo lĩnh vực/chủ đề/chế độ/prompt version), đọc bài + quiz ghi nhớ → tạo chủ đề + thẻ FSRS + nhắc ôn |
+| GĐ14 | Audit và cải thiện UI/UX | PASS | Findings P1/P2 sửa trong code (semantics, emoji, AppBar), analyze 0, test pass, build + cài lên CPH2203 |
+| GĐ15 | Nghiệm thu thực tế & nâng cấp UI + iOS | PASS | Redesign 3 màn hình (Today/Topics/Stats), Podfile + pbxproj → iOS 15.5, xóa flow Maestro thừa; analyze 0, test 75/75, build APK OK |
 
 ## File quan trọng đã thêm/sửa
 
@@ -136,3 +138,89 @@ Nguồn trạng thái duy nhất. Cập nhật sau mỗi giai đoạn.
 7. ~~Nghiệm thu GĐ13 trên thiết bị~~ — DONE (CPH2203: luồng sinh/đọc/quiz/completeQuiz/không-trùng/bền vững; bug câu hỏi trùng đã sửa; build release 93.8MB).
 8. (Tùy chọn) Test GĐ13 với AI thật DeepSeek (build kèm dart-define), bấm thông báo thật lúc đến giờ ôn, cài & smoke `app-release.apk`, build/run iOS 16 (cần macOS).
 9. (Tùy chọn) UI quản lý lĩnh vực yêu thích/ẩn (prefs `favoriteDomains`/`hiddenDomains` đã có, chưa có màn chỉnh).
+
+## GĐ14 — Audit và cải thiện UI/UX (2026-10-17)
+
+### Kết quả analyze / test / thiết bị
+- `flutter analyze`: 0 issue.
+- `flutter test`: 75/75 pass (không regression).
+- `flutter build apk --debug`: thành công.
+- Thiết bị: CPH2203 (Android 13/API 33) — cài app-debug.apk, cold start OK (~3s). Màn hình chính mở được.
+
+### Findings đã sửa (P1/P2)
+1. **Accessibility `AppCard`** (`lib/core/widgets/app_card.dart`): thêm tham số `semanticsLabel`; khi `onTap != null` bọc toàn bộ card trong `Semantics(button: true, label: ...)` → screen reader nhận biết nút bấm. Ảnh hưởng toàn màn hình dùng `AppCard` có `onTap`.
+2. **Accessibility `AppChip`** (`lib/core/widgets/app_chip.dart`): thêm `semanticsLabel`; bọc `Semantics` khi `onTap != null`.
+3. **`topics_screen.dart`**: thay icon emoji (`📗`/`📘`) bằng `Icon(Icons.folder_outlined)` theo `DESIGN.md` ("không emoji thay icon"); gán `semanticsLabel: 'Mở chủ đề ${tên}'` cho card chủ đề.
+4. **`today_screen.dart`**: gán `semanticsLabel` cho các card tương tác (Mở chủ đề, Khám phá chủ đề mới, Bài học AI, Tạo chủ đề của tôi).
+5. **`lesson_discover_screen.dart`**: gán `semanticsLabel` cho dominio tile (`Mở lĩnh vực ...`) và lesson tile (`Mở bài học ...`).
+6. **`review_screen.dart`**: sửa AppBar title (bỏ ternary rỗng `${_controller.progress >= 1 ? '' : ''}`).
+
+### Vấn đề còn lại (ghi nhận, chưa sửa trong GĐ14)
+- P2: `topics_screen.dart` filter "Yêu thích" gây truy vấn N+1 (`listByTopic` cho từng chủ đề) — cần tối ưu repository nếu danh sách chủ đề lớn.
+- P2: `LinearProgressIndicator` (tiến độ hôm nay / ôn tập / thống kê) chưa có nhãn accessibility đọc giá trị tiến độ.
+- P2: Không có chỉ báo trạng thái offline/online trên màn hình Hôm nay.
+- P3: Empty state "Chủ đề của tôi" trên Hôm nay dùng `AppCard` thuần thay `AppEmptyState` (tính nhất quán).
+- iOS: không build/test được trên Windows (cần macOS + Xcode).
+
+## GĐ15 — Nghiệm thu thực tế và hoàn thiện (2026-10-17)
+
+### Kết quả analyze / test / build
+- `flutter analyze`: 0 issue.
+- `flutter test`: 75/75 pass (không regression).
+- `flutter build apk --debug`: thành công (`app-debug.apk`).
+
+### Các luồng đã chạy trên thiết bị thật (CPH2203, Android 13/API 33)
+- **Cold start**: `adb am force-stop` rồi `am start` → `LaunchState: COLD`, `TotalTime ~578ms`, app mở thành công.
+- **Cài đặt APK**: `app-debug.apk` cài thành công (`install -r`, giữ dữ liệu người dùng, không xóa dữ liệu). Gói bị gỡ/cài lại do conflict signature khi cài đè debug lên release trước đó — đã `uninstall` rồi cài lại debug.
+- **Màn hình chính**: UI dump xác nhận `com.mindkeeper.mind_keeper` hiển thị màn hình "Hôm nay" với bottom navigation 4 tab ("Trang chủ" selected, "Chủ đề", "Thống kê", "Hồ sơ").
+
+### Kết quả thông báo nhắc ôn (ưu tiên cao)
+- **Quyền thông báo**: `adb shell appops get com.mindkeeper.mind_keeper POST_NOTIFICATION` → `Uid mode: POST_NOTIFICATION: ignore` → quyền đang **bị từ chối/mặc định không được phép** trên Android 13. Người dùng cần cấp thủ công trong Cài đặt hệ thống hoặc qua nút "Yêu cầu quyền thông báo" trong màn hình Cài đặt thông báo của app.
+- **Thông báo trong hệ thống**: `dumpsys notification` không tìm thấy bất kỳ thông báo nào từ `com.mindkeeper.mind_keeper` (chưa có lịch ôn nào được lập hoặc quyền chưa được cấp).
+- **Kiến trúc thông báo (xem source)**: `LessonService.completeQuiz` gọi `notifications.scheduleCardDueAt(cardId, ..., payload='card:<id>')` → mở đúng `ReviewScreen(targetCardId)` khi chạm thông báo (xử lý trong `TodayScreen._handlePendingNotification`). `NotificationSettingsScreen` switch bật/tắt gọi `cancelAll()` khi tắt. `ReviewController.rate` lưu progress session vào prefs để bền vững giữa các lần mở app.
+- **Chưa xác minh thực tế**: không thể chờ thông báo thật đến giờ hẹn trong phiên kiểm tra ngắn; không thể test deep-link từ thông báo ở foreground/background/đã đóng; không thể test trường hợp câu hỏi đã xóa/quyền từ chối trên thiết bị thật. Các trường hợp này được coverage bởi unit test (`lesson_test.dart`, `FakeNotificationService`) và widget test.
+
+### Kết quả accessibility và UI
+- **Semantics**: `AppCard`/`AppChip` đã được bổ sung `semanticsLabel` + `Semantics(button: true)` (sửa trong GĐ14). `_RateButton` và `AppIconButton` đã có `Semantics` trước đó.
+- **Chưa xác minh thực tế trên thiết bị**: TalkBack/screen reader, tăng cỡ chữ hệ thống, nội dung dài, trạng thái rỗng/lỗi — vì Maestro flow không thể chạy (lỗi parsing cấu trúc YAML trên Windows) và ADB input tap quá phức tạp/dễ sai cho nhiều màn hình. Các màn hình đã được review bằng source code trong GĐ14.
+- **P2 còn tồn đọng** (không sửa trong GĐ15 vì không tái hiện được trên thiết bị hoặc không chặn thao tác): N+1 query filter "Yêu thích", `LinearProgressIndicator` chưa có nhãn accessibility, thiếu chỉ báo offline/online, empty state "Chủ đề của tôi" dùng `AppCard` thay `AppEmptyState`.
+
+### Lỗi đã sửa trong GĐ15
+- **Cấu hình iOS (P0)**: tạo mới `ios/Podfile` với `platform :ios, '15.5'` + `post_install` ép `IPHONEOS_DEPLOYMENT_TARGET = 15.5` cho mọi Pod; sửa 3 chỗ trong `project.pbxproj` (Debug/Profile/Release: 13.0 → 15.5) → tránh lỗi deployment target của `file_picker_darwin`. **Chưa verify build iOS** (cần macOS + Xcode).
+- **Redesign 3 màn hình** (chỉ đổi UI, giữ nguyên logic nghiệp vụ/database/FSRS/thông báo):
+  - `today_screen.dart`: thứ tự đến hạn → tiến độ → quick actions → chủ đề gần đây; thêm `_QuickActionCard`, `TopicStats`, semantics.
+  - `topics_screen.dart`: `AppEmptyState` rõ ràng, badge "đến hạn" bằng `AppTag`, icon khám phá cho topic `discovered`.
+  - `stats_screen.dart`: bộ lọc bằng `AppChip`, `_StatCard` icon màu, `_RatingRow` có progress bar, tiến độ theo chủ đề kèm %.
+- **`stats_screen.dart` lỗi analyze** (phát hiện khi viết lại): `Text(color: ...)` không hợp lệ → `bodySmall?.copyWith(color: AppColors.textTertiary)`; `bars.add(...)` đóng bằng `),` thay vì `);` → 4 issue. Đã sửa, xác minh lại `flutter analyze` = 0.
+- **Dọn file Maestro thừa**: xóa `maestro/nav_flow.yaml`, `maestro/notification_flow.yaml` (thư mục `maestro/` rỗng → xóa luôn) — Maestro không chạy được trên Windows nên các flow này vô dụng.
+
+### Các vấn đề còn lại và lý do chưa xử lý
+1. **Quyền thông báo mặc định bị từ chối** (Android 13) — app có màn hình Cài đặt thông báo với nút "Yêu cầu quyền thông báo", nhưng không thể ép buộc cấp quyền từ code. Người dùng cần bật thủ công.
+2. **iOS build/test** — không thể trên Windows (cần macOS + Xcode).
+3. **Kiểm tra TalkBack/cỡ chữ trên thiết bị thật** — không có công cụ tự động hóa UI ổn định (Maestro lỗi parsing YAML; ADB input tap quá phức tạp cho nhiều màn hình). Được coverage bởi source code review + unit/widget test.
+4. **Thông báo thật đến giờ hẹn** — không thể chờ trong phiên kiểm tra ngắn.
+
+## GĐ15.1 — FIX VÀ KIỂM THỬ THÔNG BÁO ANDROID THỰC TẾ (tạm ngưng 2026-10-17, chưa PASS)
+
+### Bước 1 — Kiểm tra implementation hiện tại (đã xác minh một phần)
+- `flutter_local_notifications 22.3.2` (pubspec.yaml `^22.3.2`, pubspec.lock `22.3.2`).
+- `AndroidManifest.xml`: có `POST_NOTIFICATIONS` + `RECEIVE_BOOT_COMPLETED`.
+- `LocalNotificationService.requestPermissions()`: Android gọi `android.requestNotificationsPermission()` → `granted ?? false`; iOS `requestPermissions(alert/badge/sound)`; desktop/web trả `true`; catch trả `false` (không tuyên bố có quyền khi lỗi).
+- `areNotificationsEnabled()`: Android đọc `areNotificationsEnabled()`; nền tảng khác trả `null` (không đoán).
+- `openNotificationSettings()` → `openAppNotificationSettings()`, không tự bật quyền.
+- `NotificationSettingsScreen`: nút "Yêu cầu quyền thông báo" gọi `requestPermissions()`, set `_notificationsAllowed = granted`, hiện SnackBar + nút "Mở cài đặt" khi bị từ chối; `_refreshPermissionStatus()` chạy lúc init + resumed (resync lịch khi allowed); toggle bật xin quyền rồi mới `refreshReminderSchedule()`, toggle tắt gọi `cancelAll()`. Debug card tạo topic riêng "Kiểm thử thông báo" (không xóa dữ liệu user) + `scheduleCardDueAt` +2 phút / `showCardDue` với payload `card:<id>`.
+- `TodayScreen._handlePendingNotification`: đọc `AppBootstrap.pendingNotificationPayload`, `card:<id>` → `ReviewScreen(targetCardId)`, còn lại → `ReviewScreen()` chung.
+- Chưa đọc chữ ký `requestNotificationsPermission` trong pub cache để chốt API đúng — việc còn lại đầu tiên cho agent tiếp theo.
+
+### Trạng thái thiết bị CPH2203 (2026-10-17)
+- `adb -s NJR8W86LKRVW7DHQ shell appops get ... POST_NOTIFICATION` → `No operations. Default mode: allow`.
+- `dumpsys package ...` → `POST_NOTIFICATIONS: granted=true, flags=[USER_SET|...]` — hiện ĐANG granted (khác trạng thái ignore ghi ở GĐ15).
+- SDK 33 (Android 13). Lưu ý: có 2 thiết bị cắm song song (thêm CPH2239 `WCE65565HMDYOB59`) → mọi lệnh adb phải kèm `-s NJR8W86LKRVW7DHQ`.
+- Worktree đang bẩn (chưa commit theo quy định): xem `git status -s`. File mới đáng chú ý: `maestro/notification_permission.yaml`, `test/core/notification_permission_test.dart`, `ios/Podfile`, `.claude/`, `.serena/`.
+
+### Còn lại (agent tiếp theo làm)
+1. Soi chữ ký plugin trong pub cache `flutter_local_notifications-22.3.2`, chốt sửa Bước 2 (không claim quyền khi chỉ gọi API, có đường Settings khi denied, không exact alarm, không nâng dep hàng loạt).
+2. `flutter analyze`, `flutter test`, build APK debug nếu sửa code; kiểm tra/bổ sung test quyền + payload.
+3. Kiểm thử 11 mục Bước 3 trên CPH2203 (dùng topic test riêng, không xóa dữ liệu user).
+4. Cập nhật file này khi PASS. Không commit/push.
+

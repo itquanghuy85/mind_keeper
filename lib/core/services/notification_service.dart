@@ -22,10 +22,12 @@ class NotificationPayload {
       return const NotificationPayload._(kind: kindReview);
     }
     if (raw.startsWith('$kindCard:')) {
-      return NotificationPayload._(
-        kind: kindCard,
-        cardId: raw.substring(kindCard.length + 1),
-      );
+      final String id = raw.substring(kindCard.length + 1);
+      // Payload thiếu cardId (vd. 'card:') là không hợp lệ — rơi về review
+      // thay vì mở một thẻ rỗng.
+      if (id.isNotEmpty) {
+        return NotificationPayload._(kind: kindCard, cardId: id);
+      }
     }
     return const NotificationPayload._(kind: kindReview);
   }
@@ -35,6 +37,17 @@ class NotificationPayload {
 abstract class NotificationService {
   Future<bool> initialize();
   Future<bool> requestPermissions();
+
+  /// Kiểm tra trạng thái HIỆN TẠI của quyền thông báo (không prompt).
+  /// - `true`: thông báo được phép hiển thị.
+  /// - `false`: hệ thống chặn — cần người dùng mở Cài đặt để bật.
+  /// - `null`: nền tảng không có API đọc trạng thái (vd. iOS) — không đoán.
+  Future<bool?> areNotificationsEnabled();
+
+  /// Mở màn hình cài đặt thông báo của app trong Cài đặt hệ thống.
+  /// Trả `true` nếu mở được. Không tự bật quyền thay người dùng.
+  Future<bool> openNotificationSettings();
+
   Future<void> cancelAll();
   Future<void> scheduleDailyReminder({
     required String title,
@@ -81,6 +94,13 @@ class FakeNotificationService implements NotificationService {
   void Function(NotificationPayload payload)? onOpened;
   bool permissionsGranted = true;
 
+  /// Trạng thái giả lập cho [areNotificationsEnabled] (mặc định: cho phép;
+  /// `null` = nền tảng không đọc được).
+  bool? notificationsEnabledStatus = true;
+
+  /// Ghi nhận lần gọi [openNotificationSettings] (assert trong test).
+  bool openSettingsCalled = false;
+
   /// Giả lập payload khi app được mở từ thông báo (test cold start).
   String? pendingLaunchPayload;
 
@@ -94,6 +114,19 @@ class FakeNotificationService implements NotificationService {
   Future<bool> requestPermissions() async {
     calls.add('requestPermissions');
     return permissionsGranted;
+  }
+
+  @override
+  Future<bool?> areNotificationsEnabled() async {
+    calls.add('areNotificationsEnabled');
+    return notificationsEnabledStatus;
+  }
+
+  @override
+  Future<bool> openNotificationSettings() async {
+    calls.add('openNotificationSettings');
+    openSettingsCalled = true;
+    return true;
   }
 
   @override
@@ -219,27 +252,68 @@ class LocalNotificationService implements NotificationService {
     return true;
   }
 
+  /// Xin quyền hiển thị thông báo và trả KẾT QUẢ THẬT từ hệ thống.
+  ///
+  /// - Android 13+ (API 33): gọi `requestNotificationsPermission()` của
+  ///   flutter_local_notifications v22 → hộp thoại POST_NOTIFICATIONS;
+  ///   Android < 13: no-op, trả `true` (không có quyền runtime).
+  /// - iOS: `requestPermissions(alert/badge/sound)`.
+  /// - Không tuyên bố đã có quyền khi API lỗi: trả `false`.
   @override
   Future<bool> requestPermissions() async {
-    final AndroidFlutterLocalNotificationsPlugin? android =
-        _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      final bool? granted = await android.requestNotificationsPermission();
-      return granted ?? false;
+    try {
+      final AndroidFlutterLocalNotificationsPlugin? android =
+          _plugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        final bool? granted = await android.requestNotificationsPermission();
+        return granted ?? false;
+      }
+      final IOSFlutterLocalNotificationsPlugin? ios =
+          _plugin.resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        final bool? granted = await ios.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return granted ?? false;
+      }
+      // Desktop/web không có quyền runtime cho thông báo cục bộ.
+      return true;
+    } catch (_) {
+      // Plugin chưa sẵn sàng (môi trường test / chưa đăng ký) — coi như
+      // CHƯA được cấp để UI không hiển thị trạng thái sai.
+      return false;
     }
-    final IOSFlutterLocalNotificationsPlugin? ios =
-        _plugin.resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
-    if (ios != null) {
-      final bool? granted = await ios.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      return granted ?? false;
+  }
+
+  @override
+  Future<bool?> areNotificationsEnabled() async {
+    try {
+      final AndroidFlutterLocalNotificationsPlugin? android =
+          _plugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        return await android.areNotificationsEnabled();
+      }
+      // iOS/macOS: plugin không cung cấp API đọc trạng thái → trung thực
+      // trả null (không đoán "đã có quyền").
+      return null;
+    } catch (_) {
+      return null;
     }
-    return true;
+  }
+
+  @override
+  Future<bool> openNotificationSettings() async {
+    try {
+      final bool? ok = await _plugin.openAppNotificationSettings();
+      return ok ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
