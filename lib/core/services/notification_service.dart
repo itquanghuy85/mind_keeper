@@ -1,0 +1,356 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
+
+/// Payload mở khi người dùng chạm thông báo.
+/// - `card:<cardId>` → mở đúng ReviewCard
+/// - `review` → mở phiên ôn tập chung
+class NotificationPayload {
+  const NotificationPayload._({this.cardId, this.kind = kindReview});
+
+  final String? cardId;
+  final String kind;
+
+  static const String kindCard = 'card';
+  static const String kindReview = 'review';
+
+  static NotificationPayload parse(String? raw) {
+    if (raw == null || raw.isEmpty) {
+      return const NotificationPayload._(kind: kindReview);
+    }
+    if (raw.startsWith('$kindCard:')) {
+      return NotificationPayload._(
+        kind: kindCard,
+        cardId: raw.substring(kindCard.length + 1),
+      );
+    }
+    return const NotificationPayload._(kind: kindReview);
+  }
+}
+
+/// Interface để test không cần plugin thật.
+abstract class NotificationService {
+  Future<bool> initialize();
+  Future<bool> requestPermissions();
+  Future<void> cancelAll();
+  Future<void> scheduleDailyReminder({
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+    String payload,
+  });
+  Future<void> showNow({
+    required int id,
+    required String title,
+    required String body,
+    String payload,
+  });
+  Future<void> showCardDue({
+    required String cardId,
+    required String title,
+    required String body,
+  });
+
+  /// Lập lịch thông báo MỘT LẦN vào thời điểm [at] với payload `card:<cardId>`
+  /// (mở đúng câu hỏi khi người dùng chạm). Bỏ qua nếu [at] đã qua.
+  Future<void> scheduleCardDueAt({
+    required String cardId,
+    required String title,
+    required String body,
+    required DateTime at,
+  });
+
+  /// Hủy lịch thông báo của thẻ (idempotent).
+  Future<void> cancelCardNotification(String cardId);
+
+  void setOnNotificationOpened(void Function(NotificationPayload payload) cb);
+}
+
+/// Fake dùng cho widget/unit test: ghi lại lịch gọi, không gọi plugin.
+class FakeNotificationService implements NotificationService {
+  final List<String> calls = <String>[];
+  final List<int> shownIds = <int>[];
+
+  /// cardId → thời điểm thông báo đến giờ ôn đã lập (assert trong test).
+  final Map<String, DateTime> scheduledCards = <String, DateTime>{};
+  final List<String> cancelledCards = <String>[];
+  void Function(NotificationPayload payload)? onOpened;
+  bool permissionsGranted = true;
+
+  /// Giả lập payload khi app được mở từ thông báo (test cold start).
+  String? pendingLaunchPayload;
+
+  @override
+  Future<bool> initialize() async {
+    calls.add('initialize');
+    return true;
+  }
+
+  @override
+  Future<bool> requestPermissions() async {
+    calls.add('requestPermissions');
+    return permissionsGranted;
+  }
+
+  @override
+  Future<void> cancelAll() async {
+    calls.add('cancelAll');
+  }
+
+  @override
+  Future<void> scheduleDailyReminder({
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+    String payload = 'review',
+  }) async {
+    calls.add('scheduleDailyReminder:$hour:$minute:$payload');
+  }
+
+  @override
+  Future<void> showNow({
+    required int id,
+    required String title,
+    required String body,
+    String payload = 'review',
+  }) async {
+    calls.add('showNow:$id:$payload');
+    shownIds.add(id);
+  }
+
+  @override
+  Future<void> showCardDue({
+    required String cardId,
+    required String title,
+    required String body,
+  }) async {
+    calls.add('showCardDue:$cardId');
+  }
+
+  @override
+  Future<void> scheduleCardDueAt({
+    required String cardId,
+    required String title,
+    required String body,
+    required DateTime at,
+  }) async {
+    if (!at.toUtc().isAfter(DateTime.now().toUtc())) return;
+    scheduledCards[cardId] = at.toUtc();
+    calls.add('scheduleCardDueAt:$cardId');
+  }
+
+  @override
+  Future<void> cancelCardNotification(String cardId) async {
+    cancelledCards.add(cardId);
+    scheduledCards.remove(cardId);
+    calls.add('cancelCard:$cardId');
+  }
+
+  @override
+  void setOnNotificationOpened(void Function(NotificationPayload payload) cb) {
+    onOpened = cb;
+    final String? launch = pendingLaunchPayload;
+    if (launch != null) {
+      pendingLaunchPayload = null;
+      cb(NotificationPayload.parse(launch));
+    }
+  }
+}
+
+class LocalNotificationService implements NotificationService {
+  LocalNotificationService({FlutterLocalNotificationsPlugin? plugin})
+      : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+
+  final FlutterLocalNotificationsPlugin _plugin;
+  void Function(NotificationPayload payload)? _onOpened;
+  bool _initialized = false;
+
+  /// Payload từ lần mở app bằng thông báo (cold start) — replay khi
+  /// setOnNotificationOpened được đăng ký.
+  String? _launchPayload;
+
+  static const int _dailyReminderId = 1001;
+
+  static const AndroidNotificationDetails _androidDetails =
+      AndroidNotificationDetails(
+    'mind_keeper_review',
+    'Nhắc ôn tập',
+    channelDescription: 'Thông báo nhắc đến giờ ôn kiến thức',
+    importance: Importance.high,
+    priority: Priority.high,
+  );
+
+  @override
+  Future<bool> initialize() async {
+    if (_initialized) return true;
+    tz_data.initializeTimeZones();
+    const DarwinInitializationSettings ios = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    const AndroidInitializationSettings android =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings settings = InitializationSettings(
+      android: android,
+      iOS: ios,
+    );
+    await _plugin.initialize(
+      settings: settings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        _onOpened?.call(NotificationPayload.parse(response.payload));
+      },
+    );
+    _initialized = true;
+    try {
+      final NotificationAppLaunchDetails? details =
+          await _plugin.getNotificationAppLaunchDetails();
+      if (details != null && details.didNotificationLaunchApp) {
+        _launchPayload = details.notificationResponse?.payload;
+      }
+    } catch (_) {
+      // Plattform chưa sẵn sàng — bỏ qua, không chặn khởi động.
+    }
+    return true;
+  }
+
+  @override
+  Future<bool> requestPermissions() async {
+    final AndroidFlutterLocalNotificationsPlugin? android =
+        _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      final bool? granted = await android.requestNotificationsPermission();
+      return granted ?? false;
+    }
+    final IOSFlutterLocalNotificationsPlugin? ios =
+        _plugin.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      final bool? granted = await ios.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      return granted ?? false;
+    }
+    return true;
+  }
+
+  @override
+  Future<void> cancelAll() => _plugin.cancelAll();
+
+  @override
+  Future<void> scheduleDailyReminder({
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+    String payload = 'review',
+  }) async {
+    final tz.TZDateTime next = _nextInstanceOfTime(hour, minute);
+    await _plugin.zonedSchedule(
+      id: _dailyReminderId,
+      title: title,
+      body: body,
+      scheduledDate: next,
+      notificationDetails: const NotificationDetails(
+        android: _androidDetails,
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: payload,
+    );
+  }
+
+  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduled =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
+  }
+
+  @override
+  Future<void> showNow({
+    required int id,
+    required String title,
+    required String body,
+    String payload = 'review',
+  }) async {
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: _androidDetails,
+        iOS: DarwinNotificationDetails(),
+      ),
+      payload: payload,
+    );
+  }
+
+  @override
+  Future<void> showCardDue({
+    required String cardId,
+    required String title,
+    required String body,
+  }) async {
+    final int id = cardId.hashCode & 0x7fffffff;
+    await showNow(
+      id: id,
+      title: title,
+      body: body,
+      payload: '${NotificationPayload.kindCard}:$cardId',
+    );
+  }
+
+  @override
+  Future<void> scheduleCardDueAt({
+    required String cardId,
+    required String title,
+    required String body,
+    required DateTime at,
+  }) async {
+    final DateTime utc = at.toUtc();
+    if (!utc.isAfter(DateTime.now().toUtc())) return;
+    await _plugin.zonedSchedule(
+      id: cardNotificationId(cardId),
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(utc, tz.local),
+      notificationDetails: const NotificationDetails(
+        android: _androidDetails,
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: '${NotificationPayload.kindCard}:$cardId',
+    );
+  }
+
+  @override
+  Future<void> cancelCardNotification(String cardId) async {
+    await _plugin.cancel(id: cardNotificationId(cardId));
+  }
+
+  @override
+  void setOnNotificationOpened(void Function(NotificationPayload payload) cb) {
+    _onOpened = cb;
+    final String? launch = _launchPayload;
+    if (launch != null) {
+      _launchPayload = null;
+      cb(NotificationPayload.parse(launch));
+    }
+  }
+}
+
+@visibleForTesting
+int cardNotificationId(String cardId) => cardId.hashCode & 0x7fffffff;
