@@ -8,37 +8,47 @@ import 'ai_provider.dart';
 /// Provider HTTP thật (OpenAI-compatible).
 /// Cấu hình baseUrl/apiKey/model từ cài đặt — KHÔNG nhúng key trong mã nguồn.
 class HttpAIProvider implements AIProvider {
-  HttpAIProvider({
-    required this.baseUrl,
-    required this.apiKey,
-    required this.model,
-    http.Client? client,
-    this.timeout = const Duration(seconds: 45),
-  }) : _client = client ?? http.Client();
+  static const String defaultBaseUrl = 'https://api.deepseek.com';
+  static const String defaultModel = 'deepseek-chat';
 
-  final String baseUrl;
-  final String apiKey;
-  final String model;
+  HttpAIProvider({
+    String? baseUrl,
+    String? apiKey,
+    String? model,
+    http.Client? client,
+    this.timeout = const Duration(seconds: 60),
+  }) : _baseUrl = (baseUrl?.trim().isNotEmpty == true)
+           ? baseUrl!.trim()
+           : defaultBaseUrl,
+       _apiKey = apiKey?.trim() ?? '',
+       _model = (model?.trim().isNotEmpty == true)
+           ? model!.trim()
+           : defaultModel,
+       _client = client ?? http.Client();
+
+  final String _baseUrl;
+  final String _apiKey;
+  final String _model;
   final http.Client _client;
   final Duration timeout;
 
   @override
-  String get name => 'http';
+  String get name => 'deepseek';
 
   @override
-  bool get isConfigured => baseUrl.isNotEmpty && apiKey.isNotEmpty;
+  bool get isConfigured => _apiKey.isNotEmpty;
+
+  String get baseUrl => _baseUrl;
+  String get apiKey => _apiKey;
+  String get model => _model;
 
   Map<String, String> get _headers => <String, String>{
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
-      };
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $_apiKey',
+  };
 
   Future<String> _chat(String systemPrompt, String userPrompt) async {
-    final Uri uri = Uri.parse(
-      baseUrl.endsWith('/chat/completions')
-          ? baseUrl
-          : '${baseUrl.replaceAll(RegExp(r'/+$'), '')}/chat/completions',
-    );
+    final Uri uri = Uri.parse('$_baseUrl/chat/completions');
     final http.Response response = await _client
         .post(
           uri,
@@ -112,11 +122,15 @@ class HttpAIProvider implements AIProvider {
     int maxItems = 5,
   }) async {
     final String raw = await _chat(
-      'Bạn tóm tắt văn bản thành các đơn vị kiến thức ngắn (1-3 câu mỗi ý), JSON: {"items":[{"title":"","content":"","details":""}]}',
-      'Tối đa $maxItems mục.\n\n${_clip(sourceText)}',
+      'Bạn là chuyên gia soạn thảo kiến thức. Hãy phân tích văn bản đầu vào và tách thành '
+          'các đơn vị kiến thức độc lập, mỗi đơn vị đủ độ sâu để học và ghi nhớ. '
+          'Trả về JSON: {"items":[{"title":"","content":"","details":""}]} '
+          'Yêu cầu: tiêu đề rõ ràng, nội dung 150-300 từ, details là bối cảnh/ứng dụng/ví dụ.',
+      'Tối đa $maxItems mục. Văn bản:\n${_clip(sourceText)}',
     );
     final Map<String, Object?> obj = _decodeObject(raw);
-    final List<Object?> items = (obj['items'] as List<Object?>?) ?? const <Object?>[];
+    final List<Object?> items =
+        (obj['items'] as List<Object?>?) ?? const <Object?>[];
     final List<AiKnowledgeDraft> drafts = <AiKnowledgeDraft>[];
     for (final Object? item in items) {
       if (item is! Map<String, Object?>) continue;
@@ -190,22 +204,46 @@ class HttpAIProvider implements AIProvider {
     required int wordMax,
     required int questionCount,
   }) async {
-    final int maxQuestions = questionCount < 3 ? 3 : (questionCount > 5 ? 5 : questionCount);
-    final String raw = await _chat(
-      'Bạn soạn bài học JSON tiếng Việt cho ứng dụng học tập. '
-      'NGUYÊN TẮC NGUỒN: chỉ ghi nguồn vào mảng "sources" nếu bạn chắc chắn '
-      'nội dung đó tồn tại và chính xác; nếu không chắc, để mảng rỗng — '
-      'tuyệt đối không bịa nguồn. Nếu nội dung liên quan đến y tế, đặt "medical": true. '
-      'JSON bắt buộc: {"title":"","introduction":"",'
-      '"sections":[{"heading":"","body":""}],"key_points":[""],'
-      '"examples":[""],"summary":"",'
-      '"questions":[{"question":"","answer":"","explanation":""}],'
-      '"sources":[{"title":"","url":""}],"medical":false}',
-      'Lĩnh vực: $domain\nChủ đề: $topic\nChế độ học: $mode\n'
-      'Yêu cầu: toàn bài nằm trong khoảng $wordMin-$wordMax từ; '
-      'đúng $maxQuestions câu hỏi ghi nhớ; tiếng Việt chính xác; '
-      'bài có mở đầu, phần chính, điểm cốt lõi, ví dụ và tóm tắt.',
-    );
+    final int maxQuestions = questionCount < 3
+        ? 3
+        : (questionCount > 5 ? 5 : questionCount);
+    final String systemPrompt =
+        '''Bạn là chuyên gia soạn thảo bài học chất lượng cao cho ứng dụng học tập chủ động. Hãy tạo bài học JSON tiếng Việt đầy đủ, có cấu trúc, độ dài 500-800 từ.
+
+CẤU TRÚC BẮT BUỘC:
+{
+  "title": "Tiêu đề rõ ràng, hấp dẫn",
+  "learningObjectives": ["Mục tiêu 1", "Mục tiêu 2", "Mục tiêu 3"],
+  "introduction": "Mở đầu 100-150 từ: bối cảnh, tại sao quan trọng, người học sẽ đạt được gì",
+  "concepts": [
+    {"name": "Khái niệm 1", "explanation": "Giải thích chi tiết 150-200 từ"},
+    {"name": "Khái niệm 2", "explanation": "Giải thích chi tiết 150-200 từ"}
+  ],
+  "sections": [
+    {"heading": "Phần 1: Tên phần", "body": "Nội dung chi tiết 200-300 từ"}
+  ],
+  "keyPoints": ["Ý chính 1", "Ý chính 2", "Ý chính 3", "Ý chính 4", "Ý chính 5"],
+  "examples": ["Ví dụ thực tế 1", "Ví dụ thực tế 2"],
+  "commonMistakes": ["Sai lầm thường gặp 1", "Sai lầm thường gặp 2"],
+  "summary": "Tóm tắt 3-5 ý quan trọng nhất, 100-150 từ",
+  "questions": [
+    {"question": "Câu hỏi 1", "answer": "Đáp án", "explanation": "Giải thích"}
+  ],
+  "sources": [{"title": "Nguồn", "url": "URL"}],
+  "medical": false
+}
+
+NGUYÊN TẮC:
+- Độ dài toàn bài: $wordMin-$wordMax từ
+- Số câu hỏi: $maxQuestions (3-5)
+- Không bịa nguồn - để mảng sources rỗng nếu không chắc chắn
+- Nội dung y tế: medical=true + disclaimer
+- Tiếng Việt tự nhiên, chính xác, không lặp ý''';
+
+    final String userPrompt =
+        'Lĩnh vực: $domain\nChủ đề: $topic\nChế độ: $mode';
+
+    final String raw = await _chat(systemPrompt, userPrompt);
     return AiLessonDraft.fromMap(
       _decodeObject(raw),
       maxQuestions: maxQuestions,

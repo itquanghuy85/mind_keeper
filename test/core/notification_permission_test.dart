@@ -136,8 +136,9 @@ void main() {
   });
 
   group('GĐ15.1 — NotificationSettingsScreen widget', () {
-    testWidgets('bị từ chối → hiển thị "Bị từ chối" + nút Mở cài đặt',
-        (WidgetTester tester) async {
+    testWidgets('bị từ chối → hiển thị "Bị từ chối" + nút Mở cài đặt', (
+      WidgetTester tester,
+    ) async {
       final FakeNotificationService fake = FakeNotificationService()
         ..notificationsEnabledStatus = false;
       final AppServices services = (await tester.runAsync(
@@ -152,8 +153,9 @@ void main() {
       await tester.runAsync(services.dispose);
     });
 
-    testWidgets('đã cấp → "Đã cho phép", không hiện nút Mở cài đặt',
-        (WidgetTester tester) async {
+    testWidgets('đã cấp → "Đã cho phép", không hiện nút Mở cài đặt', (
+      WidgetTester tester,
+    ) async {
       final FakeNotificationService fake = FakeNotificationService();
       final AppServices services = (await tester.runAsync(
         () => buildServices(fake),
@@ -168,72 +170,77 @@ void main() {
     });
 
     testWidgets(
-        'bấm Yêu cầu quyền khi bị từ chối → requestPermissions, KHÔNG lên lịch, '
-        'trạng thái vẫn "Bị từ chối"', (WidgetTester tester) async {
-      AppBootstrap.instance.resetForTest();
-      final FakeNotificationService fake = FakeNotificationService()
-        ..permissionsGranted = false
-        ..notificationsEnabledStatus = false;
-      final AppServices services = (await tester.runAsync(
-        () => buildServices(fake),
-      ))!;
-      AppBootstrap.instance.resetForTest();
-      await AppBootstrap.instance.initialize(override: services);
+      'bấm Yêu cầu quyền khi bị từ chối → requestPermissions, KHÔNG lên lịch, '
+      'trạng thái vẫn "Bị từ chối"',
+      (WidgetTester tester) async {
+        AppBootstrap.instance.resetForTest();
+        final FakeNotificationService fake = FakeNotificationService()
+          ..permissionsGranted = false
+          ..notificationsEnabledStatus = false;
+        final AppServices services = (await tester.runAsync(
+          () => buildServices(fake),
+        ))!;
+        AppBootstrap.instance.resetForTest();
+        await AppBootstrap.instance.initialize(override: services);
 
-      await tester.pumpWidget(buildScreen(services));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildScreen(services));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Yêu cầu quyền thông báo'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Yêu cầu quyền thông báo'));
+        await tester.pumpAndSettle();
 
-      expect(fake.calls, contains('requestPermissions'));
-      expect(
-        fake.calls.where((String c) => c.startsWith('scheduleDailyReminder')),
-        isEmpty,
-        reason: 'Không được lên lịch khi quyền bị từ chối',
-      );
-      expect(find.text('Bị từ chối'), findsOneWidget);
-      expect(
-        find.textContaining('Quyền thông báo bị từ chối'),
-        findsOneWidget,
-      );
+        expect(fake.calls, contains('requestPermissions'));
+        expect(
+          fake.calls.where((String c) => c.startsWith('scheduleDailyReminder')),
+          isEmpty,
+          reason: 'Không được lên lịch khi quyền bị từ chối',
+        );
+        expect(find.text('Bị từ chối'), findsOneWidget);
+        expect(
+          find.textContaining('Quyền thông báo bị từ chối'),
+          findsOneWidget,
+        );
 
-      AppBootstrap.instance.resetForTest();
-      await tester.runAsync(services.dispose);
-    });
+        AppBootstrap.instance.resetForTest();
+        await tester.runAsync(services.dispose);
+      },
+    );
 
     testWidgets(
-        'bấm Yêu cầu quyền khi được cấp → requestPermissions + lên lịch nhắc',
-        (WidgetTester tester) async {
-      AppBootstrap.instance.resetForTest();
-      final FakeNotificationService fake = FakeNotificationService()
-        ..permissionsGranted = true
-        ..notificationsEnabledStatus = true;
-      final AppServices services = (await tester.runAsync(
-        () => buildServices(fake),
-      ))!;
-      AppBootstrap.instance.resetForTest();
-      await AppBootstrap.instance.initialize(override: services);
+      'bấm Yêu cầu quyền khi được cấp → requestPermissions + lên lịch nhắc',
+      (WidgetTester tester) async {
+        AppBootstrap.instance.resetForTest();
+        final FakeNotificationService fake = FakeNotificationService()
+          ..permissionsGranted = true
+          ..notificationsEnabledStatus = true;
+        final AppServices services = (await tester.runAsync(
+          () => buildServices(fake),
+        ))!;
+        AppBootstrap.instance.resetForTest();
+        await AppBootstrap.instance.initialize(override: services);
 
-      await tester.pumpWidget(buildScreen(services));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildScreen(services));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Yêu cầu quyền thông báo'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Yêu cầu quyền thông báo'));
+        await tester.pumpAndSettle();
 
-      expect(fake.calls, contains('requestPermissions'));
-      expect(
-        fake.calls.where((String c) => c.startsWith('scheduleDailyReminder')),
-        isNotEmpty,
-        reason: 'Được cấp quyền → lịch nhắc hằng ngày được lập',
-      );
-      expect(find.text('Đã cho phép'), findsOneWidget);
+        expect(fake.calls, contains('requestPermissions'));
+        expect(
+          fake.calls.where((String c) => c.startsWith('scheduleDailyReminder')),
+          isNotEmpty,
+          reason: 'Được cấp quyền → lịch nhắc hằng ngày được lập',
+        );
+        expect(find.text('Đã cho phép'), findsOneWidget);
 
-      AppBootstrap.instance.resetForTest();
-      await tester.runAsync(services.dispose);
-    });
+        AppBootstrap.instance.resetForTest();
+        await tester.runAsync(services.dispose);
+      },
+    );
 
-    testWidgets('tắt switch → cancelAll, không còn lịch', (WidgetTester tester) async {
+    testWidgets('tắt switch nhắc ôn → cancelAll, không còn lịch', (
+      WidgetTester tester,
+    ) async {
       final FakeNotificationService fake = FakeNotificationService();
       final AppServices services = (await tester.runAsync(
         () => buildServices(fake),
@@ -241,20 +248,20 @@ void main() {
       await tester.pumpWidget(buildScreen(services));
       await tester.pumpAndSettle();
 
-      // prefs.notificationsEnabled mặc định true → switch đang bật.
-      expect(
-        tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-        isTrue,
-      );
-      await tester.tap(find.byType(SwitchListTile));
+      // prefs.notificationsEnabled mặc định true → switch nhắc ôn đang bật.
+      final Finder reviewSwitch = find
+          .ancestor(
+            of: find.text('Bật thông báo nhắc ôn'),
+            matching: find.byType(SwitchListTile),
+          )
+          .first;
+      expect(tester.widget<SwitchListTile>(reviewSwitch).value, isTrue);
+      await tester.tap(reviewSwitch);
       await tester.pumpAndSettle();
 
       expect(fake.calls, contains('cancelAll'));
       expect(services.prefs.notificationsEnabled, isFalse);
-      expect(
-        tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-        isFalse,
-      );
+      expect(tester.widget<SwitchListTile>(reviewSwitch).value, isFalse);
 
       await tester.runAsync(services.dispose);
     });

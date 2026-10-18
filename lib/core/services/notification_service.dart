@@ -80,6 +80,22 @@ abstract class NotificationService {
   /// Hủy lịch thông báo của thẻ (idempotent).
   Future<void> cancelCardNotification(String cardId);
 
+  /// Lập lịch nhắc đọc kiến thức theo ngày/lịch tuần.
+  /// [days] là danh sách ngày trong tuần (1=Thứ 2, ..., 7=Chủ Nhật).
+  /// [frequency] = 1: hàng ngày, 2: cách ngày, 3: 3 ngày/lần, ...
+  Future<void> scheduleKnowledgeReadingReminder({
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+    required List<int> days,
+    required int frequency,
+    String payload = 'knowledge_reading',
+  });
+
+  /// Hủy lịch nhắc đọc kiến thức.
+  Future<void> cancelKnowledgeReadingReminder();
+
   void setOnNotificationOpened(void Function(NotificationPayload payload) cb);
 }
 
@@ -185,6 +201,26 @@ class FakeNotificationService implements NotificationService {
   }
 
   @override
+  Future<void> scheduleKnowledgeReadingReminder({
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+    required List<int> days,
+    required int frequency,
+    String payload = 'knowledge_reading',
+  }) async {
+    calls.add(
+      'scheduleKnowledgeReadingReminder:$hour:$minute:$days:$frequency:$payload',
+    );
+  }
+
+  @override
+  Future<void> cancelKnowledgeReadingReminder() async {
+    calls.add('cancelKnowledgeReadingReminder');
+  }
+
+  @override
   void setOnNotificationOpened(void Function(NotificationPayload payload) cb) {
     onOpened = cb;
     final String? launch = pendingLaunchPayload;
@@ -197,7 +233,7 @@ class FakeNotificationService implements NotificationService {
 
 class LocalNotificationService implements NotificationService {
   LocalNotificationService({FlutterLocalNotificationsPlugin? plugin})
-      : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   final FlutterLocalNotificationsPlugin _plugin;
   void Function(NotificationPayload payload)? _onOpened;
@@ -211,12 +247,12 @@ class LocalNotificationService implements NotificationService {
 
   static const AndroidNotificationDetails _androidDetails =
       AndroidNotificationDetails(
-    'mind_keeper_review',
-    'Nhắc ôn tập',
-    channelDescription: 'Thông báo nhắc đến giờ ôn kiến thức',
-    importance: Importance.high,
-    priority: Priority.high,
-  );
+        'mind_keeper_review',
+        'Nhắc ôn tập',
+        channelDescription: 'Thông báo nhắc đến giờ ôn kiến thức',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
 
   @override
   Future<bool> initialize() async {
@@ -227,8 +263,9 @@ class LocalNotificationService implements NotificationService {
       requestBadgePermission: false,
       requestSoundPermission: false,
     );
-    const AndroidInitializationSettings android =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const AndroidInitializationSettings android = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const InitializationSettings settings = InitializationSettings(
       android: android,
       iOS: ios,
@@ -241,8 +278,8 @@ class LocalNotificationService implements NotificationService {
     );
     _initialized = true;
     try {
-      final NotificationAppLaunchDetails? details =
-          await _plugin.getNotificationAppLaunchDetails();
+      final NotificationAppLaunchDetails? details = await _plugin
+          .getNotificationAppLaunchDetails();
       if (details != null && details.didNotificationLaunchApp) {
         _launchPayload = details.notificationResponse?.payload;
       }
@@ -262,16 +299,18 @@ class LocalNotificationService implements NotificationService {
   @override
   Future<bool> requestPermissions() async {
     try {
-      final AndroidFlutterLocalNotificationsPlugin? android =
-          _plugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final AndroidFlutterLocalNotificationsPlugin? android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (android != null) {
         final bool? granted = await android.requestNotificationsPermission();
         return granted ?? false;
       }
-      final IOSFlutterLocalNotificationsPlugin? ios =
-          _plugin.resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>();
+      final IOSFlutterLocalNotificationsPlugin? ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       if (ios != null) {
         final bool? granted = await ios.requestPermissions(
           alert: true,
@@ -292,9 +331,10 @@ class LocalNotificationService implements NotificationService {
   @override
   Future<bool?> areNotificationsEnabled() async {
     try {
-      final AndroidFlutterLocalNotificationsPlugin? android =
-          _plugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final AndroidFlutterLocalNotificationsPlugin? android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (android != null) {
         return await android.areNotificationsEnabled();
       }
@@ -345,8 +385,14 @@ class LocalNotificationService implements NotificationService {
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduled =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    tz.TZDateTime scheduled = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
     if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
@@ -413,6 +459,78 @@ class LocalNotificationService implements NotificationService {
   @override
   Future<void> cancelCardNotification(String cardId) async {
     await _plugin.cancel(id: cardNotificationId(cardId));
+  }
+
+  @override
+  Future<void> scheduleKnowledgeReadingReminder({
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+    required List<int> days,
+    required int frequency,
+    String payload = 'knowledge_reading',
+  }) async {
+    // Hủy lịch cũ trước
+    await _plugin.cancel(id: _knowledgeReadingReminderId);
+
+    // Lập lịch cho từng ngày trong tuần
+    for (final int day in days) {
+      if (day < 1 || day > 7) continue;
+
+      final tz.TZDateTime next = _nextInstanceOfWeekday(day, hour, minute);
+      await _plugin.zonedSchedule(
+        id: _knowledgeReadingReminderId + day,
+        title: title,
+        body: body,
+        scheduledDate: next,
+        notificationDetails: const NotificationDetails(
+          android: _androidDetails,
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        payload: '$payload:day=$day',
+      );
+    }
+  }
+
+  @override
+  Future<void> cancelKnowledgeReadingReminder() async {
+    for (int day = 1; day <= 7; day++) {
+      await _plugin.cancel(id: _knowledgeReadingReminderId + day);
+    }
+    await _plugin.cancel(id: _knowledgeReadingReminderId);
+  }
+
+  static const int _knowledgeReadingReminderId = 1002;
+
+  tz.TZDateTime _nextInstanceOfWeekday(int weekday, int hour, int minute) {
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    // weekday: 1=Monday, 7=Sunday
+    int daysToAdd = weekday - now.weekday;
+    if (daysToAdd < 0) daysToAdd += 7;
+    if (daysToAdd == 0) {
+      final tz.TZDateTime today = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        hour,
+        minute,
+      );
+      if (today.isBefore(now)) daysToAdd = 7;
+    }
+    tz.TZDateTime scheduled = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+    scheduled = scheduled.add(Duration(days: daysToAdd));
+    return scheduled;
   }
 
   @override

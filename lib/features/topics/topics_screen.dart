@@ -7,6 +7,7 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/app_feedback.dart';
+import '../../core/widgets/app_icon_badge.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/topic.dart';
@@ -63,9 +64,8 @@ class _TopicsScreenState extends State<TopicsScreen> {
         query: _query.isEmpty ? null : _query,
         origin: origin,
       );
-      final Map<String, TopicStats> stats = await services.topics.statsForTopics(
-        topics.map((Topic t) => t.id).toList(),
-      );
+      final Map<String, TopicStats> stats = await services.topics
+          .statsForTopics(topics.map((Topic t) => t.id).toList());
       if (_filter == _TopicFilter.favorite) {
         // "Yêu thích" = chủ đề có kiến thức yêu thích — lọc bằng cách kiểm tra nhanh.
         final List<Topic> fav = <Topic>[];
@@ -152,7 +152,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
 
             // Bộ lọc
             SizedBox(
-              height: AppSizes.controlHeightSm + 8,
+              height: AppSizes.chipHeight + 8,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -234,24 +234,17 @@ class _TopicsScreenState extends State<TopicsScreen> {
         itemBuilder: (BuildContext context, int index) {
           final Topic topic = _topics[index];
           final TopicStats s =
-              _stats[topic.id] ?? const TopicStats(knowledgeCount: 0, dueCount: 0);
+              _stats[topic.id] ??
+              const TopicStats(knowledgeCount: 0, dueCount: 0);
           return AppCard(
             semanticsLabel: 'Mở chủ đề ${topic.name}',
             onTap: () => _openDetail(topic.id),
             child: Row(
               children: <Widget>[
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.folder_outlined,
-                    size: 20,
-                    color: AppColors.primary,
-                  ),
+                const AppIconBadge(
+                  icon: Icons.folder_rounded,
+                  tone: AppIconTone.primary,
+                  size: AppSizes.badgeMd,
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(

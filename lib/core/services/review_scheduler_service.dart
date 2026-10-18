@@ -16,11 +16,9 @@ class ScheduleResult {
 /// Lịch ôn tính riêng cho từng ReviewCard, không dùng lịch cứng.
 class ReviewSchedulerService {
   ReviewSchedulerService({fsrs.Scheduler? scheduler})
-      : _scheduler = scheduler ??
-            fsrs.Scheduler(
-              desiredRetention: 0.9,
-              enableFuzzing: true,
-            );
+    : _scheduler =
+          scheduler ??
+          fsrs.Scheduler(desiredRetention: 0.9, enableFuzzing: true);
 
   final fsrs.Scheduler _scheduler;
 
@@ -37,12 +35,8 @@ class ReviewSchedulerService {
     final DateTime reviewedAt = (now ?? DateTime.now()).toUtc();
     final fsrs.Card fsrsCard = card.toFsrsCard();
     final fsrs.Rating fsrsRating = toFsrsRating(rating);
-    final ({fsrs.Card card, fsrs.ReviewLog reviewLog}) result =
-        _scheduler.reviewCard(
-      fsrsCard,
-      fsrsRating,
-      reviewDateTime: reviewedAt,
-    );
+    final ({fsrs.Card card, fsrs.ReviewLog reviewLog}) result = _scheduler
+        .reviewCard(fsrsCard, fsrsRating, reviewDateTime: reviewedAt);
 
     final ReviewCard updated = ReviewCard.fromFsrsCard(
       card: card,

@@ -1,0 +1,40 @@
+# GĐ15.1 — kiểm thử quyền thông báo (màn hình cài đặt của app).
+# Dùng \uXXXX escapes để không phụ thuộc encoding file khi Maestro đọc selector.
+# "Trang chủ" "Hồ sơ" "Cá nhân" "Cài đặt thông báo"
+# "Trạng thái quyền" "Bị từ chối" "Yêu cầu quyền thông báo"
+# Chạy: maestro test --device <serial> maestro/notification_permission.yaml
+appId: com.mindkeeper.mind_keeper
+name: GD15.1 notification permission smoke
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang ch\u1EE7"
+    timeout: 15000
+# Flutter NavBar gộp label + hint vào accessibilityText → cần regex contains.
+- tapOn: ".*H\u1ED3 s\u01A1.*"
+- extendedWaitUntil:
+    visible: "C\u00E1 nh\u00E2n"
+    timeout: 10000
+- scrollUntilVisible:
+    element: "C\u00E0i \u0111\u1EB7t th\u00F4ng b\u00E1o chi ti\u1EBFt"
+    direction: DOWN
+- tapOn: "C\u00E0i \u0111\u1EB7t th\u00F4ng b\u00E1o chi ti\u1EBFt"
+# Flutter gộp text card thành accessibilityText dài → dùng regex contains.
+- extendedWaitUntil:
+    visible: ".*Tr\u1EA1ng th\u00E1i quy\u1EC1n.*"
+    timeout: 10000
+- assertVisible: ".*B\u1ECB t\u1EEB ch\u1ED1I.*"
+- assertVisible: "Y\u00Eau c\u1EA7u quy\u1EC1n th\u00F4ng b\u00E1o"
+- assertVisible: "M\u1EDF c\u00E0i \u0111\u1EB7t h\u1EC7 th\u1ED1ng"
+# Bấm yêu cầu quyền → hộp thoại hệ thống POST_NOTIFICATIONS → Cho phép.
+- tapOn: "Y\u00Eau c\u1EA7u quy\u1EC1n th\u00F4ng b\u00E1o"
+- extendedWaitUntil:
+    visible: "Cho ph\u00E9m|Allow"
+    timeout: 10000
+- tapOn: "Cho ph\u00E9m|Allow"
+# Trạng thái phải đổi thành "Đã cho phép" sau khi cấp.
+- extendedWaitUntil:
+    visible: ".*\u0110\u00E3 cho ph\u00E9p.*"
+    timeout: 10000
+- assertVisible: ".*\u0110\u00E3 cho ph\u00E9p.*"

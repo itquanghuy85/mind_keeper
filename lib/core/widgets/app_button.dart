@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
+import 'app_icon_badge.dart';
 
-enum AppButtonVariant { primary, secondary, tonal, danger, ghost }
+enum AppButtonVariant { primary, secondary, tonal, danger, ghost, fab }
 
 class AppButton extends StatelessWidget {
   const AppButton({
@@ -17,7 +18,20 @@ class AppButton extends StatelessWidget {
     this.loading = false,
     this.dense = false,
     this.tooltip,
-  });
+  }) : isFab = false;
+
+  const AppButton.fab({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.variant = AppButtonVariant.fab,
+    this.icon,
+    this.loading = false,
+    this.tooltip,
+  }) : expanded = true,
+       dense = false,
+       leading = null,
+       isFab = true;
 
   final String label;
   final VoidCallback? onPressed;
@@ -28,27 +42,38 @@ class AppButton extends StatelessWidget {
   final bool loading;
   final bool dense;
   final String? tooltip;
+  final bool isFab;
 
   bool get _enabled => onPressed != null && !loading;
 
   @override
   Widget build(BuildContext context) {
+    final Color labelColor = _labelColor;
+    final double fontSize = dense ? 13.5 : 15;
+
     final Widget child = loading
         ? SizedBox(
-            width: 20,
-            height: 20,
+            width: 18,
+            height: 18,
             child: CircularProgressIndicator(
-              strokeWidth: 2.4,
-              color: _foregroundColor,
+              strokeWidth: 2.2,
+              color: labelColor,
             ),
           )
         : Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              if (leading != null) ...<Widget>[leading!, const SizedBox(width: AppSpacing.sm)],
+              if (leading != null) ...<Widget>[
+                leading!,
+                const SizedBox(width: AppSpacing.sm),
+              ],
               if (icon != null) ...<Widget>[
-                Icon(icon, size: AppSizes.iconSm, color: _foregroundColor),
+                Icon(
+                  icon,
+                  size: dense ? AppSizes.iconXs : AppSizes.iconSm,
+                  color: labelColor,
+                ),
                 const SizedBox(width: AppSpacing.sm),
               ],
               Flexible(
@@ -56,61 +81,130 @@ class AppButton extends StatelessWidget {
                   label,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: dense ? 14 : 16,
-                    fontWeight: FontWeight.w700,
-                    color: _foregroundColor,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                    color: labelColor,
                   ),
                 ),
               ),
             ],
           );
 
-    final Widget button = switch (variant) {
-      AppButtonVariant.primary => FilledButton(
-          onPressed: _enabled ? onPressed : null,
-          style: FilledButton.styleFrom(
-            disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.4),
-            disabledForegroundColor: Colors.white,
-          ),
-          child: child,
-        ),
-      AppButtonVariant.secondary => OutlinedButton(
-          onPressed: _enabled ? onPressed : null,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            disabledForegroundColor: AppColors.textTertiary,
-            side: const BorderSide(color: AppColors.borderStrong),
-          ),
-          child: child,
-        ),
-      AppButtonVariant.tonal => FilledButton(
-          onPressed: _enabled ? onPressed : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primarySoft,
-            foregroundColor: AppColors.primary,
-            disabledBackgroundColor: AppColors.surfaceMuted,
-            disabledForegroundColor: AppColors.textTertiary,
-          ),
-          child: child,
-        ),
-      AppButtonVariant.danger => FilledButton(
-          onPressed: _enabled ? onPressed : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.danger,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: AppColors.danger.withValues(alpha: 0.4),
-            disabledForegroundColor: Colors.white,
-          ),
-          child: child,
-        ),
-      AppButtonVariant.ghost => TextButton(
-          onPressed: _enabled ? onPressed : null,
-          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-          child: child,
-        ),
-    };
+    final ButtonStyle? sizeStyle = dense ? _denseStyle : null;
 
-    final Widget sized = expanded
+    final Widget button = isFab
+        ? FloatingActionButton.extended(
+            onPressed: _enabled ? onPressed : null,
+            icon: icon != null
+                ? Icon(icon!, size: 24, color: labelColor)
+                : null,
+            label: Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.1,
+                color: labelColor,
+              ),
+            ),
+            backgroundColor: _enabled
+                ? AppColors.primary
+                : AppColors.primary.withValues(alpha: 0.38),
+            foregroundColor: labelColor,
+            elevation: _enabled ? 2 : 0,
+            focusElevation: 2,
+            hoverElevation: 2,
+            highlightElevation: 2,
+            shape: const RoundedRectangleBorder(borderRadius: AppRadius.xlAll),
+          )
+        : switch (variant) {
+            AppButtonVariant.primary || AppButtonVariant.fab => FilledButton(
+              onPressed: _enabled ? onPressed : null,
+              style: sizeStyle,
+              child: child,
+            ),
+            AppButtonVariant.secondary => OutlinedButton(
+              onPressed: _enabled ? onPressed : null,
+              style: sizeStyle,
+              child: child,
+            ),
+            AppButtonVariant.tonal => FilledButton(
+              onPressed: _enabled ? onPressed : null,
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith<Color>((
+                  states,
+                ) {
+                  if (states.contains(WidgetState.disabled)) {
+                    return AppColors.surfaceContainerHigh;
+                  }
+                  if (states.contains(WidgetState.pressed)) {
+                    return AppColors.primarySoftAlt;
+                  }
+                  return AppColors.primaryContainer;
+                }),
+                foregroundColor: const WidgetStatePropertyAll<Color>(
+                  AppColors.onPrimaryContainer,
+                ),
+                overlayColor: WidgetStatePropertyAll<Color>(
+                  AppColors.primary.withValues(alpha: 0.08),
+                ),
+                elevation: const WidgetStatePropertyAll<double>(0),
+                shape: const WidgetStatePropertyAll<OutlinedBorder>(
+                  RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+                ),
+              ).merge(sizeStyle),
+              child: child,
+            ),
+            AppButtonVariant.danger => FilledButton(
+              onPressed: _enabled ? onPressed : null,
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith<Color>((
+                  states,
+                ) {
+                  if (states.contains(WidgetState.disabled)) {
+                    return AppColors.danger.withValues(alpha: 0.38);
+                  }
+                  if (states.contains(WidgetState.pressed)) {
+                    return Color.lerp(AppColors.danger, Colors.black, 0.14)!;
+                  }
+                  return AppColors.danger;
+                }),
+                foregroundColor: const WidgetStatePropertyAll<Color>(
+                  Colors.white,
+                ),
+                overlayColor: WidgetStatePropertyAll<Color>(
+                  Colors.white.withValues(alpha: 0.08),
+                ),
+                elevation: const WidgetStatePropertyAll<double>(0),
+                shape: const WidgetStatePropertyAll<OutlinedBorder>(
+                  RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+                ),
+              ).merge(sizeStyle),
+              child: child,
+            ),
+            AppButtonVariant.ghost => TextButton(
+              onPressed: _enabled ? onPressed : null,
+              style: sizeStyle == null
+                  ? null
+                  : const ButtonStyle()
+                        .merge(sizeStyle)
+                        .copyWith(
+                          padding:
+                              const WidgetStatePropertyAll<EdgeInsetsGeometry>(
+                                EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: AppSpacing.sm,
+                                ),
+                              ),
+                        ),
+              child: child,
+            ),
+          };
+
+    final Widget sized = isFab
+        ? button
+        : expanded
         ? SizedBox(width: double.infinity, child: button)
         : button;
 
@@ -120,11 +214,34 @@ class AppButton extends StatelessWidget {
     return sized;
   }
 
-  Color get _foregroundColor => switch (variant) {
-        AppButtonVariant.primary || AppButtonVariant.danger => Colors.white,
-        AppButtonVariant.secondary || AppButtonVariant.ghost => AppColors.primary,
-        AppButtonVariant.tonal => AppColors.primary,
+  static const ButtonStyle _denseStyle = ButtonStyle(
+    minimumSize: WidgetStatePropertyAll<Size>(
+      Size(0, AppSizes.controlHeightSm),
+    ),
+    padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+      EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+    ),
+  );
+
+  Color get _labelColor {
+    if (!_enabled) {
+      return switch (variant) {
+        AppButtonVariant.primary ||
+        AppButtonVariant.danger ||
+        AppButtonVariant.fab => Colors.white,
+        AppButtonVariant.secondary ||
+        AppButtonVariant.tonal ||
+        AppButtonVariant.ghost => AppColors.textTertiary,
       };
+    }
+    return switch (variant) {
+      AppButtonVariant.primary || AppButtonVariant.danger => Colors.white,
+      AppButtonVariant.secondary => AppColors.primaryDark,
+      AppButtonVariant.tonal => AppColors.onPrimaryContainer,
+      AppButtonVariant.ghost => AppColors.primary,
+      AppButtonVariant.fab => Colors.white,
+    };
+  }
 }
 
 class AppIconButton extends StatelessWidget {
@@ -148,16 +265,23 @@ class AppIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color background = switch (tone) {
-      AppIconTone.neutral => filled ? AppColors.primarySoft : Colors.transparent,
+      AppIconTone.neutral =>
+        filled ? AppColors.primarySoft : Colors.transparent,
       AppIconTone.primary => AppColors.primary,
       AppIconTone.surface => AppColors.surfaceMuted,
       AppIconTone.danger => AppColors.dangerSoft,
+      AppIconTone.success => AppColors.successSoft,
+      AppIconTone.warning => AppColors.warningSoft,
+      AppIconTone.info => AppColors.infoSoft,
     };
     final Color foreground = switch (tone) {
       AppIconTone.neutral => AppColors.textPrimary,
       AppIconTone.primary => Colors.white,
       AppIconTone.surface => AppColors.textSecondary,
       AppIconTone.danger => AppColors.danger,
+      AppIconTone.success => AppColors.success,
+      AppIconTone.warning => AppColors.warning,
+      AppIconTone.info => AppColors.info,
     };
 
     final Widget child = Icon(
@@ -185,5 +309,3 @@ class AppIconButton extends StatelessWidget {
     );
   }
 }
-
-enum AppIconTone { neutral, primary, surface, danger }

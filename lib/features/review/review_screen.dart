@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 import '../../core/services/app_services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/app_feedback.dart';
+import '../../core/widgets/app_icon_badge.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../data/models/enums.dart';
 import 'review_controller.dart';
@@ -71,9 +74,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.close_rounded),
+          leading: AppIconButton(
+            icon: Icons.close_rounded,
             onPressed: _exit,
+            label: 'Đóng',
           ),
           title: widget.targetCardId != null
               ? const Text('Ôn thẻ được nhắc')
@@ -134,28 +138,13 @@ class _ReviewScreenState extends State<ReviewScreen> {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        borderRadius: AppRadius.pillAll,
-                      ),
-                      child: Text(
-                        item.shortLabel,
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
+                    AppTag(label: item.shortLabel, tone: AppTagTone.primary),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
                       '${c.index + 1}/${c.total}',
-                      style: Theme.of(context).textTheme.labelMedium,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontFeatures: AppTheme.tabularFigures,
+                      ),
                     ),
                   ],
                 ),
@@ -199,16 +188,14 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   ],
                   AppCard(
                     color: AppColors.successSoft,
-                    border: AppColors.success,
+                    border: AppColors.success.withValues(alpha: 0.45),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
                           'Đáp án',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(color: AppColors.success),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(color: AppColors.successText),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(item.card.answer),
@@ -315,21 +302,21 @@ class _RateButton extends StatelessWidget {
         label: 'Đánh giá $label',
         child: Material(
           color: soft,
-          borderRadius: AppRadius.mdAll,
+          borderRadius: AppRadius.lgAll,
           child: InkWell(
             onTap: onTap,
-            borderRadius: AppRadius.mdAll,
+            borderRadius: AppRadius.lgAll,
             child: Container(
-              height: 64,
+              height: 58,
               decoration: BoxDecoration(
-                borderRadius: AppRadius.mdAll,
+                borderRadius: AppRadius.lgAll,
                 border: Border.all(color: color.withValues(alpha: 0.35)),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Icon(icon, color: color, size: 22),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     label,
                     style: TextStyle(
@@ -367,18 +354,12 @@ class _FinishedView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Container(
-              width: 80,
-              height: 80,
-              decoration: const BoxDecoration(
-                color: AppColors.successSoft,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.celebration_rounded,
-                color: AppColors.success,
-                size: 36,
-              ),
+            const AppIconBadge(
+              icon: Icons.celebration_rounded,
+              tone: AppIconTone.success,
+              size: 72,
+              radius: AppRadius.xxl,
+              iconSize: 32,
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(

@@ -14,7 +14,7 @@ class SchemaMigration {
 
 abstract final class DbSchema {
   /// Phiên bản schema hiện tại của ứng dụng.
-  static const int currentVersion = 2;
+  static const int currentVersion = 5;
 
   static const String topics = '''
 CREATE TABLE topics (
@@ -50,12 +50,14 @@ CREATE TABLE knowledge_items (
   id TEXT PRIMARY KEY,
   topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
   source_id TEXT REFERENCES sources(id) ON DELETE SET NULL,
+  lesson_id TEXT REFERENCES lessons(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   details TEXT NOT NULL DEFAULT '',
   origin TEXT NOT NULL DEFAULT 'user_confirmed',
   is_favorite INTEGER NOT NULL DEFAULT 0,
   is_paused INTEGER NOT NULL DEFAULT 0,
+  started_at INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )''';
@@ -121,6 +123,21 @@ CREATE TABLE lessons (
   updated_at INTEGER NOT NULL
 )''';
 
+  /// Theo dõi tiến độ sinh thư viện kiến thức cho chủ đề.
+  static const String knowledgeGenerationTasks = '''
+CREATE TABLE knowledge_generation_tasks (
+  topic_id TEXT PRIMARY KEY REFERENCES topics(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending',
+  total_planned INTEGER NOT NULL DEFAULT 0,
+  completed_count INTEGER NOT NULL DEFAULT 0,
+  failed_count INTEGER NOT NULL DEFAULT 0,
+  current_batch INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  started_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  completed_at INTEGER
+)''';
+
   static const List<String> lessonIndexes = <String>[
     'CREATE UNIQUE INDEX idx_lessons_dedup ON lessons(dedup_key)',
     'CREATE INDEX idx_lessons_domain ON lessons(domain_id)',
@@ -131,6 +148,7 @@ CREATE TABLE lessons (
     'CREATE INDEX idx_sources_topic ON sources(topic_id)',
     'CREATE INDEX idx_knowledge_topic ON knowledge_items(topic_id)',
     'CREATE INDEX idx_knowledge_source ON knowledge_items(source_id)',
+    'CREATE INDEX idx_knowledge_lesson ON knowledge_items(lesson_id)',
     'CREATE INDEX idx_cards_item ON review_cards(knowledge_item_id)',
     'CREATE INDEX idx_cards_due ON review_cards(due_at)',
     'CREATE INDEX idx_logs_card ON review_logs(card_id)',
@@ -146,17 +164,48 @@ CREATE TABLE lessons (
     reviewCards,
     reviewLogs,
     lessons,
+    knowledgeGenerationTasks,
   ];
 
   /// Dãy migration chính thức của ứng dụng.
   static const List<SchemaMigration> migrations = <SchemaMigration>[
     SchemaMigration(fromVersion: 1, toVersion: 2, upgrade: _upgradeToV2),
+    SchemaMigration(fromVersion: 2, toVersion: 3, upgrade: _upgradeToV3),
+    SchemaMigration(fromVersion: 3, toVersion: 4, upgrade: _upgradeToV4),
+    SchemaMigration(fromVersion: 4, toVersion: 5, upgrade: _upgradeToV5),
   ];
 
   static Future<void> _upgradeToV2(DatabaseExecutor db) async {
+    await db.execute(sources);
+    await db.execute(reviewCards);
+    await db.execute(reviewLogs);
     await db.execute(lessons);
     for (final String statement in lessonIndexes) {
       await db.execute(statement);
     }
+    await db.execute('CREATE INDEX idx_sources_topic ON sources(topic_id)');
+    await db.execute('CREATE INDEX idx_cards_item ON review_cards(knowledge_item_id)');
+    await db.execute('CREATE INDEX idx_cards_due ON review_cards(due_at)');
+    await db.execute('CREATE INDEX idx_logs_card ON review_logs(card_id)');
+    await db.execute('CREATE INDEX idx_logs_time ON review_logs(reviewed_at)');
+  }
+
+  static Future<void> _upgradeToV3(DatabaseExecutor db) async {
+    await db.execute(knowledgeGenerationTasks);
+  }
+
+  static Future<void> _upgradeToV4(DatabaseExecutor db) async {
+    // Thêm cột started_at vào knowledge_items để theo dõi thời điểm bắt đầu đọc lần đầu
+    await db.execute(
+      'ALTER TABLE knowledge_items ADD COLUMN started_at INTEGER',
+    );
+  }
+
+  static Future<void> _upgradeToV5(DatabaseExecutor db) async {
+    // Thêm cột lesson_id vào knowledge_items để liên kết bài học với mục tiêu ghi nhớ
+    await db.execute(
+      'ALTER TABLE knowledge_items ADD COLUMN lesson_id TEXT REFERENCES lessons(id) ON DELETE SET NULL',
+    );
+    await db.execute('CREATE INDEX idx_knowledge_lesson ON knowledge_items(lesson_id)');
   }
 }

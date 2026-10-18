@@ -105,9 +105,9 @@ class LessonSection {
   }
 
   Map<String, Object?> toMap() => <String, Object?>{
-        'heading': heading,
-        'body': body,
-      };
+    'heading': heading,
+    'body': body,
+  };
 }
 
 class LessonQuestion {
@@ -130,10 +130,10 @@ class LessonQuestion {
   }
 
   Map<String, Object?> toMap() => <String, Object?>{
-        'question': question,
-        'answer': answer,
-        'explanation': explanation,
-      };
+    'question': question,
+    'answer': answer,
+    'explanation': explanation,
+  };
 }
 
 class LessonSource {
@@ -149,43 +149,83 @@ class LessonSource {
     );
   }
 
+  Map<String, Object?> toMap() => <String, Object?>{'title': title, 'url': url};
+}
+
+class LessonConcept {
+  const LessonConcept({required this.name, required this.explanation});
+
+  final String name;
+  final String explanation;
+
+  factory LessonConcept.fromMap(Map<String, Object?> map) {
+    return LessonConcept(
+      name: (map['name'] ?? '').toString().trim(),
+      explanation: (map['explanation'] ?? '').toString().trim(),
+    );
+  }
+
   Map<String, Object?> toMap() => <String, Object?>{
-        'title': title,
-        'url': url,
-      };
+    'name': name,
+    'explanation': explanation,
+  };
 }
 
 /// Cấu trúc nội dung bài học (lưu trong lessons.content_json).
 class LessonContent {
   const LessonContent({
+    required this.learningObjectives,
     required this.introduction,
+    required this.concepts,
     required this.sections,
     required this.keyPoints,
     required this.examples,
+    required this.commonMistakes,
     required this.summary,
   });
 
+  final List<String> learningObjectives;
   final String introduction;
+  final List<LessonConcept> concepts;
   final List<LessonSection> sections;
   final List<String> keyPoints;
   final List<String> examples;
+  final List<String> commonMistakes;
   final String summary;
 
   factory LessonContent.fromMap(Map<String, Object?> map) {
-    final String introduction =
-        (map['introduction'] ?? '').toString().trim();
-    final List<LessonSection> sections = <LessonSection>[
-      for (final Object? item in (map['sections'] as List<Object?>?) ?? const <Object?>[])
-        if (item is Map<String, Object?>) LessonSection.fromMap(item),
-    ].where((LessonSection s) => s.heading.isNotEmpty && s.body.isNotEmpty).toList();
+    final String introduction = (map['introduction'] ?? '').toString().trim();
+    final List<String> learningObjectives = _stringList(
+      map['learning_objectives'],
+    );
+    final List<LessonConcept> concepts = <LessonConcept>[
+      for (final Object? item
+          in (map['concepts'] as List<Object?>?) ?? const <Object?>[])
+        if (item is Map<String, Object?>) LessonConcept.fromMap(item),
+    ];
+    final List<LessonSection> sections =
+        <LessonSection>[
+              for (final Object? item
+                  in (map['sections'] as List<Object?>?) ?? const <Object?>[])
+                if (item is Map<String, Object?>) LessonSection.fromMap(item),
+            ]
+            .where(
+              (LessonSection s) => s.heading.isNotEmpty && s.body.isNotEmpty,
+            )
+            .toList();
     if (introduction.isEmpty || sections.isEmpty) {
-      throw const FormatException('Bài học thiếu phần mở đầu hoặc các phần nội dung');
+      throw const FormatException(
+        'Bài học thiếu phần mở đầu hoặc các phần nội dung',
+      );
     }
     return LessonContent(
+      learningObjectives: learningObjectives,
       introduction: introduction,
+      concepts: concepts,
       sections: sections,
       keyPoints: _stringList(map['key_points']),
       examples: _stringList(map['examples']),
+      commonMistakes: _stringList(map['common_mistakes']),
       summary: (map['summary'] ?? '').toString().trim(),
     );
   }
@@ -194,22 +234,35 @@ class LessonContent {
     if (value is! List<Object?>) return const <String>[];
     return <String>[
       for (final Object? item in value)
-        if (item != null && item.toString().trim().isNotEmpty) item.toString().trim(),
+        if (item != null && item.toString().trim().isNotEmpty)
+          item.toString().trim(),
     ];
   }
 
   Map<String, Object?> toMap() => <String, Object?>{
-        'introduction': introduction,
-        'sections': sections.map((LessonSection s) => s.toMap()).toList(),
-        'key_points': keyPoints,
-        'examples': examples,
-        'summary': summary,
-      };
+    'learning_objectives': learningObjectives,
+    'introduction': introduction,
+    'concepts': concepts.map((LessonConcept c) => c.toMap()).toList(),
+    'sections': sections.map((LessonSection s) => s.toMap()).toList(),
+    'key_points': keyPoints,
+    'examples': examples,
+    'common_mistakes': commonMistakes,
+    'summary': summary,
+  };
 
   int get wordCount {
     int total = countLessonWords(introduction);
+    for (final String obj in learningObjectives) {
+      total += countLessonWords(obj);
+    }
+    for (final LessonConcept concept in concepts) {
+      total +=
+          countLessonWords(concept.name) +
+          countLessonWords(concept.explanation);
+    }
     for (final LessonSection section in sections) {
-      total += countLessonWords(section.heading) + countLessonWords(section.body);
+      total +=
+          countLessonWords(section.heading) + countLessonWords(section.body);
     }
     total += countLessonWords(summary);
     for (final String point in keyPoints) {
@@ -217,6 +270,9 @@ class LessonContent {
     }
     for (final String example in examples) {
       total += countLessonWords(example);
+    }
+    for (final String mistake in commonMistakes) {
+      total += countLessonWords(mistake);
     }
     return total;
   }
@@ -275,8 +331,10 @@ class Lesson {
     required LessonMode mode,
     required String promptVersion,
   }) {
-    final String normalizedTopic =
-        topic.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    final String normalizedTopic = topic.trim().toLowerCase().replaceAll(
+      RegExp(r'\s+'),
+      ' ',
+    );
     return '$domainId|$normalizedTopic|${mode.id}|$promptVersion';
   }
 
@@ -284,8 +342,8 @@ class Lesson {
 
   factory Lesson.fromRow(Map<String, Object?> row) {
     final Object? contentRaw = row['content_json'];
-    final Map<String, Object?> contentMap = contentRaw is String &&
-            contentRaw.trim().isNotEmpty
+    final Map<String, Object?> contentMap =
+        contentRaw is String && contentRaw.trim().isNotEmpty
         ? jsonDecode(contentRaw) as Map<String, Object?>
         : <String, Object?>{};
     return Lesson(
@@ -293,7 +351,8 @@ class Lesson {
       domainId: row['domain_id']! as String,
       domainName: (row['domain_name'] ?? '').toString(),
       topic: row['topic']! as String,
-      mode: LessonMode.tryParse((row['mode'] ?? '').toString()) ??
+      mode:
+          LessonMode.tryParse((row['mode'] ?? '').toString()) ??
           LessonMode.defaultMode,
       promptVersion: (row['prompt_version'] ?? '').toString(),
       dedupKey: (row['dedup_key'] ?? '').toString(),
@@ -301,8 +360,9 @@ class Lesson {
       content: LessonContent.fromMap(contentMap),
       questions: decodeQuestions(row['questions_json']),
       sources: decodeSources(row['sources_json']),
-      verification:
-          LessonVerification.tryParse((row['verification'] ?? '').toString()),
+      verification: LessonVerification.tryParse(
+        (row['verification'] ?? '').toString(),
+      ),
       medical: ((row['medical'] as num?) ?? 0) != 0,
       wordCount: ((row['word_count'] as num?) ?? 0).toInt(),
       isFavorite: ((row['is_favorite'] as num?) ?? 0) != 0,
@@ -320,39 +380,43 @@ class Lesson {
   }
 
   Map<String, Object?> toRow() => <String, Object?>{
-        'id': id,
-        'domain_id': domainId,
-        'domain_name': domainName,
-        'topic': topic,
-        'mode': mode.id,
-        'prompt_version': promptVersion,
-        'dedup_key': dedupKey,
-        'title': title,
-        'content_json': jsonEncode(content.toMap()),
-        'questions_json': jsonEncode(
-          questions.map((LessonQuestion q) => q.toMap()).toList(),
-        ),
-        'sources_json': jsonEncode(
-          sources.map((LessonSource s) => s.toMap()).toList(),
-        ),
-        'verification': verification.id,
-        'medical': medical ? 1 : 0,
-        'word_count': wordCount,
-        'is_favorite': isFavorite ? 1 : 0,
-        'is_read': isRead ? 1 : 0,
-        'linked_topic_id': linkedTopicId,
-        'created_at': createdAt.toUtc().millisecondsSinceEpoch,
-        'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
-      };
+    'id': id,
+    'domain_id': domainId,
+    'domain_name': domainName,
+    'topic': topic,
+    'mode': mode.id,
+    'prompt_version': promptVersion,
+    'dedup_key': dedupKey,
+    'title': title,
+    'content_json': jsonEncode(content.toMap()),
+    'questions_json': jsonEncode(
+      questions.map((LessonQuestion q) => q.toMap()).toList(),
+    ),
+    'sources_json': jsonEncode(
+      sources.map((LessonSource s) => s.toMap()).toList(),
+    ),
+    'verification': verification.id,
+    'medical': medical ? 1 : 0,
+    'word_count': wordCount,
+    'is_favorite': isFavorite ? 1 : 0,
+    'is_read': isRead ? 1 : 0,
+    'linked_topic_id': linkedTopicId,
+    'created_at': createdAt.toUtc().millisecondsSinceEpoch,
+    'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
+  };
 
   static List<LessonQuestion> decodeQuestions(Object? raw) {
     if (raw is! String || raw.trim().isEmpty) return const <LessonQuestion>[];
     final Object? decoded = jsonDecode(raw);
     if (decoded is! List<Object?>) return const <LessonQuestion>[];
     return <LessonQuestion>[
-      for (final Object? item in decoded)
-        if (item is Map<String, Object?>) LessonQuestion.fromMap(item),
-    ].where((LessonQuestion q) => q.question.isNotEmpty && q.answer.isNotEmpty).toList();
+          for (final Object? item in decoded)
+            if (item is Map<String, Object?>) LessonQuestion.fromMap(item),
+        ]
+        .where(
+          (LessonQuestion q) => q.question.isNotEmpty && q.answer.isNotEmpty,
+        )
+        .toList();
   }
 
   static List<LessonSource> decodeSources(Object? raw) {

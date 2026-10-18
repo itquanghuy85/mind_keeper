@@ -72,8 +72,10 @@ class _TextImportScreenState extends State<TextImportScreen> {
     }
     setState(() => _busy = true);
     try {
-      final List<AiKnowledgeDraft> drafts =
-          await services.ai.draftKnowledge(sourceText: source, maxItems: 5);
+      final List<AiKnowledgeDraft> drafts = await services.ai.draftKnowledge(
+        sourceText: source,
+        maxItems: 5,
+      );
       if (!mounted) return;
       setState(() {
         _drafts = drafts;
@@ -152,15 +154,15 @@ class _TextImportScreenState extends State<TextImportScreen> {
     final Topic? topic = _topic;
     if (topic == null || !mounted) return;
     final String text = _text.text.trim();
-    final KnowledgeItem? saved =
-        await Navigator.of(context).push<KnowledgeItem>(
-      MaterialPageRoute<KnowledgeItem>(
-        builder: (_) => KnowledgeEditorScreen(
-          topicId: topic.id,
-          initialContent: text.isEmpty ? null : text,
-        ),
-      ),
-    );
+    final KnowledgeItem? saved = await Navigator.of(context)
+        .push<KnowledgeItem>(
+          MaterialPageRoute<KnowledgeItem>(
+            builder: (_) => KnowledgeEditorScreen(
+              topicId: topic.id,
+              initialContent: text.isEmpty ? null : text,
+            ),
+          ),
+        );
     if (saved != null && mounted) Navigator.of(context).pop(1);
   }
 
@@ -212,11 +214,10 @@ class _TextImportScreenState extends State<TextImportScreen> {
             ),
             if (_draftLoaded) ...<Widget>[
               const SizedBox(height: AppSpacing.xl),
-              Text(
-                'Nháp (${_drafts.length}) — duyệt trước khi lưu',
-                style: Theme.of(context).textTheme.titleMedium,
+              AppSectionHeader(
+                title: 'Nháp (${_drafts.length}) — duyệt trước khi lưu',
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               ),
-              const SizedBox(height: AppSpacing.sm),
               ..._drafts.map(
                 (AiKnowledgeDraft d) => Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),

@@ -1,0 +1,31 @@
+# GĐ15.1 — kiểm thử quyền thông báo (màn hình cài đặt của app).
+# Dùng \uXXXX escapes để không phụ thuộc encoding file khi Maestro đọc selector.
+# "Trang chủ" "Hồ sơ" "Cá nhân" "Cài đặt thông báo"
+# "Trạng thái quyền" "Bị từ chối" "Yêu cầu quyền thông báo"
+# Chạy: maestro test --device <serial> maestro/notification_permission.yaml
+appId: com.mindkeeper.mind_keeper
+name: GD15.1 notification permission smoke
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang chủ"
+    timeout: 15000
+- tapOn: ".*Tạo chủ đề.*"
+- extendedWaitUntil:
+    visible: "Tạo chủ đề"
+    timeout: 10000
+- inputText: "QA_OPPO_GD184_20261018"
+- pressKey: BACK
+- scroll: DOWN
+- extendedWaitUntil:
+    visible: "Mô tả"
+    timeout: 5000
+- tapOn: "Mô tả"
+- inputText: "Chủ đề kiểm thử GD18.4"
+- pressKey: BACK
+- tapOn: "Tạo chủ đề"
+- extendedWaitUntil:
+    visible: "QA_OPPO_GD184_20261018"
+    timeout: 10000
+- takeScreenshot: "02_topic_created"

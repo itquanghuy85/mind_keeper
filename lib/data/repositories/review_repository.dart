@@ -32,10 +32,16 @@ AND c.due_at <= ?''';
     final String cleanQuestion = question.trim();
     final String cleanAnswer = answer.trim();
     if (cleanQuestion.isEmpty) {
-      throw const ValidationException('Câu hỏi không được để trống.', field: 'question');
+      throw const ValidationException(
+        'Câu hỏi không được để trống.',
+        field: 'question',
+      );
     }
     if (cleanAnswer.isEmpty) {
-      throw const ValidationException('Đáp án không được để trống.', field: 'answer');
+      throw const ValidationException(
+        'Đáp án không được để trống.',
+        field: 'answer',
+      );
     }
     final List<Map<String, Object?>> owner = await _db.query(
       'knowledge_items',
@@ -144,10 +150,7 @@ AND c.due_at <= ?''';
   ORDER BY c.due_at ASC, c.created_at ASC
   ''';
 
-  static Map<String, Object?> _pick(
-    Map<String, Object?> row,
-    String prefix,
-  ) {
+  static Map<String, Object?> _pick(Map<String, Object?> row, String prefix) {
     final String p = '${prefix}_';
     return <String, Object?>{
       for (final MapEntry<String, Object?> e in row.entries)
@@ -166,12 +169,12 @@ AND c.due_at <= ?''';
     required DateTime now,
     int? limit,
   }) async {
-    final String sql =
-        limit == null ? _contextSelect : '$_contextSelect LIMIT $limit';
-    final List<Map<String, Object?>> rows = await _db.rawQuery(
-      sql,
-      <Object>[now.toUtc().millisecondsSinceEpoch],
-    );
+    final String sql = limit == null
+        ? _contextSelect
+        : '$_contextSelect LIMIT $limit';
+    final List<Map<String, Object?>> rows = await _db.rawQuery(sql, <Object>[
+      now.toUtc().millisecondsSinceEpoch,
+    ]);
     return rows.map(_toDueItem).toList(growable: false);
   }
 
@@ -281,7 +284,11 @@ AND c.due_at <= ?''';
         where: 'card_id = ?',
         whereArgs: <Object>[id],
       );
-      await txn.delete('review_cards', where: 'id = ?', whereArgs: <Object>[id]);
+      await txn.delete(
+        'review_cards',
+        where: 'id = ?',
+        whereArgs: <Object>[id],
+      );
     });
   }
 
@@ -367,6 +374,10 @@ class ReviewLogRepository {
   }
 
   Future<void> deleteByCard(String cardId) async {
-    await _db.delete('review_logs', where: 'card_id = ?', whereArgs: <Object>[cardId]);
+    await _db.delete(
+      'review_logs',
+      where: 'card_id = ?',
+      whereArgs: <Object>[cardId],
+    );
   }
 }

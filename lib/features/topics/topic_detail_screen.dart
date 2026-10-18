@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 import '../../core/services/app_services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_feedback.dart';
+import '../../core/widgets/app_icon_badge.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../data/models/knowledge_item.dart';
 import '../../data/models/topic.dart';
@@ -78,10 +80,9 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
     if (topic == null || !mounted) return;
     final AppServices services = context.read<AppServices>();
     final TextEditingController name = TextEditingController(text: topic.name);
-    final TextEditingController desc =
-        TextEditingController(text: topic.description.startsWith('catalog:')
-            ? ''
-            : topic.description);
+    final TextEditingController desc = TextEditingController(
+      text: topic.description.startsWith('catalog:') ? '' : topic.description,
+    );
     final String? result = await showDialog<String>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -100,13 +101,20 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
           ],
         ),
         actions: <Widget>[
-          TextButton(
+          AppButton(
+            label: 'Hủy',
+            variant: AppButtonVariant.tonal,
+            dense: true,
+            expanded: false,
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Hủy'),
           ),
-          FilledButton(
+          const SizedBox(width: AppSpacing.md),
+          AppButton(
+            label: 'Lưu',
+            variant: AppButtonVariant.primary,
+            dense: true,
+            expanded: false,
             onPressed: () => Navigator.of(context).pop('save'),
-            child: const Text('Lưu'),
           ),
         ],
       ),
@@ -220,10 +228,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _topic?.name ?? 'Chủ đề',
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: Text(_topic?.name ?? 'Chủ đề', overflow: TextOverflow.ellipsis),
         actions: <Widget>[
           IconButton(
             tooltip: 'Sửa',
@@ -242,7 +247,9 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
               PopupMenuItem<String>(
                 value: 'pause',
-                child: Text(_topic?.isActive == true ? 'Tạm ngưng' : 'Kích hoạt'),
+                child: Text(
+                  _topic?.isActive == true ? 'Tạm ngưng' : 'Kích hoạt',
+                ),
               ),
               const PopupMenuItem<String>(
                 value: 'delete',
@@ -252,14 +259,12 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: AppButton.fab(
+        label: 'Thêm kiến thức',
+        icon: Icons.add_rounded,
         onPressed: _addKnowledge,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Thêm kiến thức'),
       ),
-      body: SafeArea(
-        child: _buildBody(),
-      ),
+      body: SafeArea(child: _buildBody()),
     );
   }
 
@@ -273,164 +278,166 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.sm,
-            AppSpacing.lg,
-            AppSpacing.sm,
-          ),
-          child: AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Text(
-                      topic.icon.isEmpty ? '📗' : topic.icon,
-                      style: const TextStyle(fontSize: 28),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            topic.name,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          if (topic.category.isNotEmpty)
-                            Text(
-                              topic.category,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                        ],
-                      ),
-                    ),
-                    if (!topic.isActive)
-                      const Icon(
-                        Icons.pause_circle_rounded,
-                        color: AppColors.warning,
-                      ),
-                  ],
-                ),
-                if (topic.description.isNotEmpty &&
-                    !topic.description.startsWith('catalog:')) ...<Widget>[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    topic.description,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.sm,
             ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: AppSearchField(
-            hint: 'Tìm trong chủ đề...',
-            onChanged: (String value) {
-              _query = value;
-              _load();
-            },
-            onClear: () {
-              _query = '';
-              _load();
-            },
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  '${_items.length} kiến thức',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-              ),
-              TextButton.icon(
-                onPressed: _showImportMenu,
-                icon: const Icon(Icons.upload_file_rounded, size: 18),
-                label: const Text('Nhập'),
-              ),
-            ],
-          ),
-        ),
-        _items.isEmpty
-            ? SizedBox(
-                width: double.infinity,
-                child: AppEmptyState(
-                  title: 'Chưa có kiến thức',
-                  message: 'Thêm kiến thức đầu tiên cho chủ đề này.',
-                  icon: Icons.lightbulb_outline_rounded,
-                  actionLabel: 'Thêm kiến thức',
-                  onAction: _addKnowledge,
-                ),
-              )
-            : ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  0,
-                  AppSpacing.lg,
-                  AppSpacing.xxxl,
-                ),
-                itemCount: _items.length,
-                separatorBuilder: (BuildContext context, int index) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (BuildContext context, int index) {
-                  final KnowledgeItem item = _items[index];
-                  return AppCard(
-                    onTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) =>
-                              KnowledgeDetailScreen(itemId: item.id),
-                        ),
-                      );
-                      if (mounted) await _load();
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Row(
+            child: AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        topic.icon.isEmpty ? '📗' : topic.icon,
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Expanded(
-                              child: Text(
-                                item.title,
-                                style: Theme.of(context).textTheme.titleSmall,
-                              ),
-                            ),
-                            if (item.isFavorite)
-                              const Icon(
-                                Icons.favorite_rounded,
-                                size: 18,
-                                color: AppColors.danger,
-                              ),
-                            if (item.isPaused)
-                              const Icon(
-                                Icons.pause_rounded,
-                                size: 18,
-                                color: AppColors.warning,
+                            if (topic.category.isNotEmpty)
+                              Text(
+                                topic.category,
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          item.content,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      if (!topic.isActive)
+                        AppIconButton(
+                          icon: Icons.pause_circle_rounded,
+                          tone: AppIconTone.warning,
+                          size: 36,
+                          onPressed: _toggleActive,
+                          label: 'Tạm ngưng chủ đề',
                         ),
-                      ],
+                    ],
+                  ),
+                  if (topic.description.isNotEmpty &&
+                      !topic.description.startsWith('catalog:')) ...<Widget>[
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      topic.description,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  );
-                },
+                  ],
+                ],
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: AppSearchField(
+              hint: 'Tìm trong chủ đề...',
+              onChanged: (String value) {
+                _query = value;
+                _load();
+              },
+              onClear: () {
+                _query = '';
+                _load();
+              },
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    '${_items.length} kiến thức',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+                AppButton(
+                  label: 'Nhập',
+                  variant: AppButtonVariant.ghost,
+                  dense: true,
+                  expanded: false,
+                  icon: Icons.upload_file_rounded,
+                  onPressed: _showImportMenu,
+                ),
+              ],
+            ),
+          ),
+          _items.isEmpty
+              ? SizedBox(
+                  width: double.infinity,
+                  child: AppEmptyState(
+                    title: 'Chưa có kiến thức',
+                    message: 'Thêm kiến thức đầu tiên cho chủ đề này.',
+                    icon: Icons.lightbulb_outline_rounded,
+                    actionLabel: 'Thêm kiến thức',
+                    onAction: _addKnowledge,
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.xxxl,
+                  ),
+                  itemCount: _items.length,
+                  separatorBuilder: (BuildContext context, int index) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (BuildContext context, int index) {
+                    final KnowledgeItem item = _items[index];
+                    return AppCard(
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                KnowledgeDetailScreen(itemId: item.id),
+                          ),
+                        );
+                        if (mounted) await _load();
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: Text(
+                                  item.title,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                              ),
+                              if (item.isFavorite)
+                                const Icon(
+                                  Icons.favorite_rounded,
+                                  size: 18,
+                                  color: AppColors.danger,
+                                ),
+                              if (item.isPaused)
+                                const Icon(
+                                  Icons.pause_rounded,
+                                  size: 18,
+                                  color: AppColors.warning,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            item.content,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
         ],
       ),
     );

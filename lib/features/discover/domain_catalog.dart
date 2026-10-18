@@ -24,7 +24,8 @@ class LearningDomain {
 
   String randomTopic() {
     if (sampleTopics.isEmpty) return name;
-    final int index = DateTime.now().microsecondsSinceEpoch % sampleTopics.length;
+    final int index =
+        DateTime.now().microsecondsSinceEpoch % sampleTopics.length;
     return sampleTopics[index];
   }
 }

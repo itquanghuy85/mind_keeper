@@ -43,8 +43,9 @@ class _KnowledgeDetailScreenState extends State<KnowledgeDetailScreen> {
       _error = null;
     });
     try {
-      final KnowledgeItem? item =
-          await services.knowledge.getById(widget.itemId);
+      final KnowledgeItem? item = await services.knowledge.getById(
+        widget.itemId,
+      );
       if (item == null) {
         setState(() {
           _error = 'Kiến thức không tồn tại.';
@@ -52,8 +53,9 @@ class _KnowledgeDetailScreenState extends State<KnowledgeDetailScreen> {
         });
         return;
       }
-      final List<ReviewCard> cards =
-          await services.cards.listByKnowledgeItem(widget.itemId);
+      final List<ReviewCard> cards = await services.cards.listByKnowledgeItem(
+        widget.itemId,
+      );
       if (!mounted) return;
       setState(() {
         _item = item;
@@ -80,10 +82,7 @@ class _KnowledgeDetailScreenState extends State<KnowledgeDetailScreen> {
 
   Future<void> _togglePause() async {
     final AppServices services = context.read<AppServices>();
-    await services.knowledge.setPaused(
-      widget.itemId,
-      paused: !_item!.isPaused,
-    );
+    await services.knowledge.setPaused(widget.itemId, paused: !_item!.isPaused);
     await _load();
   }
 
@@ -190,7 +189,10 @@ class _KnowledgeDetailScreenState extends State<KnowledgeDetailScreen> {
               Text(item.content),
               if (item.details.isNotEmpty) ...<Widget>[
                 const SizedBox(height: AppSpacing.lg),
-                Text('Chi tiết', style: Theme.of(context).textTheme.labelMedium),
+                Text(
+                  'Chi tiết',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(item.details),
               ],
@@ -224,7 +226,7 @@ class _KnowledgeDetailScreenState extends State<KnowledgeDetailScreen> {
           const SizedBox(height: AppSpacing.md),
           AppCard(
             color: AppColors.infoSoft,
-            border: AppColors.info,
+            border: AppColors.info.withValues(alpha: 0.45),
             child: Text(
               _tutorNote!,
               style: const TextStyle(fontSize: 14, height: 1.5),
@@ -232,11 +234,10 @@ class _KnowledgeDetailScreenState extends State<KnowledgeDetailScreen> {
           ),
         ],
         const SizedBox(height: AppSpacing.xl),
-        Text(
-          'Thẻ ôn tập (${_cards.length})',
-          style: Theme.of(context).textTheme.titleMedium,
+        AppSectionHeader(
+          title: 'Thẻ ôn tập (${_cards.length})',
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
         ),
-        const SizedBox(height: AppSpacing.sm),
         if (_cards.isEmpty)
           AppCard(
             child: Text(
@@ -257,7 +258,10 @@ class _KnowledgeDetailScreenState extends State<KnowledgeDetailScreen> {
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(card.answer, style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      card.answer,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       card.isNew

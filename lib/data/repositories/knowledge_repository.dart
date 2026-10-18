@@ -23,17 +23,25 @@ class KnowledgeRepository {
     required String content,
     String details = '',
     String? sourceId,
+    String? lessonId,
     KnowledgeOrigin origin = KnowledgeOrigin.userConfirmed,
     bool skipDuplicateCheck = false,
     DateTime? now,
+    DateTime? startedAt,
   }) async {
     final String cleanTitle = title.trim();
     final String cleanContent = content.trim();
     if (cleanTitle.isEmpty) {
-      throw const ValidationException('Tiêu đề không được để trống.', field: 'title');
+      throw const ValidationException(
+        'Tiêu đề không được để trống.',
+        field: 'title',
+      );
     }
     if (cleanContent.isEmpty) {
-      throw const ValidationException('Nội dung không được để trống.', field: 'content');
+      throw const ValidationException(
+        'Nội dung không được để trống.',
+        field: 'content',
+      );
     }
 
     final TopicRef? topic = await _topicRef(topicId);
@@ -56,10 +64,118 @@ class KnowledgeRepository {
       id: newId('ki'),
       topicId: topicId,
       sourceId: sourceId,
+      lessonId: lessonId,
       title: cleanTitle,
       content: cleanContent,
       details: details.trim(),
       origin: origin,
+      startedAt: startedAt,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    await _db.insert('knowledge_items', item.toMap());
+    return item;
+  }
+
+  /// Tìm KnowledgeItem theo title trong một topic (để kiểm tra đã đăng ký chưa).
+  /// Nếu cung cấp lessonId, ưu tiên tìm theo lessonId để tránh gộp sai bài trùng tiêu đề.
+  Future<KnowledgeItem?> findByTitle(
+    String topicId,
+    String title, {
+    String? lessonId,
+  }) async {
+    final String cleanTitle = title.trim();
+    if (cleanTitle.isEmpty) return null;
+    
+    // Nếu có lessonId, tìm theo lessonId trước (định danh ổn định)
+    if (lessonId != null) {
+      final List<Map<String, Object?>> rowsByLesson = await _db.query(
+        'knowledge_items',
+        where: 'topic_id = ? AND lesson_id = ?',
+        whereArgs: <Object>[topicId, lessonId],
+        limit: 1,
+      );
+      if (rowsByLesson.isNotEmpty) {
+        return KnowledgeItem.fromMap(rowsByLesson.first);
+      }
+    }
+    
+    // Fallback: tìm theo title (để tương thích ngược)
+    final List<Map<String, Object?>> rows = await _db.query(
+      'knowledge_items',
+      where: 'topic_id = ? AND LOWER(title) = LOWER(?)',
+      whereArgs: <Object>[topicId, cleanTitle],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return KnowledgeItem.fromMap(rows.first);
+  }
+
+  /// Đăng ký bài vào Kho đã học (tạo KnowledgeItem với startedAt = now).
+  /// Trả về item đã có nếu đã đăng ký (không tạo mới).
+  /// Sử dụng lessonId để tránh gộp sai bài trùng tiêu đề.
+  Future<KnowledgeItem> enroll({
+    required String topicId,
+    required String title,
+    required String content,
+    String details = '',
+    String? sourceId,
+    String? lessonId,
+    KnowledgeOrigin origin = KnowledgeOrigin.aiSuggested,
+    DateTime? now,
+  }) async {
+    final DateTime timestamp = (now ?? DateTime.now()).toUtc();
+    final String cleanTitle = title.trim();
+
+    // Kiểm tra đã đăng ký chưa
+    KnowledgeItem? existing;
+    
+    if (lessonId != null) {
+      // Nếu có lessonId: CHỈ tìm theo lessonId (KHÔNG fallback title)
+      // Điều này tránh gộp sai 2 bài khác nhau cùng title nhưng khác lessonId
+      final List<Map<String, Object?>> rowsByLesson = await _db.query(
+        'knowledge_items',
+        where: 'topic_id = ? AND lesson_id = ?',
+        whereArgs: <Object>[topicId, lessonId],
+        limit: 1,
+      );
+      if (rowsByLesson.isNotEmpty) {
+        existing = KnowledgeItem.fromMap(rowsByLesson.first);
+      }
+    } else {
+      // Không có lessonId: fallback tìm theo title (tương thích ngược)
+      existing = await findByTitle(topicId, title);
+    }
+
+    if (existing != null) {
+      // Nếu đã có nhưng chưa có startedAt, cập nhật startedAt
+      if (existing.startedAt == null) {
+        final KnowledgeItem updated = existing.copyWith(
+          startedAt: timestamp,
+          updatedAt: timestamp,
+        );
+        await _db.update(
+          'knowledge_items',
+          updated.toMap(),
+          where: 'id = ?',
+          whereArgs: <Object>[existing.id],
+        );
+        return updated;
+      }
+      return existing;
+    }
+
+    // Tạo mới với startedAt
+    final KnowledgeItem item = KnowledgeItem(
+      id: newId('ki'),
+      topicId: topicId,
+      sourceId: sourceId,
+      lessonId: lessonId,
+      title: cleanTitle,
+      content: content.trim(),
+      details: details.trim(),
+      origin: origin,
+      startedAt: timestamp,
       createdAt: timestamp,
       updatedAt: timestamp,
     );
@@ -87,8 +203,9 @@ class KnowledgeRepository {
       whereArgs: <Object>[topicId],
     );
     for (final Map<String, Object?> row in rows) {
-      final String existing =
-          normalizeContent((row['content'] ?? '') as String).toLowerCase();
+      final String existing = normalizeContent(
+        (row['content'] ?? '') as String,
+      ).toLowerCase();
       if (existing == normalized) return KnowledgeItem.fromMap(row);
     }
     return null;
@@ -105,7 +222,9 @@ class KnowledgeRepository {
       where.add('is_paused = 0');
     }
     if (query != null && query.trim().isNotEmpty) {
-      where.add('(LOWER(title) LIKE ? OR LOWER(content) LIKE ? OR LOWER(details) LIKE ?)');
+      where.add(
+        '(LOWER(title) LIKE ? OR LOWER(content) LIKE ? OR LOWER(details) LIKE ?)',
+      );
       final String like = '%${query.trim().toLowerCase()}%';
       args.addAll(<Object>[like, like, like]);
     }
@@ -137,10 +256,16 @@ class KnowledgeRepository {
     final String cleanTitle = item.title.trim();
     final String cleanContent = item.content.trim();
     if (cleanTitle.isEmpty) {
-      throw const ValidationException('Tiêu đề không được để trống.', field: 'title');
+      throw const ValidationException(
+        'Tiêu đề không được để trống.',
+        field: 'title',
+      );
     }
     if (cleanContent.isEmpty) {
-      throw const ValidationException('Nội dung không được để trống.', field: 'content');
+      throw const ValidationException(
+        'Nội dung không được để trống.',
+        field: 'content',
+      );
     }
     final KnowledgeItem updated = item.copyWith(
       title: cleanTitle,
@@ -198,8 +323,9 @@ class KnowledgeRepository {
   }
 
   Future<int> countAll() async {
-    final List<Map<String, Object?>> rows =
-        await _db.rawQuery('SELECT COUNT(*) AS total FROM knowledge_items');
+    final List<Map<String, Object?>> rows = await _db.rawQuery(
+      'SELECT COUNT(*) AS total FROM knowledge_items',
+    );
     return ((rows.first['total'] ?? 0) as num).toInt();
   }
 
@@ -286,9 +412,7 @@ class SourceRepository {
   }
 
   Future<Source> update(Source source) async {
-    final Source updated = source.copyWith(
-      updatedAt: DateTime.now().toUtc(),
-    );
+    final Source updated = source.copyWith(updatedAt: DateTime.now().toUtc());
     final int count = await _db.update(
       'sources',
       updated.toMap(),

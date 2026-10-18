@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 
+/// Thẻ nội dung chuẩn: nền trắng, viền mảnh, bóng mờ nhẹ, bo góc 16.
 class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
@@ -14,6 +15,7 @@ class AppCard extends StatelessWidget {
     this.border,
     this.radius = AppRadius.lg,
     this.highlighted = false,
+    this.elevated = false,
     this.semanticsLabel,
   });
 
@@ -25,6 +27,9 @@ class AppCard extends StatelessWidget {
   final Color? border;
   final double radius;
   final bool highlighted;
+
+  /// Bóng đậm hơn cho thẻ nổi bật (hero, thẻ ôn tập...).
+  final bool elevated;
   final String? semanticsLabel;
 
   @override
@@ -42,12 +47,31 @@ class AppCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(radius),
+          splashColor: AppColors.primary.withValues(alpha: 0.06),
+          highlightColor: AppColors.primary.withValues(alpha: 0.04),
           child: Container(
             width: double.infinity,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: effectiveBorder),
+              border: Border.all(
+                color: effectiveBorder,
+                width: highlighted ? 1.4 : AppSizes.dividerThickness,
+              ),
+              boxShadow: <BoxShadow>[
+                if (elevated)
+                  const BoxShadow(
+                    color: AppColors.shadowStrong,
+                    blurRadius: 24,
+                    offset: Offset(0, 8),
+                  )
+                else
+                  const BoxShadow(
+                    color: AppColors.shadow,
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+              ],
             ),
             child: content,
           ),
@@ -58,6 +82,7 @@ class AppCard extends StatelessWidget {
     if (onTap != null) {
       return Semantics(
         button: true,
+        container: true,
         label: semanticsLabel,
         child: card,
       );
@@ -66,6 +91,7 @@ class AppCard extends StatelessWidget {
   }
 }
 
+/// Tiêu đề mục + hành động phụ (kiểu "Xem tất cả").
 class AppSectionHeader extends StatelessWidget {
   const AppSectionHeader({
     super.key,
@@ -87,26 +113,24 @@ class AppSectionHeader extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Expanded(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
           ),
           if (actionLabel != null)
-            GestureDetector(
+            InkWell(
               onTap: onAction,
-              behavior: HitTestBehavior.opaque,
+              borderRadius: AppRadius.smAll,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs,
+                  horizontal: AppSpacing.sm,
                   vertical: AppSpacing.xs,
                 ),
                 child: Text(
                   actionLabel!,
                   style: const TextStyle(
                     color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13.5,
+                    letterSpacing: 0.1,
                   ),
                 ),
               ),

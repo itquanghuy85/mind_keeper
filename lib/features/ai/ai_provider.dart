@@ -1,6 +1,22 @@
 /// Schema đầu vào/đầu ra cho AI. Validate trước khi dùng kết quả.
 library;
 
+/// Exception cho lỗi cấu hình AI.
+class AiConfigurationException implements Exception {
+  const AiConfigurationException({
+    required this.code,
+    required this.message,
+    required this.userMessage,
+  });
+
+  final String code;
+  final String message;
+  final String userMessage;
+
+  @override
+  String toString() => 'AiConfigurationException($code): $message';
+}
+
 class AiQuestionDraft {
   const AiQuestionDraft({
     required this.question,
@@ -83,8 +99,7 @@ class AiTutorExplanation {
   final String example;
 
   factory AiTutorExplanation.fromMap(Map<String, Object?> map) {
-    final String explanation =
-        (map['explanation'] ?? '').toString().trim();
+    final String explanation = (map['explanation'] ?? '').toString().trim();
     if (explanation.isEmpty) {
       throw const FormatException('Thiếu explanation');
     }
@@ -111,6 +126,22 @@ class AiLessonSection {
   }
 }
 
+class AiLessonConcept {
+  const AiLessonConcept({required this.name, required this.explanation});
+
+  final String name;
+  final String explanation;
+
+  factory AiLessonConcept.fromMap(Map<String, Object?> map) {
+    final String name = (map['name'] ?? '').toString().trim();
+    final String explanation = (map['explanation'] ?? '').toString().trim();
+    if (name.isEmpty || explanation.isEmpty) {
+      throw const FormatException('Thiếu name hoặc explanation cho concept');
+    }
+    return AiLessonConcept(name: name, explanation: explanation);
+  }
+}
+
 class AiLessonSource {
   const AiLessonSource({required this.title, this.url = ''});
 
@@ -133,10 +164,13 @@ class AiLessonSource {
 class AiLessonDraft {
   const AiLessonDraft({
     required this.title,
+    required this.learningObjectives,
     required this.introduction,
+    required this.concepts,
     required this.sections,
     required this.keyPoints,
     required this.examples,
+    required this.commonMistakes,
     required this.summary,
     required this.questions,
     required this.sources,
@@ -144,10 +178,13 @@ class AiLessonDraft {
   });
 
   final String title;
+  final List<String> learningObjectives;
   final String introduction;
+  final List<AiLessonConcept> concepts;
   final List<AiLessonSection> sections;
   final List<String> keyPoints;
   final List<String> examples;
+  final List<String> commonMistakes;
   final String summary;
   final List<AiQuestionDraft> questions;
 
@@ -164,6 +201,12 @@ class AiLessonDraft {
     }
 
     int total = count(introduction) + count(summary);
+    for (final String obj in learningObjectives) {
+      total += count(obj);
+    }
+    for (final AiLessonConcept concept in concepts) {
+      total += count(concept.name) + count(concept.explanation);
+    }
     for (final AiLessonSection section in sections) {
       total += count(section.heading) + count(section.body);
     }
@@ -173,6 +216,9 @@ class AiLessonDraft {
     for (final String example in examples) {
       total += count(example);
     }
+    for (final String mistake in commonMistakes) {
+      total += count(mistake);
+    }
     return total;
   }
 
@@ -181,13 +227,26 @@ class AiLessonDraft {
     int maxQuestions = 5,
   }) {
     final String title = (map['title'] ?? '').toString().trim();
-    final String introduction =
-        (map['introduction'] ?? '').toString().trim();
+    final String introduction = (map['introduction'] ?? '').toString().trim();
     if (title.isEmpty || introduction.isEmpty) {
       throw const FormatException('Thiếu title hoặc introduction');
     }
+    final List<String> learningObjectives = _textList(
+      map['learning_objectives'],
+    );
+    final List<AiLessonConcept> concepts = <AiLessonConcept>[];
+    for (final Object? item
+        in (map['concepts'] as List<Object?>?) ?? const <Object?>[]) {
+      if (item is! Map<String, Object?>) continue;
+      try {
+        concepts.add(AiLessonConcept.fromMap(item));
+      } on FormatException {
+        continue;
+      }
+    }
     final List<AiLessonSection> sections = <AiLessonSection>[];
-    for (final Object? item in (map['sections'] as List<Object?>?) ?? const <Object?>[]) {
+    for (final Object? item
+        in (map['sections'] as List<Object?>?) ?? const <Object?>[]) {
       if (item is! Map<String, Object?>) continue;
       try {
         sections.add(AiLessonSection.fromMap(item));
@@ -199,7 +258,8 @@ class AiLessonDraft {
       throw const FormatException('Bài học không có phần nội dung nào');
     }
     final List<AiQuestionDraft> questions = <AiQuestionDraft>[];
-    for (final Object? item in (map['questions'] as List<Object?>?) ?? const <Object?>[]) {
+    for (final Object? item
+        in (map['questions'] as List<Object?>?) ?? const <Object?>[]) {
       if (item is! Map<String, Object?>) continue;
       try {
         questions.add(AiQuestionDraft.fromMap(item));
@@ -209,7 +269,8 @@ class AiLessonDraft {
       if (questions.length >= maxQuestions) break;
     }
     final List<AiLessonSource> sources = <AiLessonSource>[];
-    for (final Object? item in (map['sources'] as List<Object?>?) ?? const <Object?>[]) {
+    for (final Object? item
+        in (map['sources'] as List<Object?>?) ?? const <Object?>[]) {
       if (item is! Map<String, Object?>) continue;
       try {
         sources.add(AiLessonSource.fromMap(item));
@@ -219,10 +280,13 @@ class AiLessonDraft {
     }
     return AiLessonDraft(
       title: title,
+      learningObjectives: learningObjectives,
       introduction: introduction,
+      concepts: concepts,
       sections: sections,
       keyPoints: _textList(map['key_points']),
       examples: _textList(map['examples']),
+      commonMistakes: _textList(map['common_mistakes']),
       summary: (map['summary'] ?? '').toString().trim(),
       questions: questions,
       sources: sources,

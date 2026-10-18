@@ -46,8 +46,7 @@ class MockAIProvider implements AIProvider {
     if (drafts.isEmpty) {
       drafts.add(
         AiKnowledgeDraft(
-          title:
-              text.length > 48 ? '${text.substring(0, 45)}…' : text,
+          title: text.length > 48 ? '${text.substring(0, 45)}…' : text,
           content: text,
         ),
       );
@@ -113,8 +112,11 @@ class MockAIProvider implements AIProvider {
         score: 0,
       );
     }
-    final List<String> refTokens =
-        ref.split(RegExp(r'[^a-z0-9à-ỹ]+')).where((String t) => t.length > 2).toSet().toList();
+    final List<String> refTokens = ref
+        .split(RegExp(r'[^a-z0-9à-ỹ]+'))
+        .where((String t) => t.length > 2)
+        .toSet()
+        .toList();
     if (refTokens.isEmpty) {
       return AiAnswerEvaluation(
         verdict: 'partial',
@@ -150,14 +152,16 @@ class MockAIProvider implements AIProvider {
 
   /// Serialize draft (hữu ích test cache).
   static String encodeDrafts(List<AiKnowledgeDraft> drafts) => jsonEncode(
-        drafts
-            .map((AiKnowledgeDraft d) => <String, String>{
-                  'title': d.title,
-                  'content': d.content,
-                  'details': d.details,
-                })
-            .toList(),
-      );
+    drafts
+        .map(
+          (AiKnowledgeDraft d) => <String, String>{
+            'title': d.title,
+            'content': d.content,
+            'details': d.details,
+          },
+        )
+        .toList(),
+  );
 
   static const List<String> _lessonSentences = <String>[
     'Để hiểu rõ chủ đề này, trước tiên cần nắm được ý tưởng nền tảng và cách nó vận động trong thực tế.',
@@ -268,11 +272,15 @@ class MockAIProvider implements AIProvider {
     }
 
     final List<AiQuestionDraft> questions = <AiQuestionDraft>[];
-    final int qCount = questionCount < 3 ? 3 : (questionCount > 5 ? 5 : questionCount);
+    final int qCount = questionCount < 3
+        ? 3
+        : (questionCount > 5 ? 5 : questionCount);
     for (int i = 0; i < qCount; i++) {
       final AiLessonSection section = sections[i % sections.length];
-      final String firstSentence =
-          section.body.split(RegExp(r'[.!?]+')).first.trim();
+      final String firstSentence = section.body
+          .split(RegExp(r'[.!?]+'))
+          .first
+          .trim();
       questions.add(
         AiQuestionDraft(
           question:
@@ -284,14 +292,33 @@ class MockAIProvider implements AIProvider {
     }
 
     final String lowerTopic = topic.toLowerCase();
-    final bool medical =
-        _medicalKeywords.any(lowerTopic.contains);
+    final bool medical = _medicalKeywords.any(lowerTopic.contains);
+
+    // Tạo concepts mẫu
+    final List<AiLessonConcept> concepts = <AiLessonConcept>[
+      AiLessonConcept(
+        name: 'Khái niệm cốt lõi 1',
+        explanation:
+            'Giải thích chi tiết về khái niệm cốt lõi đầu tiên liên quan đến $topic.',
+      ),
+      AiLessonConcept(
+        name: 'Khái niệm cốt lõi 2',
+        explanation:
+            'Giải thích chi tiết về khái niệm cốt lõi thứ hai liên quan đến $topic.',
+      ),
+    ];
 
     return AiLessonDraft(
       title: '$topic — khám phá trong $domain',
+      learningObjectives: <String>[
+        'Hiểu được khái niệm cơ bản của $topic',
+        'Nắm vững các nguyên lý quan trọng',
+        'Áp dụng được vào thực tế',
+      ],
       introduction:
           'Bài học này giúp bạn khám phá $topic trong lĩnh vực $domain, '
           'đi từ bức tranh tổng quan đến những chi tiết đáng nhớ nhất.',
+      concepts: concepts,
       sections: sections,
       keyPoints: <String>[
         for (final AiLessonSection section in sections.take(3))
@@ -300,6 +327,11 @@ class MockAIProvider implements AIProvider {
       examples: <String>[
         'Ví dụ gần gũi: ${_lessonSentences[2]}',
         'Tình huống thực tế: ${_lessonSentences[5]}',
+      ],
+      commonMistakes: <String>[
+        'Học vẹt mà không hiểu bản chất',
+        'Bỏ qua việc ôn tập định kỳ',
+        'Không liên kết kiến thức mới với kiến thức cũ',
       ],
       summary:
           'Tóm lại, $topic đòi hỏi cách nhìn vừa bao quát vừa chi tiết. '

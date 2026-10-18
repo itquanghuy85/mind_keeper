@@ -51,8 +51,10 @@ void main() {
         rating: rating,
         now: now,
       );
-      expect(r.card.dueAt.isAfter(now.subtract(const Duration(seconds: 1))),
-          isTrue);
+      expect(
+        r.card.dueAt.isAfter(now.subtract(const Duration(seconds: 1))),
+        isTrue,
+      );
       expect(r.card.dueAt.isUtc, isFalse, reason: 'due lưu local');
       gaps[rating] = r.card.dueAt.difference(now);
     }
@@ -84,11 +86,9 @@ void main() {
       scheduler: fsrs.Scheduler(enableFuzzing: false),
     );
     ReviewCard card = newCard();
-    card = scheduler.schedule(
-      card: card,
-      rating: MemoryRating.easy,
-      now: now,
-    ).card;
+    card = scheduler
+        .schedule(card: card, rating: MemoryRating.easy, now: now)
+        .card;
     final DateTime muchLater = now.add(const Duration(days: 40));
     final ScheduleResult late = scheduler.schedule(
       card: card,
@@ -111,11 +111,9 @@ void main() {
     );
     final ReviewCard card = newCard();
     expect(scheduler.retrievability(card, now: now), 0);
-    final ReviewCard reviewed = scheduler.schedule(
-      card: card,
-      rating: MemoryRating.good,
-      now: now,
-    ).card;
+    final ReviewCard reviewed = scheduler
+        .schedule(card: card, rating: MemoryRating.good, now: now)
+        .card;
     final double r = scheduler.retrievability(
       reviewed,
       now: now.add(const Duration(days: 1)),

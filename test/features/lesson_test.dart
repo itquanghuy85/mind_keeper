@@ -65,30 +65,33 @@ void main() {
   });
 
   group('LessonService (GĐ13)', () {
-    test('generate dedup: lần hai lấy lại gói đã lưu, không sinh lại', () async {
-      final AppServices services = await buildServices();
-      final LearningDomain domain = LearningDomains.byId('science')!;
+    test(
+      'generate dedup: lần hai lấy lại gói đã lưu, không sinh lại',
+      () async {
+        final AppServices services = await buildServices();
+        final LearningDomain domain = LearningDomains.byId('science')!;
 
-      final GeneratedLesson first = await services.lessonService.generate(
-        domain: domain,
-        topic: 'Vũ trụ',
-      );
-      expect(first.fromCache, isFalse);
-      expect(first.lesson.topic, 'Vũ trụ');
-      expect(first.lesson.domainId, 'science');
-      expect(await services.lessons.countAll(), 1);
+        final GeneratedLesson first = await services.lessonService.generate(
+          domain: domain,
+          topic: 'Vũ trụ',
+        );
+        expect(first.fromCache, isFalse);
+        expect(first.lesson.topic, 'Vũ trụ');
+        expect(first.lesson.domainId, 'science');
+        expect(await services.lessons.countAll(), 1);
 
-      final GeneratedLesson second = await services.lessonService.generate(
-        domain: domain,
-        topic: 'vũ  trụ',
-        mode: first.lesson.mode,
-      );
-      expect(second.fromCache, isTrue);
-      expect(second.lesson.id, first.lesson.id);
-      expect(await services.lessons.countAll(), 1);
+        final GeneratedLesson second = await services.lessonService.generate(
+          domain: domain,
+          topic: 'vũ  trụ',
+          mode: first.lesson.mode,
+        );
+        expect(second.fromCache, isTrue);
+        expect(second.lesson.id, first.lesson.id);
+        expect(await services.lessons.countAll(), 1);
 
-      await services.dispose();
-    });
+        await services.dispose();
+      },
+    );
 
     test('generate từ chối chủ đề trống', () async {
       final AppServices services = await buildServices();
@@ -102,46 +105,50 @@ void main() {
       await services.dispose();
     });
 
-    test('completeQuiz tạo chủ đề + kiến thức + thẻ FSRS + thông báo', () async {
-      final AppServices services = await buildServices();
-      final FakeNotificationService fake =
-          services.notifications as FakeNotificationService;
-      final LearningDomain domain = LearningDomains.byId('science')!;
+    test(
+      'completeQuiz tạo chủ đề + kiến thức + thẻ FSRS + thông báo',
+      () async {
+        final AppServices services = await buildServices();
+        final FakeNotificationService fake =
+            services.notifications as FakeNotificationService;
+        final LearningDomain domain = LearningDomains.byId('science')!;
 
-      final GeneratedLesson generated = await services.lessonService.generate(
-        domain: domain,
-        topic: 'Thuyết tiến hóa',
-      );
-      final Lesson lesson = generated.lesson;
-      expect(lesson.questions, isNotEmpty);
+        final GeneratedLesson generated = await services.lessonService.generate(
+          domain: domain,
+          topic: 'Thuyết tiến hóa',
+        );
+        final Lesson lesson = generated.lesson;
+        expect(lesson.questions, isNotEmpty);
 
-      final LessonQuizOutcome outcome = await services.lessonService.completeQuiz(
-        lesson: lesson,
-        answers: <QuizAnswer>[
-          for (int i = 0; i < lesson.questions.length; i++)
-            QuizAnswer(questionIndex: i, rating: MemoryRating.good),
-        ],
-      );
+        final LessonQuizOutcome outcome = await services.lessonService
+            .completeQuiz(
+              lesson: lesson,
+              answers: <QuizAnswer>[
+                for (int i = 0; i < lesson.questions.length; i++)
+                  QuizAnswer(questionIndex: i, rating: MemoryRating.good),
+              ],
+            );
 
-      expect(outcome.topic.name, isNotEmpty);
-      expect(outcome.knowledgeItem.title, lesson.title);
-      expect(outcome.cards, hasLength(lesson.questions.length));
+        expect(outcome.topic.name, isNotEmpty);
+        expect(outcome.knowledgeItem.title, lesson.title);
+        expect(outcome.cards, hasLength(lesson.questions.length));
 
-      // Chủ đề đã được ghép vào bộ nhớ dài hạn.
-      final items = await services.knowledge.listByTopic(outcome.topic.id);
-      expect(items, hasLength(1));
-      final cards = await services.cards.listByKnowledgeItem(
-        outcome.knowledgeItem.id,
-      );
-      expect(cards, hasLength(lesson.questions.length));
+        // Chủ đề đã được ghép vào bộ nhớ dài hạn.
+        final items = await services.knowledge.listByTopic(outcome.topic.id);
+        expect(items, hasLength(1));
+        final cards = await services.cards.listByKnowledgeItem(
+          outcome.knowledgeItem.id,
+        );
+        expect(cards, hasLength(lesson.questions.length));
 
-      // Đã đánh dấu đọc và lập lịch nhắc ôn sớm nhất.
-      expect(outcome.lesson.isRead, isTrue);
-      expect(outcome.notifiedCardId, isNotNull);
-      expect(fake.scheduledCards, isNotEmpty);
+        // Đã đánh dấu đọc và lập lịch nhắc ôn sớm nhất.
+        expect(outcome.lesson.isRead, isTrue);
+        expect(outcome.notifiedCardId, isNotNull);
+        expect(fake.scheduledCards, isNotEmpty);
 
-      await services.dispose();
-    });
+        await services.dispose();
+      },
+    );
 
     test('completeQuiz không lập lịch thông báo khi tắt thông báo', () async {
       final AppServices services = await buildServices();
@@ -154,13 +161,14 @@ void main() {
         domain: domain,
         topic: 'Quang học',
       );
-      final LessonQuizOutcome outcome = await services.lessonService.completeQuiz(
-        lesson: generated.lesson,
-        answers: <QuizAnswer>[
-          for (int i = 0; i < generated.lesson.questions.length; i++)
-            QuizAnswer(questionIndex: i, rating: MemoryRating.easy),
-        ],
-      );
+      final LessonQuizOutcome outcome = await services.lessonService
+          .completeQuiz(
+            lesson: generated.lesson,
+            answers: <QuizAnswer>[
+              for (int i = 0; i < generated.lesson.questions.length; i++)
+                QuizAnswer(questionIndex: i, rating: MemoryRating.easy),
+            ],
+          );
 
       expect(outcome.notifiedCardId, isNull);
       expect(fake.scheduledCards, isEmpty);
@@ -168,47 +176,52 @@ void main() {
       await services.dispose();
     });
 
-    test('câu hỏi trùng: generate dedup + completeQuiz nhiều lần không tạo trùng', () async {
-      final AppServices services = await buildServices();
-      // Provider trả về câu hỏi trùng (mô phỏng AI thật có thể lặp).
-      services.ai.useProvider(_DuplicateQuestionProvider());
+    test(
+      'câu hỏi trùng: generate dedup + completeQuiz nhiều lần không tạo trùng',
+      () async {
+        final AppServices services = await buildServices();
+        // Provider trả về câu hỏi trùng (mô phỏng AI thật có thể lặp).
+        services.ai.useProvider(_DuplicateQuestionProvider());
 
-      final LearningDomain domain = LearningDomains.byId('science')!;
-      final GeneratedLesson generated = await services.lessonService.generate(
-        domain: domain,
-        topic: 'Thuyết tiến hóa',
-        mode: LessonMode.deep,
-      );
-      final Lesson lesson = generated.lesson;
+        final LearningDomain domain = LearningDomains.byId('science')!;
+        final GeneratedLesson generated = await services.lessonService.generate(
+          domain: domain,
+          topic: 'Thuyết tiến hóa',
+          mode: LessonMode.deep,
+        );
+        final Lesson lesson = generated.lesson;
 
-      // Câu hỏi đã được loại trùng.
-      final Set<String> questions =
-          lesson.questions.map((LessonQuestion q) => q.question).toSet();
-      expect(questions.length, lesson.questions.length);
-      expect(lesson.questions, isNotEmpty);
+        // Câu hỏi đã được loại trùng.
+        final Set<String> questions = lesson.questions
+            .map((LessonQuestion q) => q.question)
+            .toSet();
+        expect(questions.length, lesson.questions.length);
+        expect(lesson.questions, isNotEmpty);
 
-      final List<QuizAnswer> answers = <QuizAnswer>[
-        for (int i = 0; i < lesson.questions.length; i++)
-          QuizAnswer(questionIndex: i, rating: MemoryRating.good),
-      ];
-      final LessonQuizOutcome first = await services.lessonService.completeQuiz(
-        lesson: lesson,
-        answers: answers,
-      );
-      final int cardCount =
-          (await services.cards.listByKnowledgeItem(first.knowledgeItem.id))
-              .length;
-      expect(cardCount, lesson.questions.length);
+        final List<QuizAnswer> answers = <QuizAnswer>[
+          for (int i = 0; i < lesson.questions.length; i++)
+            QuizAnswer(questionIndex: i, rating: MemoryRating.good),
+        ];
+        final LessonQuizOutcome first = await services.lessonService
+            .completeQuiz(lesson: lesson, answers: answers);
+        final int cardCount = (await services.cards.listByKnowledgeItem(
+          first.knowledgeItem.id,
+        )).length;
+        expect(cardCount, lesson.questions.length);
 
-      // Hoàn tất lại: không crash (log id trùng), không tạo thêm thẻ.
-      await services.lessonService.completeQuiz(lesson: lesson, answers: answers);
-      final int afterSecond =
-          (await services.cards.listByKnowledgeItem(first.knowledgeItem.id))
-              .length;
-      expect(afterSecond, cardCount);
+        // Hoàn tất lại: không crash (log id trùng), không tạo thêm thẻ.
+        await services.lessonService.completeQuiz(
+          lesson: lesson,
+          answers: answers,
+        );
+        final int afterSecond = (await services.cards.listByKnowledgeItem(
+          first.knowledgeItem.id,
+        )).length;
+        expect(afterSecond, cardCount);
 
-      await services.dispose();
-    });
+        await services.dispose();
+      },
+    );
   });
 }
 
@@ -236,10 +249,13 @@ class _DuplicateQuestionProvider extends MockAIProvider {
     final AiQuestionDraft dup = base.questions.first;
     return AiLessonDraft(
       title: base.title,
+      learningObjectives: base.learningObjectives,
       introduction: base.introduction,
+      concepts: base.concepts,
       sections: base.sections,
       keyPoints: base.keyPoints,
       examples: base.examples,
+      commonMistakes: base.commonMistakes,
       summary: base.summary,
       questions: <AiQuestionDraft>[
         ...base.questions,

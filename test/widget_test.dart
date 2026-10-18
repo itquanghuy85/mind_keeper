@@ -24,7 +24,9 @@ Future<AppServices> buildTestServices() async {
 }
 
 void main() {
-  testWidgets('app mở tab Hôm nay với dữ liệu rỗng', (WidgetTester tester) async {
+  testWidgets('app mở tab Hôm nay với dữ liệu rỗng', (
+    WidgetTester tester,
+  ) async {
     // sqflite FFI chạy event loop thật — cần runAsync ngoài FakeAsync của widget test.
     final AppServices? services = await tester.runAsync(buildTestServices);
     expect(services, isNotNull);
@@ -33,7 +35,9 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MindKeeperApp(services: services!));
     // Đợi load dữ liệu DB thật (ngoài fake async).
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
     await tester.pump();
     expect(find.text('Mỗi ngày nhớ thêm một chút'), findsOneWidget);
     await tester.runAsync(services.dispose);

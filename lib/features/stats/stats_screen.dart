@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 import '../../core/services/app_services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_chart_theme.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/app_feedback.dart';
+import '../../core/widgets/app_icon_badge.dart';
 import '../../data/repositories/stats_repository.dart';
 
 enum _Range { d7, d30, all }
@@ -47,10 +50,12 @@ class _StatsScreenState extends State<StatsScreen> {
         _Range.d30 => now.subtract(const Duration(days: 30)),
         _Range.all => DateTime(2000),
       };
-      final List<DailyReviewStat> daily =
-          await services.stats.dailyReviews(from: from, to: now);
-      final List<TopicProgressStat> topics =
-          await services.stats.topicProgress();
+      final List<DailyReviewStat> daily = await services.stats.dailyReviews(
+        from: from,
+        to: now,
+      );
+      final List<TopicProgressStat> topics = await services.stats
+          .topicProgress();
       final int newTopics = await services.stats.newTopicsSince(from);
       if (!mounted) return;
       setState(() {
@@ -196,11 +201,7 @@ class _StatsScreenState extends State<StatsScreen> {
           const SizedBox(height: AppSpacing.xxl),
 
           // Lượt ôn theo thời gian
-          Text(
-            'Lượt ôn theo thời gian',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: AppSpacing.md),
+          AppSectionHeader(title: 'Lượt ôn theo thời gian'),
           AppCard(
             child: _daily.isEmpty
                 ? Column(
@@ -223,11 +224,7 @@ class _StatsScreenState extends State<StatsScreen> {
           const SizedBox(height: AppSpacing.xxl),
 
           // Đánh giá nhớ
-          Text(
-            'Đánh giá nhớ',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: AppSpacing.md),
+          AppSectionHeader(title: 'Đánh giá nhớ'),
           AppCard(
             child: Column(
               children: <Widget>[
@@ -266,11 +263,7 @@ class _StatsScreenState extends State<StatsScreen> {
           const SizedBox(height: AppSpacing.xxl),
 
           // Tiến độ theo chủ đề
-          Text(
-            'Tiến độ theo chủ đề',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: AppSpacing.md),
+          AppSectionHeader(title: 'Tiến độ theo chủ đề'),
           if (_topics.isEmpty)
             AppCard(
               child: Padding(
@@ -298,18 +291,11 @@ class _StatsScreenState extends State<StatsScreen> {
                             Row(
                               children: <Widget>[
                                 if (t.icon.isNotEmpty) ...<Widget>[
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primarySoft,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.folder_outlined,
-                                      size: 18,
-                                      color: AppColors.primary,
-                                    ),
+                                  const AppIconBadge(
+                                    icon: Icons.folder_rounded,
+                                    tone: AppIconTone.primary,
+                                    size: AppSizes.badgeSm,
+                                    radius: AppRadius.md,
                                   ),
                                   const SizedBox(width: AppSpacing.md),
                                 ],
@@ -320,17 +306,18 @@ class _StatsScreenState extends State<StatsScreen> {
                                     children: <Widget>[
                                       Text(
                                         t.topicName,
-                                        style:
-                                            Theme.of(context).textTheme.titleSmall,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: AppSpacing.xs),
                                       Text(
                                         '${t.reviewedCards}/${t.totalCards} thẻ đã ôn',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
                                       ),
                                     ],
                                   ),
@@ -343,7 +330,9 @@ class _StatsScreenState extends State<StatsScreen> {
                               child: LinearProgressIndicator(
                                 value: t.progress,
                                 minHeight: 8,
-                                backgroundColor: AppColors.surfaceMuted,
+                                backgroundColor: AppChartTheme.progressTrack(
+                                  context,
+                                ),
                                 color: AppColors.primary,
                               ),
                             ),
@@ -352,7 +341,10 @@ class _StatsScreenState extends State<StatsScreen> {
                               alignment: Alignment.centerRight,
                               child: Text(
                                 '${(t.progress * 100).round()}%',
-                                style: Theme.of(context).textTheme.labelSmall,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      fontFeatures: AppTheme.tabularFigures,
+                                    ),
                               ),
                             ),
                           ],
@@ -368,9 +360,7 @@ class _StatsScreenState extends State<StatsScreen> {
                       child: Center(
                         child: Text(
                           'Và ${_topics.length - 10} chủ đề khác...',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
+                          style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: AppColors.textTertiary),
                         ),
                       ),
@@ -409,22 +399,23 @@ class _StatsScreenState extends State<StatsScreen> {
           children: <Widget>[
             Text(
               '${s.count}',
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Container(
-              height: h < 4 ? 4 : h,
-              width: 24,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(4),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontFeatures: AppTheme.tabularFigures,
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              dayLabel,
-              style: Theme.of(context).textTheme.labelSmall,
+            Container(
+              height: h < AppChartTheme.minBarHeight
+                  ? AppChartTheme.minBarHeight
+                  : h,
+              width: AppChartTheme.barWidth,
+              decoration: BoxDecoration(
+                color: AppChartTheme.lineColor(context),
+                borderRadius: BorderRadius.circular(AppChartTheme.barRadius),
+              ),
             ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(dayLabel, style: Theme.of(context).textTheme.labelSmall),
           ],
         ),
       );
@@ -446,11 +437,7 @@ class _RangeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppChip(
-      label: label,
-      selected: selected,
-      onTap: onTap,
-    );
+    return AppChip(label: label, selected: selected, onTap: onTap);
   }
 }
 
@@ -474,14 +461,11 @@ class _StatCard extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: <Widget>[
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 22),
+            AppIconBadge(
+              icon: icon,
+              color: color,
+              background: color.withValues(alpha: 0.12),
+              size: 42,
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -490,9 +474,13 @@ class _StatCard extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     value,
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontFeatures: AppTheme.tabularFigures,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: 2),
                   Text(
                     title,
                     style: Theme.of(context).textTheme.labelSmall,
@@ -541,9 +529,13 @@ class _RatingRow extends StatelessWidget {
                   style: Theme.of(context).textTheme.labelMedium,
                 ),
               ),
-              AppTag(
-                label: '$value',
-                tone: tone,
+              AppTag(label: '$value', tone: tone),
+              const Spacer(),
+              Text(
+                '${(ratio * 100).round()}%',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontFeatures: AppTheme.tabularFigures,
+                ),
               ),
             ],
           ),
@@ -554,7 +546,7 @@ class _RatingRow extends StatelessWidget {
               value: ratio,
               minHeight: 8,
               color: color,
-              backgroundColor: AppColors.surfaceMuted,
+              backgroundColor: AppChartTheme.progressTrack(context),
             ),
           ),
         ],

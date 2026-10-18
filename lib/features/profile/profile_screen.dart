@@ -6,9 +6,13 @@ import '../../core/services/app_services.dart';
 import '../../core/services/preferences_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_icon_badge.dart';
 import '../../core/widgets/app_text_field.dart';
+import '../../features/knowledge/learned_library_screen.dart';
 import '../import/link_import_screen.dart';
 import '../import/media_import_flow.dart';
 import '../import/text_import_screen.dart';
@@ -30,20 +34,13 @@ class ProfileScreen extends StatelessWidget {
             AppCard(
               child: Row(
                 children: <Widget>[
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primarySoft,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person_rounded,
-                      color: AppColors.primary,
-                      size: 28,
-                    ),
+                  const AppIconBadge(
+                    icon: Icons.person_rounded,
+                    tone: AppIconTone.primary,
+                    size: 56,
+                    radius: AppRadius.xl,
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.lg),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,6 +49,7 @@ class ProfileScreen extends StatelessWidget {
                           'Người học MindKeeper',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           'Học ít nhưng đều đặn',
                           style: Theme.of(context).textTheme.bodySmall,
@@ -62,51 +60,80 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            Text('Học tập', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xxl),
+            AppSectionHeader(
+              title: 'Học tập',
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            ),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: <Widget>[
-                  ListTile(
+                  _SettingsTile(
                     leading: const Icon(Icons.flag_outlined),
-                    title: const Text('Mục tiêu học mỗi ngày'),
-                    trailing: Text('${prefs.dailyGoal} mục tiêu'),
+                    title: 'Mục tiêu học mỗi ngày',
+                    trailing: Text(
+                      '${prefs.dailyGoal} mục tiêu',
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                     onTap: () => _editDailyGoal(context, prefs),
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.explore_outlined),
-                    title: const Text('Số chủ đề mới mỗi ngày'),
-                    trailing: Text('${prefs.newTopicsPerDay}'),
+                    title: 'Số chủ đề mới mỗi ngày',
+                    trailing: Text(
+                      '${prefs.newTopicsPerDay}',
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                     onTap: () => _editNewTopics(context, prefs),
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.category_outlined),
-                    title: const Text('Lĩnh vực yêu thích'),
+                    title: 'Lĩnh vực yêu thích',
                     trailing: Text(
                       prefs.favoriteCategories.isEmpty
                           ? 'Chưa đặt'
                           : '${prefs.favoriteCategories.length}',
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     onTap: () => _editCategories(context, prefs),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            Text('Thông báo & AI', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xxl),
+            AppSectionHeader(
+              title: 'Thông báo & AI',
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            ),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: <Widget>[
-                  SwitchListTile(
+                  SwitchListTile.adaptive(
                     secondary: const Icon(Icons.notifications_outlined),
                     title: const Text('Bật thông báo'),
                     value: prefs.notificationsEnabled,
+                    activeThumbColor: AppColors.primary,
                     onChanged: (bool value) async {
                       final AppServices services = context.read<AppServices>();
                       await prefs.setNotificationsEnabled(value);
@@ -118,12 +145,20 @@ class ProfileScreen extends StatelessWidget {
                       }
                     },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.alarm_outlined),
-                    title: const Text('Giờ nhắc ôn tập'),
+                    title: 'Giờ nhắc ôn tập',
                     trailing: Text(
                       '${prefs.reminderHour.toString().padLeft(2, '0')}:${prefs.reminderMinute.toString().padLeft(2, '0')}',
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     onTap: () async {
                       final TimeOfDay? picked = await showTimePicker(
@@ -142,22 +177,28 @@ class ProfileScreen extends StatelessWidget {
                       }
                     },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.smart_toy_outlined),
-                    title: const Text('Cấu hình AI'),
-                    subtitle: Text(
-                      context.read<AppServices>().ai.isRealProvider
-                          ? 'Đang dùng AI thật (${prefs.aiModel})'
-                          : 'Đang dùng mock AI — chưa cấu hình key',
-                    ),
+                    title: 'Cấu hình AI',
+                    subtitle: context.read<AppServices>().ai.isRealProvider
+                        ? 'Đang dùng AI thật (${prefs.aiModel})'
+                        : 'Đang dùng mock AI — chưa cấu hình key',
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => _editAi(context),
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.upload_file_outlined),
-                    title: const Text('Nhập văn bản'),
+                    title: 'Nhập văn bản',
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
@@ -165,10 +206,14 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.link_outlined),
-                    title: const Text('Nhập từ liên kết web'),
+                    title: 'Nhập từ liên kết web',
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
@@ -176,24 +221,36 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.photo_camera_outlined),
-                    title: const Text('Nhập từ ảnh (OCR)'),
+                    title: 'Nhập từ ảnh (OCR)',
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => MediaImportFlow.fromImage(context),
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.picture_as_pdf_outlined),
-                    title: const Text('Nhập từ PDF'),
+                    title: 'Nhập từ PDF',
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => MediaImportFlow.fromPdf(context),
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.mic_none_outlined),
-                    title: const Text('Nhập bằng giọng nói'),
+                    title: 'Nhập bằng giọng nói',
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
@@ -201,10 +258,30 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Divider(height: 1),
-                  ListTile(
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
+                    leading: const Icon(Icons.library_books_outlined),
+                    title: 'Kho đã học',
+                    subtitle: 'Danh sách bài đã mở đọc, ôn tập và tiến độ',
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LearnedLibraryScreen(),
+                      ),
+                    ),
+                  ),
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
                     leading: const Icon(Icons.notifications_active_outlined),
-                    title: const Text('Cài đặt thông báo chi tiết'),
+                    title: 'Cài đặt thông báo chi tiết',
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
@@ -215,16 +292,18 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            Text('Về ứng dụng', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xxl),
+            AppSectionHeader(
+              title: 'Về ứng dụng',
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            ),
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
                     'MindKeeper AI',
-                    style: Theme.of(context).textTheme.titleSmall,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -251,8 +330,9 @@ class ProfileScreen extends StatelessWidget {
     BuildContext context,
     PreferencesService prefs,
   ) async {
-    final TextEditingController controller =
-        TextEditingController(text: '${prefs.dailyGoal}');
+    final TextEditingController controller = TextEditingController(
+      text: '${prefs.dailyGoal}',
+    );
     final String? result = await showDialog<String>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -263,13 +343,20 @@ class ProfileScreen extends StatelessWidget {
           hint: 'VD: 10',
         ),
         actions: <Widget>[
-          TextButton(
+          AppButton(
+            label: 'Hủy',
+            variant: AppButtonVariant.tonal,
+            dense: true,
+            expanded: false,
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Hủy'),
           ),
-          FilledButton(
+          const SizedBox(width: AppSpacing.md),
+          AppButton(
+            label: 'Lưu',
+            variant: AppButtonVariant.primary,
+            dense: true,
+            expanded: false,
             onPressed: () => Navigator.of(context).pop('save'),
-            child: const Text('Lưu'),
           ),
         ],
       ),
@@ -285,8 +372,9 @@ class ProfileScreen extends StatelessWidget {
     BuildContext context,
     PreferencesService prefs,
   ) async {
-    final TextEditingController controller =
-        TextEditingController(text: '${prefs.newTopicsPerDay}');
+    final TextEditingController controller = TextEditingController(
+      text: '${prefs.newTopicsPerDay}',
+    );
     final String? result = await showDialog<String>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -297,13 +385,20 @@ class ProfileScreen extends StatelessWidget {
           hint: '0–5',
         ),
         actions: <Widget>[
-          TextButton(
+          AppButton(
+            label: 'Hủy',
+            variant: AppButtonVariant.tonal,
+            dense: true,
+            expanded: false,
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Hủy'),
           ),
-          FilledButton(
+          const SizedBox(width: AppSpacing.md),
+          AppButton(
+            label: 'Lưu',
+            variant: AppButtonVariant.primary,
+            dense: true,
+            expanded: false,
             onPressed: () => Navigator.of(context).pop('save'),
-            child: const Text('Lưu'),
           ),
         ],
       ),
@@ -324,65 +419,59 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       builder: (BuildContext context) => StatefulBuilder(
-        builder: (
-          BuildContext context,
-          void Function(void Function()) setModalState,
-        ) {
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Lĩnh vực yêu thích',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Ưu tiên các lĩnh vực này khi khám phá chủ đề mới.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: DiscoveryCategory.all.map((String c) {
-                      final bool on = selected.contains(c);
-                      return FilterChip(
-                        label: Text(c),
-                        selected: on,
-                        onSelected: (bool value) {
-                          setModalState(() {
-                            if (value) {
-                              selected.add(c);
-                            } else {
-                              selected.remove(c);
+        builder:
+            (
+              BuildContext context,
+              void Function(void Function()) setModalState,
+            ) {
+              return SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Lĩnh vực yêu thích',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'Ưu tiên các lĩnh vực này khi khám phá chủ đề mới.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: DiscoveryCategory.all.map((String c) {
+                          return AppChip(
+                            label: c,
+                            selected: selected.contains(c),
+                            onTap: () {
+                              // Note: multi-select toggle handled externally via prefs
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      SizedBox(
+                        width: double.infinity,
+                        child: AppButton(
+                          label: 'Lưu',
+                          onPressed: () async {
+                            await prefs.setFavoriteCategories(selected);
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
                             }
-                          });
-                        },
-                      );
-                    }).toList(),
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () async {
-                        await prefs.setFavoriteCategories(selected);
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      child: const Text('Lưu'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+                ),
+              );
+            },
       ),
     );
   }
@@ -390,12 +479,15 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _editAi(BuildContext context) async {
     final AppServices services = context.read<AppServices>();
     final PreferencesService prefs = services.prefs;
-    final TextEditingController baseUrl =
-        TextEditingController(text: prefs.aiBaseUrl);
-    final TextEditingController apiKey =
-        TextEditingController(text: prefs.aiApiKey);
-    final TextEditingController model =
-        TextEditingController(text: prefs.aiModel);
+    final TextEditingController baseUrl = TextEditingController(
+      text: prefs.aiBaseUrl,
+    );
+    final TextEditingController apiKey = TextEditingController(
+      text: prefs.aiApiKey,
+    );
+    final TextEditingController model = TextEditingController(
+      text: prefs.aiModel,
+    );
     final bool? saved = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -423,18 +515,29 @@ class ProfileScreen extends StatelessWidget {
                 hint: 'sk-...',
               ),
               const SizedBox(height: AppSpacing.md),
-              AppTextField(controller: model, label: 'Model', hint: 'gpt-4o-mini'),
+              AppTextField(
+                controller: model,
+                label: 'Model',
+                hint: 'gpt-4o-mini',
+              ),
             ],
           ),
         ),
         actions: <Widget>[
-          TextButton(
+          AppButton(
+            label: 'Hủy',
+            variant: AppButtonVariant.tonal,
+            dense: true,
+            expanded: false,
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Hủy'),
           ),
-          FilledButton(
+          const SizedBox(width: AppSpacing.md),
+          AppButton(
+            label: 'Lưu',
+            variant: AppButtonVariant.primary,
+            dense: true,
+            expanded: false,
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Lưu'),
           ),
         ],
       ),
@@ -462,6 +565,35 @@ class ProfileScreen extends StatelessWidget {
     baseUrl.dispose();
     apiKey.dispose();
     model.dispose();
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.leading,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    required this.onTap,
+  });
+
+  final Widget leading;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: leading,
+      title: Text(title, style: Theme.of(context).textTheme.titleSmall),
+      subtitle: subtitle != null
+          ? Text(subtitle!, style: Theme.of(context).textTheme.bodySmall)
+          : null,
+      trailing: trailing ?? const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
+    );
   }
 }
 

@@ -7,11 +7,10 @@ enum TopicOrigin {
 
   final String dbValue;
 
-  static TopicOrigin fromDb(String? value) =>
-      TopicOrigin.values.firstWhere(
-        (TopicOrigin e) => e.dbValue == value,
-        orElse: () => TopicOrigin.personal,
-      );
+  static TopicOrigin fromDb(String? value) => TopicOrigin.values.firstWhere(
+    (TopicOrigin e) => e.dbValue == value,
+    orElse: () => TopicOrigin.personal,
+  );
 }
 
 enum SourceType {
@@ -26,11 +25,10 @@ enum SourceType {
 
   final String dbValue;
 
-  static SourceType fromDb(String? value) =>
-      SourceType.values.firstWhere(
-        (SourceType e) => e.dbValue == value,
-        orElse: () => SourceType.text,
-      );
+  static SourceType fromDb(String? value) => SourceType.values.firstWhere(
+    (SourceType e) => e.dbValue == value,
+    orElse: () => SourceType.text,
+  );
 }
 
 enum SourceStatus {
@@ -43,11 +41,10 @@ enum SourceStatus {
 
   final String dbValue;
 
-  static SourceStatus fromDb(String? value) =>
-      SourceStatus.values.firstWhere(
-        (SourceStatus e) => e.dbValue == value,
-        orElse: () => SourceStatus.ready,
-      );
+  static SourceStatus fromDb(String? value) => SourceStatus.values.firstWhere(
+    (SourceStatus e) => e.dbValue == value,
+    orElse: () => SourceStatus.ready,
+  );
 }
 
 enum KnowledgeOrigin {
@@ -76,11 +73,10 @@ enum QuestionType {
 
   final String dbValue;
 
-  static QuestionType fromDb(String? value) =>
-      QuestionType.values.firstWhere(
-        (QuestionType e) => e.dbValue == value,
-        orElse: () => QuestionType.recall,
-      );
+  static QuestionType fromDb(String? value) => QuestionType.values.firstWhere(
+    (QuestionType e) => e.dbValue == value,
+    orElse: () => QuestionType.recall,
+  );
 }
 
 enum MemoryRating {
@@ -95,9 +91,8 @@ enum MemoryRating {
   final String vietnameseLabel;
   final String fsrsLabel;
 
-  static MemoryRating fromValue(int? value) =>
-      MemoryRating.values.firstWhere(
-        (MemoryRating e) => e.value == value,
-        orElse: () => MemoryRating.good,
-      );
+  static MemoryRating fromValue(int? value) => MemoryRating.values.firstWhere(
+    (MemoryRating e) => e.value == value,
+    orElse: () => MemoryRating.good,
+  );
 }

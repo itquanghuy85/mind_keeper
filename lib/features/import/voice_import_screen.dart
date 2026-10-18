@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/services/voice_transcription_service.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_icon_badge.dart';
 import '../../core/widgets/app_text_field.dart';
 import 'text_import_screen.dart';
 
@@ -79,15 +79,17 @@ class _VoiceImportScreenState extends State<VoiceImportScreen> {
   void _useText() {
     final String value = _text.text.trim();
     if (value.isEmpty) {
-      showAppSnack(context, message: 'Chưa có nội dung — hãy ghi âm trước.', error: true);
+      showAppSnack(
+        context,
+        message: 'Chưa có nội dung — hãy ghi âm trước.',
+        error: true,
+      );
       return;
     }
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => TextImportScreen(
-          topicId: widget.topicId,
-          initialText: value,
-        ),
+        builder: (_) =>
+            TextImportScreen(topicId: widget.topicId, initialText: value),
       ),
     );
   }
@@ -103,33 +105,30 @@ class _VoiceImportScreenState extends State<VoiceImportScreen> {
             AppCard(
               child: Column(
                 children: <Widget>[
-                  Container(
-                    width: 96,
-                    height: 96,
-                    decoration: BoxDecoration(
-                      color: _listening
-                          ? AppColors.dangerSoft
-                          : AppColors.primarySoft,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      _listening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                      size: 44,
-                      color: _listening ? AppColors.danger : AppColors.primary,
-                    ),
+                  AppIconBadge(
+                    icon: _listening
+                        ? Icons.mic_rounded
+                        : Icons.mic_none_rounded,
+                    tone: _listening ? AppIconTone.danger : AppIconTone.primary,
+                    size: 96,
+                    radius: AppRadius.xxl,
+                    iconSize: 44,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     _listening
                         ? 'Đang nghe — nói tự nhiên, ngưng nói để dừng.'
-                        : (_hint ?? 'Nhấn Bắt đầu để nói. Có thể ghi nhiều lần, văn bản cộng dồn.'),
+                        : (_hint ??
+                              'Nhấn Bắt đầu để nói. Có thể ghi nhiều lần, văn bản cộng dồn.'),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppButton(
                     label: _listening ? 'Dừng ghi âm' : 'Bắt đầu ghi âm',
-                    variant: _listening ? AppButtonVariant.danger : AppButtonVariant.primary,
+                    variant: _listening
+                        ? AppButtonVariant.danger
+                        : AppButtonVariant.primary,
                     icon: _listening ? Icons.stop_rounded : Icons.mic_rounded,
                     loading: _busy,
                     onPressed: _toggle,

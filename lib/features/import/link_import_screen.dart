@@ -71,7 +71,10 @@ class _LinkImportScreenState extends State<LinkImportScreen> {
     dotAll: true,
   );
   static final RegExp _tagRe = RegExp(r'<[^>]+>');
-  static final RegExp _blockRe = RegExp(r'</(p|div|h[1-6]|li|br)\s*>', caseSensitive: false); // ignore: lines_longer_than_80_chars
+  static final RegExp _blockRe = RegExp(
+    r'</(p|div|h[1-6]|li|br)\s*>',
+    caseSensitive: false,
+  ); // ignore: lines_longer_than_80_chars
 
   String _htmlToText(String html) {
     String text = html.replaceAll(_scriptRe, ' ');
@@ -251,8 +254,10 @@ class _LinkImportScreenState extends State<LinkImportScreen> {
             ],
             if (_extracted != null) ...<Widget>[
               const SizedBox(height: AppSpacing.xl),
-              Text('Nội dung trích xuất', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: AppSpacing.sm),
+              AppSectionHeader(
+                title: 'Nội dung trích xuất',
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              ),
               AppCard(
                 child: Text(
                   _extracted!,
@@ -264,8 +269,10 @@ class _LinkImportScreenState extends State<LinkImportScreen> {
             ],
             if (_drafts.isNotEmpty) ...<Widget>[
               const SizedBox(height: AppSpacing.xl),
-              Text('Nháp kiến thức (${_drafts.length})', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: AppSpacing.sm),
+              AppSectionHeader(
+                title: 'Nháp kiến thức (${_drafts.length})',
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              ),
               ..._drafts.map(
                 (AiKnowledgeDraft d) => Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -273,7 +280,10 @@ class _LinkImportScreenState extends State<LinkImportScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(d.title, style: Theme.of(context).textTheme.titleSmall),
+                        Text(
+                          d.title,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(d.content),
                       ],

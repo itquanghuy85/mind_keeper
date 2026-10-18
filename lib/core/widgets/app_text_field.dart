@@ -60,23 +60,24 @@ class AppTextField extends StatelessWidget {
       children: <Widget>[
         if (label != null)
           Padding(
-            padding: const EdgeInsets.only(
-              left: AppSpacing.xs,
-              bottom: AppSpacing.sm,
-            ),
+            padding: const EdgeInsets.only(left: 2, bottom: AppSpacing.sm),
             child: Text.rich(
               TextSpan(
                 text: label,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
+                  letterSpacing: 0.1,
                   color: AppColors.textSecondary,
                 ),
                 children: <InlineSpan>[
                   if (required)
                     const TextSpan(
                       text: ' *',
-                      style: TextStyle(color: AppColors.danger),
+                      style: TextStyle(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                 ],
               ),
@@ -98,24 +99,33 @@ class AppTextField extends StatelessWidget {
           obscureText: obscureText,
           textCapitalization: textCapitalization,
           cursorColor: AppColors.primary,
-          style: const TextStyle(fontSize: 15, height: 1.45),
+          cursorWidth: 1.6,
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.4,
+            color: AppColors.textPrimary,
+          ),
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
             prefixIcon: prefixIcon == null
                 ? null
-                : Icon(prefixIcon, size: AppSizes.iconSm),
+                : Icon(prefixIcon, size: 20, color: AppColors.textTertiary),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: AppSizes.touchTarget,
+            ),
             suffixIcon: suffix,
             counterText: '',
           ),
         ),
         if (helper != null && !hasError)
           Padding(
-            padding: const EdgeInsets.only(left: AppSpacing.xs, top: AppSpacing.xs),
+            padding: const EdgeInsets.only(left: 2, top: 6),
             child: Text(
               helper!,
               style: const TextStyle(
                 fontSize: 12,
+                height: 1.35,
                 color: AppColors.textTertiary,
               ),
             ),
@@ -153,11 +163,12 @@ class AppSearchField extends StatelessWidget {
       onChanged: onChanged,
       suffix: IconButton(
         icon: const Icon(
-          Icons.close_rounded,
-          size: AppSizes.iconSm,
+          Icons.cancel_rounded,
+          size: 18,
           color: AppColors.textTertiary,
         ),
         onPressed: onClear,
+        visualDensity: VisualDensity.compact,
       ),
     );
   }

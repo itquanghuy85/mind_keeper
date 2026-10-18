@@ -4,12 +4,17 @@ import 'package:provider/provider.dart';
 import '../../core/services/app_services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_feedback.dart';
+import '../../core/widgets/app_icon_badge.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/lesson.dart';
+import '../../data/models/topic.dart';
+import '../../data/repositories/topic_repository.dart';
 import '../topics/topic_detail_screen.dart';
 import 'lesson_service.dart';
 
@@ -36,6 +41,9 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
   bool _submitting = false;
   LessonQuizOutcome? _outcome;
 
+  /// Đã thử đăng ký vào Kho đã học chưa (tránh đăng ký trùng do rebuild).
+  bool _enrollmentAttempted = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +63,7 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
         _lesson = lesson;
         _error = lesson == null ? 'Bài học không tồn tại.' : null;
         _loading = false;
+        _enrollmentAttempted = false;
       });
     } catch (e) {
       if (!mounted) return;
@@ -63,6 +72,77 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
         _loading = false;
       });
     }
+  }
+
+  /// Đăng ký bài vào Kho đã học khi người dùng thực sự đọc bài lần đầu.
+  /// Chỉ chạy một lần khi nội dung đọc được hiển thị (build _buildReading).
+  Future<void> _ensureEnrolled() async {
+    if (_enrollmentAttempted || _lesson == null) return;
+    final lesson = _lesson!;
+
+    _enrollmentAttempted = true;
+    try {
+      final AppServices services = context.read<AppServices>();
+
+      // Đảm bảo topic tồn tại và liên kết với lesson
+      Topic topic;
+      if (lesson.linkedTopicId != null) {
+        final Topic? existing = await services.topics.getById(
+          lesson.linkedTopicId!,
+        );
+        if (existing != null) {
+          topic = existing;
+        } else {
+          topic = await _ensureTopicForLesson(services, lesson);
+        }
+      } else {
+        topic = await _ensureTopicForLesson(services, lesson);
+      }
+
+      final String summary = lesson.content.summary.isNotEmpty
+          ? lesson.content.summary
+          : lesson.content.introduction;
+
+      await services.knowledge.enroll(
+        topicId: topic.id,
+        title: lesson.title,
+        content: summary,
+        details: lesson.content.keyPoints.join(' — '),
+        origin: KnowledgeOrigin.aiSuggested,
+      );
+      // Cập nhật lesson local để biết đã enrolled
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      // Log error but don't block reading
+      debugPrint('Enrollment failed: $e');
+    }
+  }
+
+  Future<Topic> _ensureTopicForLesson(
+    AppServices services,
+    Lesson lesson,
+  ) async {
+    final String name = TopicRepository.normalizeName(
+      lesson.topic.isEmpty ? lesson.title : lesson.topic,
+    );
+    final Topic? existing = await services.topics.findByName(name);
+    if (existing != null) {
+      if (lesson.linkedTopicId != existing.id) {
+        await services.lessons.setLinkedTopic(lesson.id, topicId: existing.id);
+      }
+      return existing;
+    }
+    final Topic topic = await services.topics.create(
+      name: name,
+      description: 'lesson:${lesson.id}',
+      category: lesson.domainName,
+      icon: '',
+      origin: TopicOrigin.discovered,
+    );
+    await services.lessons.setLinkedTopic(lesson.id, topicId: topic.id);
+    return topic;
   }
 
   Future<void> _toggleFavorite() async {
@@ -109,11 +189,8 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
     final AppServices services = context.read<AppServices>();
     setState(() => _submitting = true);
     try {
-      final LessonQuizOutcome outcome =
-          await services.lessonService.completeQuiz(
-        lesson: _lesson!,
-        answers: _answers,
-      );
+      final LessonQuizOutcome outcome = await services.lessonService
+          .completeQuiz(lesson: _lesson!, answers: _answers);
       if (!mounted) return;
       setState(() {
         _outcome = outcome;
@@ -161,6 +238,8 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
 
   Widget _buildReading() {
     final Lesson lesson = _lesson!;
+    // Đăng ký vào Kho đã học khi nội dung đọc được hiển thị lần đầu
+    _ensureEnrolled();
     return Column(
       children: <Widget>[
         Expanded(
@@ -174,17 +253,15 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  _TagPill(
-                    label: lesson.mode.label,
-                    color: AppColors.primary,
-                    background: AppColors.primarySoft,
-                  ),
+                  AppTag(label: lesson.mode.label, tone: AppTagTone.primary),
                   const SizedBox(width: AppSpacing.sm),
                   _VerificationTag(lesson: lesson),
                   const Spacer(),
                   Text(
                     '${lesson.wordCount} từ',
-                    style: Theme.of(context).textTheme.labelSmall,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontFeatures: AppTheme.tabularFigures,
+                    ),
                   ),
                 ],
               ),
@@ -205,21 +282,70 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: AppColors.warningSoft,
-                    borderRadius: AppRadius.mdAll,
+                    borderRadius: AppRadius.lgAll,
                   ),
                   child: const Text(
                     'Nội dung về sức khỏe chỉ mang tính tham khảo, '
                     'không thay thế tư vấn y tế chuyên môn.',
-                    style: TextStyle(fontSize: 13, color: Color(0xFFB7791F)),
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: AppColors.warningText,
+                    ),
                   ),
                 ),
               ],
               const SizedBox(height: AppSpacing.lg),
+              if (lesson.content.learningObjectives.isNotEmpty) ...<Widget>[
+                Text(
+                  'Mục tiêu học tập',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                for (final String obj in lesson.content.learningObjectives)
+                  _Bullet(text: obj),
+                const SizedBox(height: AppSpacing.lg),
+              ],
               Text(
                 lesson.content.introduction,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
-              for (final LessonSection section in lesson.content.sections) ...<Widget>[
+              if (lesson.content.concepts.isNotEmpty) ...<Widget>[
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Khái niệm cốt lõi',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                for (final LessonConcept concept
+                    in lesson.content.concepts) ...<Widget>[
+                  AppCard(
+                    color: AppColors.infoSoft,
+                    border: AppColors.info.withValues(alpha: 0.3),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          concept.name,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.info,
+                              ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          concept.explanation,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.lg),
+              ],
+              for (final LessonSection section
+                  in lesson.content.sections) ...<Widget>[
                 const SizedBox(height: AppSpacing.lg),
                 Text(
                   section.heading,
@@ -243,13 +369,20 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
               ],
               if (lesson.content.examples.isNotEmpty) ...<Widget>[
                 const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Ví dụ',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                Text('Ví dụ', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: AppSpacing.sm),
                 for (final String example in lesson.content.examples)
                   _Bullet(text: example),
+              ],
+              if (lesson.content.commonMistakes.isNotEmpty) ...<Widget>[
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Sai lầm thường gặp',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                for (final String mistake in lesson.content.commonMistakes)
+                  _Bullet(text: mistake),
               ],
               if (lesson.content.summary.isNotEmpty) ...<Widget>[
                 const SizedBox(height: AppSpacing.lg),
@@ -314,7 +447,9 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
             children: <Widget>[
               Text(
                 '${_qIndex + 1}/${lesson.questions.length}',
-                style: Theme.of(context).textTheme.labelMedium,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontFeatures: AppTheme.tabularFigures,
+                ),
               ),
               const Spacer(),
               Text(
@@ -348,16 +483,14 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
                 else ...<Widget>[
                   AppCard(
                     color: AppColors.successSoft,
-                    border: AppColors.success,
+                    border: AppColors.success.withValues(alpha: 0.45),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
                           'Đáp án',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(color: AppColors.success),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(color: AppColors.successText),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(question.answer),
@@ -390,12 +523,12 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
                   child: CircularProgressIndicator(strokeWidth: 3),
                 )
               : _revealed
-                  ? _QuizRatingBar(onRate: _rate)
-                  : AppButton(
-                      label: 'Xem đáp án',
-                      icon: Icons.visibility_outlined,
-                      onPressed: () => setState(() => _revealed = true),
-                    ),
+              ? _QuizRatingBar(onRate: _rate)
+              : AppButton(
+                  label: 'Xem đáp án',
+                  icon: Icons.visibility_outlined,
+                  onPressed: () => setState(() => _revealed = true),
+                ),
         ),
       ],
     );
@@ -409,18 +542,12 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Container(
-              width: 80,
-              height: 80,
-              decoration: const BoxDecoration(
-                color: AppColors.successSoft,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.celebration_rounded,
-                color: AppColors.success,
-                size: 36,
-              ),
+            const AppIconBadge(
+              icon: Icons.celebration_rounded,
+              tone: AppIconTone.success,
+              size: 72,
+              radius: AppRadius.xxl,
+              iconSize: 32,
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
@@ -476,25 +603,32 @@ class _VerificationTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color background, Color color, IconData icon) = switch (lesson.verification) {
+    final (
+      Color background,
+      Color color,
+      IconData icon,
+    ) = switch (lesson.verification) {
       LessonVerification.confirmed => (
-          AppColors.successSoft,
-          AppColors.success,
-          Icons.verified_rounded,
-        ),
+        AppColors.successSoft,
+        AppColors.successText,
+        Icons.verified_rounded,
+      ),
       LessonVerification.sourced => (
-          AppColors.infoSoft,
-          AppColors.info,
-          Icons.link_rounded,
-        ),
+        AppColors.infoSoft,
+        AppColors.info,
+        Icons.link_rounded,
+      ),
       LessonVerification.unverified => (
-          AppColors.warningSoft,
-          Color(0xFFB7791F),
-          Icons.help_outline_rounded,
-        ),
+        AppColors.warningSoft,
+        AppColors.warningText,
+        Icons.help_outline_rounded,
+      ),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 3,
+      ),
       decoration: BoxDecoration(
         color: background,
         borderRadius: AppRadius.pillAll,
@@ -506,7 +640,11 @@ class _VerificationTag extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             lesson.verification.label,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -526,10 +664,7 @@ class _SourcesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          'Nguồn tham khảo',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Nguồn tham khảo', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: AppSpacing.sm),
         if (sources.isEmpty)
           Text(
@@ -591,48 +726,13 @@ class _Bullet extends StatelessWidget {
         children: <Widget>[
           const Padding(
             padding: EdgeInsets.only(top: 7),
-            child: Icon(
-              Icons.circle,
-              size: 6,
-              color: AppColors.primary,
-            ),
+            child: Icon(Icons.circle, size: 6, color: AppColors.primary),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TagPill extends StatelessWidget {
-  const _TagPill({
-    required this.label,
-    required this.color,
-    required this.background,
-  });
-
-  final String label;
-  final Color color;
-  final Color background;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: AppRadius.pillAll,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }
@@ -706,21 +806,21 @@ class _RateButton extends StatelessWidget {
         label: 'Đánh giá $label',
         child: Material(
           color: soft,
-          borderRadius: AppRadius.mdAll,
+          borderRadius: AppRadius.lgAll,
           child: InkWell(
             onTap: onTap,
-            borderRadius: AppRadius.mdAll,
+            borderRadius: AppRadius.lgAll,
             child: Container(
-              height: 64,
+              height: 58,
               decoration: BoxDecoration(
-                borderRadius: AppRadius.mdAll,
+                borderRadius: AppRadius.lgAll,
                 border: Border.all(color: color.withValues(alpha: 0.35)),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Icon(icon, color: color, size: 22),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     label,
                     style: TextStyle(

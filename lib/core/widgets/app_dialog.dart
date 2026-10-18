@@ -15,12 +15,12 @@ Future<bool> showAppConfirmDialog(
   final bool? result = await showDialog<bool>(
     context: context,
     builder: (BuildContext context) => AlertDialog(
-      title: Text(title),
-      content: Text(message),
+      title: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      content: Text(message, style: Theme.of(context).textTheme.bodyMedium),
       actionsPadding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
+        AppSpacing.xl,
         AppSpacing.sm,
-        AppSpacing.lg,
+        AppSpacing.xl,
         AppSpacing.lg,
       ),
       actions: <Widget>[
@@ -38,8 +38,9 @@ Future<bool> showAppConfirmDialog(
             Expanded(
               child: AppButton(
                 label: confirmLabel,
-                variant:
-                    destructive ? AppButtonVariant.danger : AppButtonVariant.primary,
+                variant: destructive
+                    ? AppButtonVariant.danger
+                    : AppButtonVariant.primary,
                 dense: true,
                 onPressed: () => Navigator.of(context).pop(true),
               ),
@@ -115,33 +116,38 @@ void showAppSnack(
   Duration duration = const Duration(seconds: 3),
 }) {
   final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+  final Color background = error
+      ? AppColors.danger
+      : success
+      ? AppColors.success
+      : AppColors.textPrimary;
+  final IconData icon = error
+      ? Icons.error_outline_rounded
+      : success
+      ? Icons.check_circle_outline_rounded
+      : Icons.info_outline_rounded;
+
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
         duration: duration,
-        backgroundColor: error
-            ? AppColors.danger
-            : success
-                ? AppColors.success
-                : AppColors.textPrimary,
+        backgroundColor: background,
         content: Row(
           children: <Widget>[
-            Icon(
-              error
-                  ? Icons.error_outline_rounded
-                  : success
-                      ? Icons.check_circle_outline_rounded
-                      : Icons.info_outline_rounded,
-              color: Colors.white,
-              size: AppSizes.iconSm,
-            ),
-            const SizedBox(width: AppSpacing.sm),
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Text(
                 message,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],

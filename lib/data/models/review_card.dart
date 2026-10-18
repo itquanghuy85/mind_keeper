@@ -112,54 +112,54 @@ class ReviewCard {
   }
 
   Map<String, Object?> toMap() => <String, Object?>{
-        'id': id,
-        'knowledge_item_id': knowledgeItemId,
-        'question': question,
-        'answer': answer,
-        'question_type': questionType.dbValue,
-        'fsrs_state': fsrsState,
-        'fsrs_step': fsrsStep,
-        'stability': stability,
-        'difficulty': difficulty,
-        'due_at': dueAt.toUtc().millisecondsSinceEpoch,
-        'last_review_at': lastReviewAt?.toUtc().millisecondsSinceEpoch,
-        'reps': reps,
-        'lapses': lapses,
-        'is_active': isActive ? 1 : 0,
-        'created_at': createdAt.toUtc().millisecondsSinceEpoch,
-        'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
-      };
+    'id': id,
+    'knowledge_item_id': knowledgeItemId,
+    'question': question,
+    'answer': answer,
+    'question_type': questionType.dbValue,
+    'fsrs_state': fsrsState,
+    'fsrs_step': fsrsStep,
+    'stability': stability,
+    'difficulty': difficulty,
+    'due_at': dueAt.toUtc().millisecondsSinceEpoch,
+    'last_review_at': lastReviewAt?.toUtc().millisecondsSinceEpoch,
+    'reps': reps,
+    'lapses': lapses,
+    'is_active': isActive ? 1 : 0,
+    'created_at': createdAt.toUtc().millisecondsSinceEpoch,
+    'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
+  };
 
   factory ReviewCard.fromMap(Map<String, Object?> map) => ReviewCard(
-        id: map['id']! as String,
-        knowledgeItemId: map['knowledge_item_id']! as String,
-        question: map['question']! as String,
-        answer: map['answer']! as String,
-        questionType: QuestionType.fromDb(map['question_type'] as String?),
-        fsrsState: ((map['fsrs_state'] ?? 0) as int).clamp(0, 2),
-        fsrsStep: map['fsrs_step'] as int?,
-        stability: (map['stability'] as num?)?.toDouble(),
-        difficulty: (map['difficulty'] as num?)?.toDouble(),
-        dueAt: DateTime.fromMillisecondsSinceEpoch(
-          (map['due_at']! as num).toInt(),
-          isUtc: true,
-        ),
-        lastReviewAt: map['last_review_at'] == null
-            ? null
-            : DateTime.fromMillisecondsSinceEpoch(
-                (map['last_review_at']! as num).toInt(),
-                isUtc: true,
-              ),
-        reps: ((map['reps'] ?? 0) as int),
-        lapses: ((map['lapses'] ?? 0) as int),
-        isActive: ((map['is_active'] ?? 1) as int) == 1,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(
-          (map['created_at']! as num).toInt(),
-          isUtc: true,
-        ),
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(
-          (map['updated_at']! as num).toInt(),
-          isUtc: true,
-        ),
-      );
+    id: map['id']! as String,
+    knowledgeItemId: map['knowledge_item_id']! as String,
+    question: map['question']! as String,
+    answer: map['answer']! as String,
+    questionType: QuestionType.fromDb(map['question_type'] as String?),
+    fsrsState: ((map['fsrs_state'] ?? 0) as int).clamp(0, 2),
+    fsrsStep: map['fsrs_step'] as int?,
+    stability: (map['stability'] as num?)?.toDouble(),
+    difficulty: (map['difficulty'] as num?)?.toDouble(),
+    dueAt: DateTime.fromMillisecondsSinceEpoch(
+      (map['due_at']! as num).toInt(),
+      isUtc: true,
+    ),
+    lastReviewAt: map['last_review_at'] == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(
+            (map['last_review_at']! as num).toInt(),
+            isUtc: true,
+          ),
+    reps: ((map['reps'] ?? 0) as int),
+    lapses: ((map['lapses'] ?? 0) as int),
+    isActive: ((map['is_active'] ?? 1) as int) == 1,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(
+      (map['created_at']! as num).toInt(),
+      isUtc: true,
+    ),
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(
+      (map['updated_at']! as num).toInt(),
+      isUtc: true,
+    ),
+  );
 }

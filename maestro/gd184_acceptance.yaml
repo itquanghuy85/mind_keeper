@@ -1,0 +1,12 @@
+# GĐ18.4 — Nghiệm thu end-to-end trên OPPO CPH2203
+# Chạy: maestro test --device NJR8W86LKRVW7DHQ maestro/gd184_acceptance.yaml
+appId: com.mindkeeper.mind_keeper
+name: GD18.4 Acceptance Test
+tags: [acceptance, gd184]
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang ch\u1EE7"
+    timeout: 15000
+- takeScreenshot: "01_home_screen"

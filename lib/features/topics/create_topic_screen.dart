@@ -5,23 +5,24 @@ import '../../core/errors/app_exception.dart';
 import '../../core/services/app_services.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../data/models/topic.dart';
 
 const List<({String icon, String category})> _iconChoices =
     <({String icon, String category})>[
-  (icon: '📱', category: 'Công nghệ'),
-  (icon: '🔬', category: 'Khoa học'),
-  (icon: '📚', category: 'Lịch sử'),
-  (icon: '🇬🇧', category: 'Ngoại ngữ'),
-  (icon: '💼', category: 'Kinh doanh'),
-  (icon: '❤️', category: 'Sức khỏe'),
-  (icon: '🧠', category: 'Tâm lý'),
-  (icon: '🌍', category: 'Địa lý'),
-  (icon: '🏠', category: 'Đời sống'),
-  (icon: '📗', category: ''),
-];
+      (icon: '📱', category: 'Công nghệ'),
+      (icon: '🔬', category: 'Khoa học'),
+      (icon: '📚', category: 'Lịch sử'),
+      (icon: '🇬🇧', category: 'Ngoại ngữ'),
+      (icon: '💼', category: 'Kinh doanh'),
+      (icon: '❤️', category: 'Sức khỏe'),
+      (icon: '🧠', category: 'Tâm lý'),
+      (icon: '🌍', category: 'Địa lý'),
+      (icon: '🏠', category: 'Đời sống'),
+      (icon: '📗', category: ''),
+    ];
 
 class CreateTopicScreen extends StatefulWidget {
   const CreateTopicScreen({super.key});
@@ -57,18 +58,42 @@ class _CreateTopicScreenState extends State<CreateTopicScreen> {
         description: _description.text,
         category: _category.isEmpty
             ? (_iconChoices
-                    .firstWhere(
-                      (({String icon, String category}) e) =>
-                          e.icon == _icon,
-                      orElse: () =>
-                          (icon: '📗', category: ''),
-                    )
-                    .category)
+                  .firstWhere(
+                    (({String icon, String category}) e) => e.icon == _icon,
+                    orElse: () => (icon: '📗', category: ''),
+                  )
+                  .category)
             : _category,
         icon: _icon,
       );
       if (!mounted) return;
-      showAppSnack(context, message: 'Đã tạo chủ đề', success: true);
+
+      // Bắt đầu sinh thư viện kiến thức trong background
+      try {
+        await services.knowledgeGeneration.startGeneration(
+          topicId: topic.id,
+          topicName: topic.name,
+          topicDescription: topic.description,
+          topicCategory: topic.category,
+        );
+        if (mounted) {
+          showAppSnack(
+            context,
+            message: 'Đã tạo chủ đề. Đang sinh thư viện kiến thức...',
+            success: true,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          showAppSnack(
+            context,
+            message: 'Đã tạo chủ đề. Sinh thư viện kiến thức: $e',
+            error: true,
+          );
+        }
+      }
+
+      if (!mounted) return;
       Navigator.of(context).pop(topic);
     } on ValidationException catch (e) {
       setState(() {
@@ -121,15 +146,19 @@ class _CreateTopicScreenState extends State<CreateTopicScreen> {
               runSpacing: AppSpacing.sm,
               children: _iconChoices.map((({String icon, String category}) e) {
                 final bool selected = _icon == e.icon;
-                return ChoiceChip(
-                  label: Text(e.icon, style: const TextStyle(fontSize: 20)),
+                final String label = e.category.isNotEmpty
+                    ? '${e.icon} ${e.category}'
+                    : e.icon;
+                return AppChip(
+                  label: e.icon,
                   selected: selected,
-                  onSelected: (_) {
+                  onTap: () {
                     setState(() {
                       _icon = e.icon;
                       _category = e.category;
                     });
                   },
+                  semanticsLabel: label,
                 );
               }).toList(),
             ),

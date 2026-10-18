@@ -58,8 +58,11 @@ void main() {
         fetched.copyWith(name: 'Kỹ thuật iPhone Pro'),
       );
       expect(updated.name, 'Kỹ thuật iPhone Pro');
-      expect(updated.updatedAt.isAfter(created.updatedAt) ||
-          !updated.updatedAt.isBefore(created.updatedAt), isTrue);
+      expect(
+        updated.updatedAt.isAfter(created.updatedAt) ||
+            !updated.updatedAt.isBefore(created.updatedAt),
+        isTrue,
+      );
 
       final List<Topic> all = await topics.list();
       expect(all.length, 1);
@@ -249,8 +252,16 @@ void main() {
     });
 
     test('tìm kiếm toàn bộ kho kiến thức', () async {
-      await knowledge.create(title: 'A', topicId: topic.id, content: 'Cấu trúc ADN');
-      await knowledge.create(title: 'B', topicId: topic.id, content: 'Chọn lọc tự nhiên');
+      await knowledge.create(
+        title: 'A',
+        topicId: topic.id,
+        content: 'Cấu trúc ADN',
+      );
+      await knowledge.create(
+        title: 'B',
+        topicId: topic.id,
+        content: 'Chọn lọc tự nhiên',
+      );
       expect(await knowledge.search('adn'), hasLength(1));
       expect(await knowledge.search('   '), isEmpty);
       expect(await knowledge.search('tự nhiên'), hasLength(1));
@@ -267,7 +278,10 @@ void main() {
       final KnowledgeItem? reloaded = await knowledge.getById(item.id);
       expect(reloaded!.isFavorite, isTrue);
       expect(reloaded.isPaused, isTrue);
-      expect(await knowledge.listByTopic(topic.id, includePaused: false), isEmpty);
+      expect(
+        await knowledge.listByTopic(topic.id, includePaused: false),
+        isEmpty,
+      );
     });
 
     test('dữ liệu dài không làm hỏng truy vấn', () async {
@@ -277,40 +291,45 @@ void main() {
         title: 'Dài',
         content: longContent,
       );
-      expect((await knowledge.getById(item.id))!.content.length,
-          greaterThan(6000));
+      expect(
+        (await knowledge.getById(item.id))!.content.length,
+        greaterThan(6000),
+      );
       expect(await knowledge.search('Nội dung dài'), hasLength(1));
     });
   });
 
   group('SourceRepository', () {
-    test('tạo, cập nhật trạng thái, xóa giữ nguyên liên kết kiến thức', () async {
-      final Topic topic = await topics.create(name: 'Công nghệ');
-      final source = await sources.create(
-        topicId: topic.id,
-        type: SourceType.text,
-        title: 'Ghi chú',
-        contentText: 'Bản gốc',
-      );
-      await sources.updateStatus(
-        source.id,
-        status: SourceStatus.failed,
-        errorMessage: 'Không đọc được',
-      );
-      final reloaded = await sources.getById(source.id);
-      expect(reloaded!.status, SourceStatus.failed);
-      expect(reloaded.errorMessage, 'Không đọc được');
+    test(
+      'tạo, cập nhật trạng thái, xóa giữ nguyên liên kết kiến thức',
+      () async {
+        final Topic topic = await topics.create(name: 'Công nghệ');
+        final source = await sources.create(
+          topicId: topic.id,
+          type: SourceType.text,
+          title: 'Ghi chú',
+          contentText: 'Bản gốc',
+        );
+        await sources.updateStatus(
+          source.id,
+          status: SourceStatus.failed,
+          errorMessage: 'Không đọc được',
+        );
+        final reloaded = await sources.getById(source.id);
+        expect(reloaded!.status, SourceStatus.failed);
+        expect(reloaded.errorMessage, 'Không đọc được');
 
-      final item = await knowledge.create(
-        topicId: topic.id,
-        title: 'K',
-        content: 'N',
-        sourceId: source.id,
-      );
-      await sources.delete(source.id);
-      expect(await sources.getById(source.id), isNull);
-      expect((await knowledge.getById(item.id))!.sourceId, isNull);
-    });
+        final item = await knowledge.create(
+          topicId: topic.id,
+          title: 'K',
+          content: 'N',
+          sourceId: source.id,
+        );
+        await sources.delete(source.id);
+        expect(await sources.getById(source.id), isNull);
+        expect((await knowledge.getById(item.id))!.sourceId, isNull);
+      },
+    );
   });
 
   group('ReviewRepository', () {
@@ -335,38 +354,45 @@ void main() {
         dueAt: now.subtract(const Duration(minutes: 1)),
       );
       expect(await cards.countDue(now: now), 1);
-      expect(await cards.countDue(now: now.subtract(const Duration(days: 30))), 0);
+      expect(
+        await cards.countDue(now: now.subtract(const Duration(days: 30))),
+        0,
+      );
       // Quá hạn chỉ tính thẻ đã ôn (reps > 0) và trễ hơn đầu hôm nay.
       expect(
         await cards.countOverdue(
-          startOfTodayUtc:
-              DateTime.now().toUtc().subtract(const Duration(days: 1)),
+          startOfTodayUtc: DateTime.now().toUtc().subtract(
+            const Duration(days: 1),
+          ),
         ),
         0,
         reason: 'thẻ mới chưa ôn không tính quá hạn',
       );
     });
 
-    test('từ chối câu hỏi hoặc đáp án trống và kiến thức không tồn tại', () async {
-      await expectLater(
-        cards.create(
-          knowledgeItemId: item.id,
-          question: ' ',
-          answer: 'A',
-          dueAt: DateTime.now(),
-        ),
-        throwsA(isA<ValidationException>()),
-      );
-      await expectLater(
-        cards.create(
-          knowledgeItemId: 'khong_ton_tai',
-          question: 'Q',
-          answer: 'A',
-          dueAt: DateTime.now(),
-        ),
-        throwsA(isA<NotFoundException>()),
-      );
-    });
+    test(
+      'từ chối câu hỏi hoặc đáp án trống và kiến thức không tồn tại',
+      () async {
+        await expectLater(
+          cards.create(
+            knowledgeItemId: item.id,
+            question: ' ',
+            answer: 'A',
+            dueAt: DateTime.now(),
+          ),
+          throwsA(isA<ValidationException>()),
+        );
+        await expectLater(
+          cards.create(
+            knowledgeItemId: 'khong_ton_tai',
+            question: 'Q',
+            answer: 'A',
+            dueAt: DateTime.now(),
+          ),
+          throwsA(isA<NotFoundException>()),
+        );
+      },
+    );
 
     test('saveReview ghi thẻ và lịch sử trong một giao dịch', () async {
       final DateTime now = DateTime.now().toUtc();
@@ -445,7 +471,12 @@ void main() {
         dueAt: now,
       );
       await logs.insert(
-        ReviewLog(id: 'l1', cardId: card.id, reviewedAt: now, rating: MemoryRating.again),
+        ReviewLog(
+          id: 'l1',
+          cardId: card.id,
+          reviewedAt: now,
+          rating: MemoryRating.again,
+        ),
       );
       await cards.delete(card.id);
       expect(await logs.listByCard(card.id), isEmpty);
@@ -462,7 +493,8 @@ void main() {
       bool isFavorite = false,
       LessonVerification verification = LessonVerification.unverified,
     }) {
-      final String key = dedupKey ??
+      final String key =
+          dedupKey ??
           Lesson.buildDedupKey(
             domainId: domainId,
             topic: topic,
@@ -480,12 +512,17 @@ void main() {
         dedupKey: key,
         title: topic,
         content: const LessonContent(
+          learningObjectives: <String>['Mục tiêu'],
           introduction: 'Mở đầu.',
+          concepts: <LessonConcept>[
+            LessonConcept(name: 'Khái niệm', explanation: 'Giải thích'),
+          ],
           sections: <LessonSection>[
             LessonSection(heading: 'Tổng quan', body: 'Nội dung.'),
           ],
           keyPoints: <String>['Ý 1'],
           examples: <String>['Ví dụ 1'],
+          commonMistakes: <String>['Sai lầm 1'],
           summary: 'Tóm tắt.',
         ),
         questions: const <LessonQuestion>[
@@ -524,9 +561,7 @@ void main() {
       await lessons.create(
         makeLesson(domainId: 'history', topic: 'Lịch sử', isFavorite: true),
       );
-      await lessons.create(
-        makeLesson(domainId: 'tech', topic: 'Công nghệ'),
-      );
+      await lessons.create(makeLesson(domainId: 'tech', topic: 'Công nghệ'));
 
       expect(await lessons.list(domainId: 'science'), hasLength(1));
       expect(await lessons.list(favoritesOnly: true), hasLength(1));
@@ -554,12 +589,15 @@ void main() {
 
     test('đếm theo lĩnh vực và tổng số', () async {
       await lessons.create(makeLesson(domainId: 'science', isRead: true));
-      await lessons.create(makeLesson(domainId: 'science', topic: 'Thuyết tiến hóa'));
+      await lessons.create(
+        makeLesson(domainId: 'science', topic: 'Thuyết tiến hóa'),
+      );
       await lessons.create(
         makeLesson(domainId: 'history', topic: 'Lịch sử', isFavorite: true),
       );
 
-      final Map<String, LessonDomainCount> counts = await lessons.countByDomain();
+      final Map<String, LessonDomainCount> counts = await lessons
+          .countByDomain();
       expect(counts['science']!.total, 2);
       expect(counts['science']!.read, 1);
       expect(counts['history']!.favorites, 1);

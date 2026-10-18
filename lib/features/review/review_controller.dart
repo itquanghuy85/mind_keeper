@@ -37,8 +37,9 @@ class ReviewController extends ChangeNotifier {
     notifyListeners();
     try {
       final DateTime now = DateTime.now();
-      final List<DueReviewItem> due =
-          await _services.cards.listDueWithContext(now: now);
+      final List<DueReviewItem> due = await _services.cards.listDueWithContext(
+        now: now,
+      );
       if (resume) {
         final List<String> savedIds = _services.prefs.sessionCardIds;
         final int savedIndex = _services.prefs.sessionIndex;
@@ -85,7 +86,9 @@ class ReviewController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final DueReviewItem? item = await _services.cards.getByIdWithContext(cardId);
+      final DueReviewItem? item = await _services.cards.getByIdWithContext(
+        cardId,
+      );
       if (item == null) {
         error = 'Thẻ ôn tập không còn tồn tại.';
         queue = const <DueReviewItem>[];
@@ -135,7 +138,8 @@ class ReviewController extends ChangeNotifier {
     ReviewCard card,
     DateTime now,
   ) async {
-    final bool? enabled = await _services.notifications.areNotificationsEnabled();
+    final bool? enabled = await _services.notifications
+        .areNotificationsEnabled();
     if (enabled == true) {
       await _services.notifications.cancelCardNotification(card.id);
       if (card.dueAt.isAfter(now)) {

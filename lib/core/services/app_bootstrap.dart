@@ -40,12 +40,12 @@ class AppBootstrap {
       if (services.prefs.notificationsEnabled) {
         await _scheduleReminder(services);
       }
-      services.notifications.setOnNotificationOpened(
-        (NotificationPayload payload) {
-          pendingNotificationPayload = payload;
-          onNotificationOpened?.call(payload);
-        },
-      );
+      services.notifications.setOnNotificationOpened((
+        NotificationPayload payload,
+      ) {
+        pendingNotificationPayload = payload;
+        onNotificationOpened?.call(payload);
+      });
     } catch (e, s) {
       if (kDebugMode) {
         debugPrint('Khởi tạo thông báo thất bại: $e\n$s');
@@ -59,7 +59,8 @@ class AppBootstrap {
     // nhầm "đã bật mà không thấy". Trạng thái null (nền tảng không đọc được)
     // → vẫn lên lịch. Được cấp lại → lịch tự lập ở lần mở app sau hoặc khi
     // quay về màn Cài đặt thông báo (resumed).
-    final bool? granted = await services.notifications.areNotificationsEnabled();
+    final bool? granted = await services.notifications
+        .areNotificationsEnabled();
     if (granted == false) {
       if (kDebugMode) {
         debugPrint('Bỏ qua lên lịch nhắc ôn: quyền thông báo bị chặn.');

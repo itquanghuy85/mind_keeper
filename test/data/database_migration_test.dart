@@ -14,9 +14,7 @@ void main() {
     final AppDatabase app = await openMemoryDb();
     final List<String> tables = (await app.db.rawQuery(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
-    ))
-        .map((Map<String, Object?> row) => row['name']! as String)
-        .toList();
+    )).map((Map<String, Object?> row) => row['name']! as String).toList();
     expect(
       tables,
       containsAll(<String>[
@@ -26,14 +24,13 @@ void main() {
         'review_cards',
         'review_logs',
         'lessons',
+        'knowledge_generation_tasks',
       ]),
     );
 
     final List<String> indexes = (await app.db.rawQuery(
       "SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'",
-    ))
-        .map((Map<String, Object?> row) => row['name']! as String)
-        .toList();
+    )).map((Map<String, Object?> row) => row['name']! as String).toList();
     expect(
       indexes,
       containsAll(<String>[
@@ -81,7 +78,9 @@ void main() {
   });
 
   test('migration chạy theo phiên bản và giữ dữ liệu cũ', () async {
-    final Directory temp = await Directory.systemTemp.createTemp('mk_migration');
+    final Directory temp = await Directory.systemTemp.createTemp(
+      'mk_migration',
+    );
     final String dbPath = '${temp.path}/legacy.db';
 
     final Database legacy = await databaseFactoryFfi.openDatabase(
@@ -133,8 +132,11 @@ CREATE TABLE topics (
     await upgraded.open();
     expect(await upgraded.db.getVersion(), 2);
 
-    final List<Map<String, Object?>> rows =
-        await upgraded.db.query('topics', where: 'id = ?', whereArgs: <Object?>['tp_old']);
+    final List<Map<String, Object?>> rows = await upgraded.db.query(
+      'topics',
+      where: 'id = ?',
+      whereArgs: <Object?>['tp_old'],
+    );
     expect(rows, hasLength(1));
     expect(rows.first['name'], 'Chủ đề cũ');
     expect(rows.first['description'], '');
@@ -145,7 +147,9 @@ CREATE TABLE topics (
   });
 
   test('thiếu migration thì báo lỗi thay vì im lặng bỏ qua', () async {
-    final Directory temp = await Directory.systemTemp.createTemp('mk_migration_missing');
+    final Directory temp = await Directory.systemTemp.createTemp(
+      'mk_migration_missing',
+    );
     final String dbPath = '${temp.path}/v1.db';
 
     final Database legacy = await databaseFactoryFfi.openDatabase(
@@ -153,7 +157,9 @@ CREATE TABLE topics (
       options: OpenDatabaseOptions(
         version: 1,
         onCreate: (Database db, int version) async {
-          await db.execute('CREATE TABLE topics (id TEXT PRIMARY KEY, name TEXT NOT NULL)');
+          await db.execute(
+            'CREATE TABLE topics (id TEXT PRIMARY KEY, name TEXT NOT NULL)',
+          );
         },
       ),
     );
@@ -180,19 +186,21 @@ CREATE TABLE topics (
   });
 
   test('DbSchema sinh câu lệnh SQL hợp lệ', () {
-    expect(DbSchema.tables, hasLength(6));
+    expect(DbSchema.tables, hasLength(7));
     expect(DbSchema.indexes, isNotEmpty);
     int withReferences = 0;
     for (final String sql in DbSchema.tables) {
       expect(sql.trimLeft(), startsWith('CREATE TABLE'));
       if (sql.contains('REFERENCES')) withReferences += 1;
     }
-    // 5 bảng con có khóa ngoại (gồm lessons.linked_topic_id); topics không có.
-    expect(withReferences, 5);
+    // 6 bảng con có khóa ngoại (gồm lessons.linked_topic_id); topics không có.
+    expect(withReferences, 6);
   });
 
   test('migration 1→2 tạo bảng lessons và giữ dữ liệu cũ', () async {
-    final Directory temp = await Directory.systemTemp.createTemp('mk_migration_v2');
+    final Directory temp = await Directory.systemTemp.createTemp(
+      'mk_migration_v2',
+    );
     final String dbPath = '${temp.path}/v1_full.db';
 
     final Database legacy = await databaseFactoryFfi.openDatabase(
@@ -253,12 +261,18 @@ CREATE TABLE knowledge_items (
     await upgraded.open();
     expect(await upgraded.db.getVersion(), DbSchema.currentVersion);
 
-    final List<Map<String, Object?>> topics =
-        await upgraded.db.query('topics', where: 'id = ?', whereArgs: <Object?>['tp_old']);
+    final List<Map<String, Object?>> topics = await upgraded.db.query(
+      'topics',
+      where: 'id = ?',
+      whereArgs: <Object?>['tp_old'],
+    );
     expect(topics, hasLength(1));
     expect(topics.first['name'], 'Chủ đề cũ');
-    final List<Map<String, Object?>> items =
-        await upgraded.db.query('knowledge_items', where: 'id = ?', whereArgs: <Object?>['ki_old']);
+    final List<Map<String, Object?>> items = await upgraded.db.query(
+      'knowledge_items',
+      where: 'id = ?',
+      whereArgs: <Object?>['ki_old'],
+    );
     expect(items, hasLength(1));
     expect(items.first['title'], 'Mục cũ');
 

@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_feedback.dart';
 import '../../data/models/topic.dart';
@@ -41,12 +42,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       _error = null;
     });
     try {
-      List<DiscoverySuggestion> list =
-          await services.discovery.suggestionsForToday();
+      List<DiscoverySuggestion> list = await services.discovery
+          .suggestionsForToday();
       if (_categoryFilter != null) {
         list = list
-            .where((DiscoverySuggestion s) =>
-                s.entry.category == _categoryFilter)
+            .where(
+              (DiscoverySuggestion s) => s.entry.category == _categoryFilter,
+            )
             .toList();
       }
       if (!mounted) return;
@@ -104,7 +106,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         ),
       );
     } else {
-      showAppSnack(context, message: 'Đã lưu chủ đề "${topic.name}".', success: true);
+      showAppSnack(
+        context,
+        message: 'Đã lưu chủ đề "${topic.name}".',
+        success: true,
+      );
     }
     if (mounted) await _load();
   }
@@ -136,10 +142,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Text(
-          'Đề xuất hôm nay',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Đề xuất hôm nay', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: AppSpacing.xs),
         Text(
           'Nội dung biên soạn offline, đánh dấu là đề xuất đã kiểm đính — '
@@ -150,7 +153,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         if (_suggestions.isEmpty)
           AppEmptyState(
             title: 'Hết đề xuất hôm nay',
-            message: 'Ngày mai sẽ có gợi ý mới. Hoặc tăng số chủ đề mới mỗi ngày trong Cá nhân.',
+            message:
+                'Ngày mai sẽ có gợi ý mới. Hoặc tăng số chủ đề mới mỗi ngày trong Cá nhân.',
             icon: Icons.explore_off_rounded,
           )
         else
@@ -163,7 +167,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        AppTagMini(category: s.entry.category),
+                        AppTag(label: s.entry.category),
                         const Spacer(),
                         if (s.isSaved)
                           const Icon(
@@ -217,8 +221,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                             onPressed: () {
                               setState(() {
                                 _suggestions = _suggestions
-                                    .where((DiscoverySuggestion x) =>
-                                        x.entry.id != s.entry.id)
+                                    .where(
+                                      (DiscoverySuggestion x) =>
+                                          x.entry.id != s.entry.id,
+                                    )
                                     .toList();
                               });
                             },
@@ -246,38 +252,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final bool selected = _categoryFilter == category;
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: ChoiceChip(
-        label: Text(category ?? 'Tất cả'),
+      child: AppChip(
+        label: category ?? 'Tất cả',
         selected: selected,
-        onSelected: (_) {
+        onTap: () {
           setState(() => _categoryFilter = category);
           _load();
         },
-      ),
-    );
-  }
-}
-
-class AppTagMini extends StatelessWidget {
-  const AppTagMini({super.key, required this.category});
-
-  final String category;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppColors.primarySoft,
-        borderRadius: AppRadius.pillAll,
-      ),
-      child: Text(
-        category,
-        style: const TextStyle(
-          color: AppColors.primary,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }

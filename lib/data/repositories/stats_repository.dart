@@ -4,7 +4,11 @@ import '../db/app_database.dart';
 import '../models/enums.dart';
 
 class DailyReviewStat {
-  const DailyReviewStat({required this.day, required this.count, required this.againCount});
+  const DailyReviewStat({
+    required this.day,
+    required this.count,
+    required this.againCount,
+  });
 
   final DateTime day;
   final int count;
@@ -151,19 +155,23 @@ class StatsRepository {
         to.toUtc().millisecondsSinceEpoch,
       ],
     );
-    return rows.map((Map<String, Object?> row) {
-      final int dayIndex = ((row['day_index'] ?? 0) as num).toInt();
-      return DailyReviewStat(
-        day: DateTime.fromMillisecondsSinceEpoch(dayIndex * 86400000, isUtc: true),
-        count: ((row['t'] ?? 0) as num).toInt(),
-        againCount: ((row['again_t'] ?? 0) as num).toInt(),
-      );
-    }).toList(growable: false);
+    return rows
+        .map((Map<String, Object?> row) {
+          final int dayIndex = ((row['day_index'] ?? 0) as num).toInt();
+          return DailyReviewStat(
+            day: DateTime.fromMillisecondsSinceEpoch(
+              dayIndex * 86400000,
+              isUtc: true,
+            ),
+            count: ((row['t'] ?? 0) as num).toInt(),
+            againCount: ((row['again_t'] ?? 0) as num).toInt(),
+          );
+        })
+        .toList(growable: false);
   }
 
   Future<List<TopicProgressStat>> topicProgress() async {
-    final List<Map<String, Object?>> rows = await _db.rawQuery(
-      '''
+    final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT
         t.id AS id, t.name AS name, t.icon AS icon,
         COUNT(c.id) AS total_cards,
@@ -174,17 +182,18 @@ class StatsRepository {
       WHERE t.is_active = 1
       GROUP BY t.id
       ORDER BY t.created_at DESC
-      ''',
-    );
-    return rows.map((Map<String, Object?> row) {
-      return TopicProgressStat(
-        topicId: row['id']! as String,
-        topicName: row['name']! as String,
-        icon: (row['icon'] ?? '') as String,
-        totalCards: ((row['total_cards'] ?? 0) as num).toInt(),
-        reviewedCards: ((row['reviewed_cards'] ?? 0) as num).toInt(),
-      );
-    }).toList(growable: false);
+      ''');
+    return rows
+        .map((Map<String, Object?> row) {
+          return TopicProgressStat(
+            topicId: row['id']! as String,
+            topicName: row['name']! as String,
+            icon: (row['icon'] ?? '') as String,
+            totalCards: ((row['total_cards'] ?? 0) as num).toInt(),
+            reviewedCards: ((row['reviewed_cards'] ?? 0) as num).toInt(),
+          );
+        })
+        .toList(growable: false);
   }
 
   Future<Map<MemoryRating, int>> ratingBreakdown() async {

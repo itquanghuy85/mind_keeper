@@ -17,16 +17,19 @@ class AppLoading extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             const SizedBox(
-              width: 32,
-              height: 32,
-              child: CircularProgressIndicator(strokeWidth: 3),
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.6,
+                color: AppColors.primary,
+              ),
             ),
             if (label != null) ...<Widget>[
               const SizedBox(height: AppSpacing.lg),
               Text(
                 label!,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ],
@@ -120,21 +123,21 @@ class AppStatusView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double badgeSize = compact ? 56 : 68;
+
     final Widget body = Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Container(
-          width: compact ? 56 : 72,
-          height: compact ? 56 : 72,
+          width: badgeSize,
+          height: badgeSize,
           decoration: BoxDecoration(
             color: iconBackground,
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(
+              compact ? AppRadius.lg : AppRadius.xl,
+            ),
           ),
-          child: Icon(
-            icon,
-            size: compact ? 26 : 32,
-            color: iconColor,
-          ),
+          child: Icon(icon, size: compact ? 26 : 30, color: iconColor),
         ),
         const SizedBox(height: AppSpacing.lg),
         Text(
@@ -151,7 +154,7 @@ class AppStatusView extends StatelessWidget {
           ),
         ],
         if (actionLabel != null && onAction != null) ...<Widget>[
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.xl),
           OutlinedButton.icon(
             onPressed: onAction,
             icon: const Icon(Icons.refresh_rounded, size: AppSizes.iconSm),

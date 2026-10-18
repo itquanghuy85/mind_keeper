@@ -1,0 +1,27 @@
+# GD18.4 Minimal Test
+appId: com.mindkeeper.mind_keeper
+name: GD18.4 Step 1 Create Topic
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang chủ"
+    timeout: 15000
+- tapOn: ".*Tạo chủ đề.*"
+- extendedWaitUntil:
+    visible: "Tạo chủ đề"
+    timeout: 10000
+- inputText: "QA_OPPO_GD184_20261018"
+- pressKey: BACK
+- scroll: DOWN
+- extendedWaitUntil:
+    visible: "Mô tả"
+    timeout: 5000
+- tapOn: "Mô tả"
+- inputText: "Chủ đề kiểm thử GD18.4"
+- pressKey: BACK
+- tapOn: "Tạo chủ đề"
+- extendedWaitUntil:
+    visible: "QA_OPPO_GD184_20261018"
+    timeout: 10000
+- takeScreenshot: "02_topic_created"

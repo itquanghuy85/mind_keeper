@@ -21,7 +21,9 @@ Future<({AppDatabase app, Directory dir})> openFileDb({
   String name = 'test.db',
 }) async {
   await initFfi();
-  final Directory dir = await Directory.systemTemp.createTemp('mindkeeper_test');
+  final Directory dir = await Directory.systemTemp.createTemp(
+    'mindkeeper_test',
+  );
   final AppDatabase app = AppDatabase(
     factory: databaseFactoryFfi,
     name: name,

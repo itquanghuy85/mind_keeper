@@ -77,8 +77,9 @@ class _KnowledgeEditorScreenState extends State<KnowledgeEditorScreen> {
       return;
     }
     try {
-      final KnowledgeItem? item =
-          await services.knowledge.getById(widget.itemId!);
+      final KnowledgeItem? item = await services.knowledge.getById(
+        widget.itemId!,
+      );
       if (item == null) {
         setState(() {
           _error = 'Kiến thức không tồn tại.';
@@ -86,8 +87,9 @@ class _KnowledgeEditorScreenState extends State<KnowledgeEditorScreen> {
         });
         return;
       }
-      final List<ReviewCard> cards =
-          await services.cards.listByKnowledgeItem(item.id);
+      final List<ReviewCard> cards = await services.cards.listByKnowledgeItem(
+        item.id,
+      );
       _title.text = item.title;
       _content.text = item.content;
       _details.text = item.details;
@@ -224,82 +226,78 @@ class _KnowledgeEditorScreenState extends State<KnowledgeEditorScreen> {
         child: _loading
             ? const AppLoading()
             : _error != null
-                ? AppErrorState(message: _error, onRetry: _load)
-                : ListView(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
+            ? AppErrorState(message: _error, onRetry: _load)
+            : ListView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                children: <Widget>[
+                  AppTextField(
+                    controller: _title,
+                    label: 'Tiêu đề',
+                    required: true,
+                    errorText: _titleError,
+                    hint: 'Một ý chính, ngắn gọn',
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppTextField(
+                    controller: _content,
+                    label: 'Nội dung cốt lõi',
+                    required: true,
+                    errorText: _contentError,
+                    hint: '1–3 câu, đi thẳng vào trọng tâm',
+                    maxLines: 4,
+                    minLines: 2,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppTextField(
+                    controller: _details,
+                    label: 'Chi tiết mở rộng (tuỳ chọn)',
+                    maxLines: 5,
+                    minLines: 2,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Row(
                     children: <Widget>[
-                      AppTextField(
-                        controller: _title,
-                        label: 'Tiêu đề',
-                        required: true,
-                        errorText: _titleError,
-                        hint: 'Một ý chính, ngắn gọn',
+                      Expanded(
+                        child: Text(
+                          'Câu hỏi tự kiểm tra',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-                      AppTextField(
-                        controller: _content,
-                        label: 'Nội dung cốt lõi',
-                        required: true,
-                        errorText: _contentError,
-                        hint: '1–3 câu, đi thẳng vào trọng tâm',
-                        maxLines: 4,
-                        minLines: 2,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      AppTextField(
-                        controller: _details,
-                        label: 'Chi tiết mở rộng (tuỳ chọn)',
-                        maxLines: 5,
-                        minLines: 2,
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              'Câu hỏi tự kiểm tra',
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: _aiLoading ? null : _aiDraftQuestion,
-                            icon: _aiLoading
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.auto_awesome_rounded, size: 18),
-                            label: const Text('AI gợi ý'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      AppTextField(
-                        controller: _question,
-                        label: 'Câu hỏi',
-                        hint: 'VD: Đường cong lãng mô tả điều gì?',
-                        maxLines: 3,
-                        minLines: 2,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      AppTextField(
-                        controller: _answer,
-                        label: 'Đáp án',
-                        hint: 'Câu trả lời tham chiếu',
-                        maxLines: 3,
-                        minLines: 2,
-                      ),
-                      const SizedBox(height: AppSpacing.xxl),
                       AppButton(
-                        label: isEdit ? 'Lưu thay đổi' : 'Lưu kiến thức',
-                        loading: _saving,
-                        onPressed: _saving ? null : _save,
+                        label: _aiLoading ? 'Đang tạo...' : 'AI gợi ý',
+                        variant: AppButtonVariant.ghost,
+                        dense: true,
+                        expanded: false,
+                        icon: Icons.auto_awesome_rounded,
+                        loading: _aiLoading,
+                        onPressed: _aiDraftQuestion,
                       ),
                     ],
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppTextField(
+                    controller: _question,
+                    label: 'Câu hỏi',
+                    hint: 'VD: Đường cong lãng mô tả điều gì?',
+                    maxLines: 3,
+                    minLines: 2,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppTextField(
+                    controller: _answer,
+                    label: 'Đáp án',
+                    hint: 'Câu trả lời tham chiếu',
+                    maxLines: 3,
+                    minLines: 2,
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  AppButton(
+                    label: isEdit ? 'Lưu thay đổi' : 'Lưu kiến thức',
+                    loading: _saving,
+                    onPressed: _saving ? null : _save,
+                  ),
+                ],
+              ),
       ),
     );
   }

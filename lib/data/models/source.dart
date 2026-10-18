@@ -60,38 +60,38 @@ class Source {
   }
 
   Map<String, Object?> toMap() => <String, Object?>{
-        'id': id,
-        'topic_id': topicId,
-        'type': type.dbValue,
-        'title': title,
-        'storage_path': storagePath,
-        'content_text': contentText,
-        'status': status.dbValue,
-        'reference_url': referenceUrl,
-        'reference_location': referenceLocation,
-        'error_message': errorMessage,
-        'created_at': createdAt.toUtc().millisecondsSinceEpoch,
-        'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
-      };
+    'id': id,
+    'topic_id': topicId,
+    'type': type.dbValue,
+    'title': title,
+    'storage_path': storagePath,
+    'content_text': contentText,
+    'status': status.dbValue,
+    'reference_url': referenceUrl,
+    'reference_location': referenceLocation,
+    'error_message': errorMessage,
+    'created_at': createdAt.toUtc().millisecondsSinceEpoch,
+    'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
+  };
 
   factory Source.fromMap(Map<String, Object?> map) => Source(
-        id: map['id']! as String,
-        topicId: map['topic_id'] as String?,
-        type: SourceType.fromDb(map['type'] as String?),
-        title: (map['title'] ?? '') as String,
-        storagePath: map['storage_path'] as String?,
-        contentText: (map['content_text'] ?? '') as String,
-        status: SourceStatus.fromDb(map['status'] as String?),
-        referenceUrl: map['reference_url'] as String?,
-        referenceLocation: map['reference_location'] as String?,
-        errorMessage: map['error_message'] as String?,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(
-          (map['created_at']! as num).toInt(),
-          isUtc: true,
-        ),
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(
-          (map['updated_at']! as num).toInt(),
-          isUtc: true,
-        ),
-      );
+    id: map['id']! as String,
+    topicId: map['topic_id'] as String?,
+    type: SourceType.fromDb(map['type'] as String?),
+    title: (map['title'] ?? '') as String,
+    storagePath: map['storage_path'] as String?,
+    contentText: (map['content_text'] ?? '') as String,
+    status: SourceStatus.fromDb(map['status'] as String?),
+    referenceUrl: map['reference_url'] as String?,
+    referenceLocation: map['reference_location'] as String?,
+    errorMessage: map['error_message'] as String?,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(
+      (map['created_at']! as num).toInt(),
+      isUtc: true,
+    ),
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(
+      (map['updated_at']! as num).toInt(),
+      isUtc: true,
+    ),
+  );
 }

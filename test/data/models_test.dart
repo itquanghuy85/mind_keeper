@@ -161,12 +161,20 @@ void main() {
       dedupKey: 'science|vũ trụ|deep|v1',
       title: 'Vũ trụ — khám phá trong Khoa học',
       content: const LessonContent(
+        learningObjectives: <String>['Mục tiêu 1'],
         introduction: 'Mở đầu bài học.',
+        concepts: <LessonConcept>[
+          LessonConcept(name: 'Khái niệm 1', explanation: 'Giải thích 1'),
+        ],
         sections: <LessonSection>[
-          LessonSection(heading: 'Bức tranh tổng quan', body: 'Nội dung phần một.'),
+          LessonSection(
+            heading: 'Bức tranh tổng quan',
+            body: 'Nội dung phần một.',
+          ),
         ],
         keyPoints: <String>['Ý chính 1', 'Ý chính 2'],
         examples: <String>['Ví dụ 1'],
+        commonMistakes: <String>['Sai lầm 1'],
         summary: 'Tóm tắt ngắn gọn.',
       ),
       questions: const <LessonQuestion>[

@@ -125,6 +125,10 @@ class LessonService {
         LessonSource(title: source.title, url: source.url),
     ];
     final List<LessonQuestion> questions = _uniqueQuestions(draft.questions);
+    final List<LessonConcept> concepts = <LessonConcept>[
+      for (final AiLessonConcept concept in draft.concepts)
+        LessonConcept(name: concept.name, explanation: concept.explanation),
+    ];
     final Lesson lesson = Lesson(
       id: newId('ls'),
       domainId: domain.id,
@@ -135,13 +139,16 @@ class LessonService {
       dedupKey: dedupKey,
       title: draft.title,
       content: LessonContent(
+        learningObjectives: draft.learningObjectives,
         introduction: draft.introduction,
+        concepts: concepts,
         sections: <LessonSection>[
           for (final AiLessonSection section in draft.sections)
             LessonSection(heading: section.heading, body: section.body),
         ],
         keyPoints: draft.keyPoints,
         examples: draft.examples,
+        commonMistakes: draft.commonMistakes,
         summary: draft.summary,
       ),
       questions: questions,
@@ -158,10 +165,7 @@ class LessonService {
       updatedAt: timestamp,
     );
     final Lesson saved = await lessons.create(lesson);
-    return GeneratedLesson(
-      lesson: saved,
-      fromCache: saved.id != lesson.id,
-    );
+    return GeneratedLesson(lesson: saved, fromCache: saved.id != lesson.id);
   }
 
   /// Ghép bài học vào bộ nhớ dài hạn + chấm quiz → cập nhật lịch ôn FSRS
@@ -180,10 +184,15 @@ class LessonService {
     if (lesson.linkedTopicId != topic.id) {
       await lessons.setLinkedTopic(lesson.id, topicId: topic.id);
     }
-    final KnowledgeItem item = await _ensureKnowledgeItem(lesson, topic, moment);
+    final KnowledgeItem item = await _ensureKnowledgeItem(
+      lesson,
+      topic,
+      moment,
+    );
 
-    final List<ReviewCard> existingCards =
-        await cards.listByKnowledgeItem(item.id);
+    final List<ReviewCard> existingCards = await cards.listByKnowledgeItem(
+      item.id,
+    );
     final List<ReviewCard> handled = <ReviewCard>[];
     final Set<String> handledCardIds = <String>{};
     for (final QuizAnswer answer in answers) {
@@ -225,8 +234,9 @@ class LessonService {
     String? notifiedCardId;
     DateTime? nextDueAt;
     if (prefs.notificationsEnabled) {
-      final List<ReviewCard> allCards =
-          await cards.listByKnowledgeItem(item.id);
+      final List<ReviewCard> allCards = await cards.listByKnowledgeItem(
+        item.id,
+      );
       final DateTime floor = moment.add(const Duration(minutes: 1));
       final DateTime horizon = moment.add(const Duration(days: 30));
       ReviewCard? earliest;
@@ -265,8 +275,9 @@ class LessonService {
       final Topic? linked = await topics.getById(lesson.linkedTopicId!);
       if (linked != null) return linked;
     }
-    final String name =
-        TopicRepository.normalizeName(lesson.topic.isEmpty ? lesson.title : lesson.topic);
+    final String name = TopicRepository.normalizeName(
+      lesson.topic.isEmpty ? lesson.title : lesson.topic,
+    );
     final Topic? existing = await topics.findByName(name);
     if (existing != null) return existing;
     return topics.create(
@@ -284,20 +295,26 @@ class LessonService {
     Topic topic,
     DateTime moment,
   ) async {
-    final List<KnowledgeItem> items = await knowledge.listByTopic(topic.id);
-    for (final KnowledgeItem item in items) {
-      if (item.title == lesson.title) return item;
-    }
+    // Kiểm tra đã đăng ký (enroll) chưa - KnowledgeItem đã có startedAt từ lúc đọc lần đầu
+    // Ưu tiên tìm theo lessonId để tránh gộp sai bài trùng tiêu đề
+    final KnowledgeItem? existing = await knowledge.findByTitle(
+      topic.id,
+      lesson.title,
+      lessonId: lesson.id,
+    );
+    if (existing != null) return existing;
+
+    // Fallback: tạo mới nếu chưa có (trường hợp hiếm khi user làm quiz mà chưa đọc)
     final String summary = lesson.content.summary.isNotEmpty
         ? lesson.content.summary
         : lesson.content.introduction;
-    return knowledge.create(
+    return knowledge.enroll(
       topicId: topic.id,
       title: lesson.title,
       content: summary,
       details: lesson.content.keyPoints.join(' — '),
       origin: KnowledgeOrigin.aiSuggested,
-      skipDuplicateCheck: true,
+      lessonId: lesson.id,
       now: moment,
     );
   }
@@ -315,10 +332,10 @@ class LessonService {
     final List<LessonQuestion> result = <LessonQuestion>[];
     final Set<String> seen = <String>{};
     for (final AiQuestionDraft draft in drafts) {
-      final String key = draft.question
-          .trim()
-          .toLowerCase()
-          .replaceAll(RegExp(r'\s+'), ' ');
+      final String key = draft.question.trim().toLowerCase().replaceAll(
+        RegExp(r'\s+'),
+        ' ',
+      );
       if (key.isEmpty || !seen.add(key)) continue;
       result.add(
         LessonQuestion(
@@ -338,9 +355,9 @@ class LessonService {
       lessons.setRead(lesson.id, read: read);
 
   Future<void> confirmVerification(Lesson lesson) => lessons.setVerification(
-        lesson.id,
-        verification: LessonVerification.confirmed,
-      );
+    lesson.id,
+    verification: LessonVerification.confirmed,
+  );
 
   /// Hủy thông báo ôn của một thẻ (khi người dùng ôn sớm/thủ công).
   Future<void> cancelCardReminder(String cardId) =>

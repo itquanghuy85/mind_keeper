@@ -55,7 +55,9 @@ class LessonRepository {
       args.add(domainId);
     }
     if (query != null && query.trim().isNotEmpty) {
-      where.add('(LOWER(title) LIKE ? OR LOWER(topic) LIKE ? OR LOWER(domain_name) LIKE ?)');
+      where.add(
+        '(LOWER(title) LIKE ? OR LOWER(topic) LIKE ? OR LOWER(domain_name) LIKE ?)',
+      );
       final String like = '%${query.trim().toLowerCase()}%';
       args.addAll(<Object>[like, like, like]);
     }
@@ -76,27 +78,22 @@ class LessonRepository {
   }
 
   Future<void> setFavorite(String id, {required bool favorite}) async {
-    await _updateFlags(id, <String, Object?>{
-      'is_favorite': favorite ? 1 : 0,
-    });
+    await _updateFlags(id, <String, Object?>{'is_favorite': favorite ? 1 : 0});
   }
 
   Future<void> setRead(String id, {required bool read}) async {
-    await _updateFlags(id, <String, Object?>{
-      'is_read': read ? 1 : 0,
-    });
+    await _updateFlags(id, <String, Object?>{'is_read': read ? 1 : 0});
   }
 
   Future<void> setLinkedTopic(String id, {required String? topicId}) async {
-    await _updateFlags(id, <String, Object?>{
-      'linked_topic_id': topicId,
-    });
+    await _updateFlags(id, <String, Object?>{'linked_topic_id': topicId});
   }
 
-  Future<void> setVerification(String id, {required LessonVerification verification}) async {
-    await _updateFlags(id, <String, Object?>{
-      'verification': verification.id,
-    });
+  Future<void> setVerification(
+    String id, {
+    required LessonVerification verification,
+  }) async {
+    await _updateFlags(id, <String, Object?>{'verification': verification.id});
   }
 
   Future<void> _updateFlags(String id, Map<String, Object?> values) async {
@@ -117,8 +114,7 @@ class LessonRepository {
 
   /// Số bài học theo từng lĩnh vực (dùng cho lưới khám phá + thống kê).
   Future<Map<String, LessonDomainCount>> countByDomain() async {
-    final List<Map<String, Object?>> rows = await _db.rawQuery(
-      '''
+    final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT
         domain_id,
         COUNT(*) AS total,
@@ -126,8 +122,7 @@ class LessonRepository {
         SUM(CASE WHEN is_favorite = 1 THEN 1 ELSE 0 END) AS fav_t
       FROM lessons
       GROUP BY domain_id
-      ''',
-    );
+      ''');
     final Map<String, LessonDomainCount> result = <String, LessonDomainCount>{};
     for (final Map<String, Object?> row in rows) {
       result[row['domain_id']! as String] = LessonDomainCount(
@@ -140,14 +135,16 @@ class LessonRepository {
   }
 
   Future<int> countAll() async {
-    final List<Map<String, Object?>> rows =
-        await _db.rawQuery('SELECT COUNT(*) AS total FROM lessons');
+    final List<Map<String, Object?>> rows = await _db.rawQuery(
+      'SELECT COUNT(*) AS total FROM lessons',
+    );
     return ((rows.first['total'] ?? 0) as num).toInt();
   }
 
   Future<int> countRead() async {
-    final List<Map<String, Object?>> rows =
-        await _db.rawQuery('SELECT COUNT(*) AS total FROM lessons WHERE is_read = 1');
+    final List<Map<String, Object?>> rows = await _db.rawQuery(
+      'SELECT COUNT(*) AS total FROM lessons WHERE is_read = 1',
+    );
     return ((rows.first['total'] ?? 0) as num).toInt();
   }
 

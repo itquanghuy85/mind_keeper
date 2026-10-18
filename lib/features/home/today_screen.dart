@@ -5,9 +5,11 @@ import '../../core/services/app_bootstrap.dart';
 import '../../core/services/app_services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_feedback.dart';
+import '../../core/widgets/app_icon_badge.dart';
 import '../../data/models/topic.dart';
 import '../../data/repositories/topic_repository.dart';
 import '../../features/discover/discover_screen.dart';
@@ -65,9 +67,8 @@ class _TodayScreenState extends State<TodayScreen> {
       final int goal = services.prefs.dailyGoal;
       final List<Topic> all = await services.topics.list(limit: 20);
       all.sort((Topic a, Topic b) => b.updatedAt.compareTo(a.updatedAt));
-      final Map<String, TopicStats> stats = await services.topics.statsForTopics(
-        all.map((Topic t) => t.id).toList(),
-      );
+      final Map<String, TopicStats> stats = await services.topics
+          .statsForTopics(all.map((Topic t) => t.id).toList());
       if (!mounted) return;
       setState(() {
         _dueCount = due;
@@ -123,9 +124,9 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   Future<void> _startReview() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ReviewScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const ReviewScreen()));
     if (mounted) await _load();
   }
 
@@ -146,8 +147,9 @@ class _TodayScreenState extends State<TodayScreen> {
       return AppErrorState(message: _error, onRetry: _load);
     }
 
-    final double goalProgress =
-        _dailyGoal == 0 ? 0 : (_reviewsToday / _dailyGoal).clamp(0.0, 1.0);
+    final double goalProgress = _dailyGoal == 0
+        ? 0
+        : (_reviewsToday / _dailyGoal).clamp(0.0, 1.0);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -160,10 +162,9 @@ class _TodayScreenState extends State<TodayScreen> {
         // Header
         Text(
           'Chào bạn',
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: AppColors.textSecondary),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -202,18 +203,11 @@ class _TodayScreenState extends State<TodayScreen> {
           onTap: _startReview,
           child: Row(
             children: <Widget>[
-              Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  color: AppColors.warningSoft,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.schedule_rounded,
-                  color: AppColors.warning,
-                  size: 28,
-                ),
+              const AppIconBadge(
+                icon: Icons.schedule_rounded,
+                tone: AppIconTone.warning,
+                size: 48,
+                radius: AppRadius.xl,
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -236,12 +230,13 @@ class _TodayScreenState extends State<TodayScreen> {
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 '$_dueCount',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(color: AppColors.primary),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: AppColors.primary,
+                  fontFeatures: AppTheme.tabularFigures,
+                ),
               ),
             ],
           ),
@@ -273,17 +268,16 @@ class _TodayScreenState extends State<TodayScreen> {
         const SizedBox(height: AppSpacing.xs),
         Text(
           '${(goalProgress * 100).round()}% đã hoàn thành',
-          style: Theme.of(context).textTheme.labelSmall,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontFeatures: AppTheme.tabularFigures,
+          ),
           textAlign: TextAlign.right,
         ),
 
         const SizedBox(height: AppSpacing.xxl),
 
         // 3. Nhanh tập trung — 3 hành động chính
-        AppSectionHeader(
-          title: 'Nhanh tập trung',
-          padding: EdgeInsets.zero,
-        ),
+        AppSectionHeader(title: 'Nhanh tập trung', padding: EdgeInsets.zero),
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: <Widget>[
@@ -342,10 +336,7 @@ class _TodayScreenState extends State<TodayScreen> {
         const SizedBox(height: AppSpacing.xxl),
 
         // 4. Chủ đề gần đây
-        AppSectionHeader(
-          title: 'Chủ đề gần đây',
-          padding: EdgeInsets.zero,
-        ),
+        AppSectionHeader(title: 'Chủ đề gần đây', padding: EdgeInsets.zero),
         const SizedBox(height: AppSpacing.sm),
         if (_recentTopics.isEmpty)
           AppCard(
@@ -387,18 +378,11 @@ class _TodayScreenState extends State<TodayScreen> {
                 },
                 child: Row(
                   children: <Widget>[
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.folder_outlined,
-                        size: 20,
-                        color: AppColors.primary,
-                      ),
+                    const AppIconBadge(
+                      icon: Icons.folder_rounded,
+                      tone: AppIconTone.primary,
+                      size: AppSizes.badgeSm,
+                      radius: AppRadius.md,
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
@@ -478,18 +462,11 @@ class _QuickActionCard extends StatelessWidget {
         children: <Widget>[
           Align(
             alignment: Alignment.center,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: iconBg,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 22,
-              ),
+            child: AppIconBadge(
+              icon: icon,
+              color: iconColor,
+              background: iconBg,
+              size: 44,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),

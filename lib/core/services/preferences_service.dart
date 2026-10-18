@@ -21,11 +21,25 @@ class PreferencesService extends ChangeNotifier {
   static const String _keyLessonDefaultMode = 'lesson_default_mode';
   static const String _keyFavoriteDomains = 'favorite_domains';
   static const String _keyHiddenDomains = 'hidden_domains';
+  // Knowledge reading notifications
+  static const String _keyKnowledgeReadingEnabled = 'knowledge_reading_enabled';
+  static const String _keyKnowledgeReadingHour = 'knowledge_reading_hour';
+  static const String _keyKnowledgeReadingMinute = 'knowledge_reading_minute';
+  static const String _keyKnowledgeReadingDays = 'knowledge_reading_days';
+  static const String _keyKnowledgeReadingFrequency =
+      'knowledge_reading_frequency';
 
   // Fallback khi prefs chưa cấu hình — inject lúc build, không nhúng trong source.
-  static const String _envAiBaseUrl = String.fromEnvironment('AI_BASE_URL');
-  static const String _envAiApiKey = String.fromEnvironment('AI_API_KEY');
-  static const String _envAiModel = String.fromEnvironment('AI_MODEL');
+  // DeepSeek defaults
+  static const String _envDeepSeekApiKey = String.fromEnvironment(
+    'DEEPSEEK_API_KEY',
+  );
+  static const String _envDeepSeekBaseUrl = String.fromEnvironment(
+    'DEEPSEEK_BASE_URL',
+  );
+  static const String _envDeepSeekModel = String.fromEnvironment(
+    'DEEPSEEK_MODEL',
+  );
 
   bool get notificationsEnabled =>
       _prefs.getBool(_keyNotificationsEnabled) ?? true;
@@ -45,13 +59,11 @@ class PreferencesService extends ChangeNotifier {
       _prefs.getStringList(_keyFavoriteCategories) ?? const <String>[];
 
   String get aiBaseUrl =>
-      _prefs.getString(_keyAiBaseUrl) ?? _envAiBaseUrl;
+      _prefs.getString(_keyAiBaseUrl) ?? _envDeepSeekBaseUrl;
 
-  String get aiApiKey => _prefs.getString(_keyAiApiKey) ?? _envAiApiKey;
+  String get aiApiKey => _prefs.getString(_keyAiApiKey) ?? _envDeepSeekApiKey;
 
-  String get aiModel =>
-      _prefs.getString(_keyAiModel) ??
-      (_envAiModel.isNotEmpty ? _envAiModel : 'gpt-4o-mini');
+  String get aiModel => _prefs.getString(_keyAiModel) ?? _envDeepSeekModel;
 
   Future<void> setNotificationsEnabled(bool value) async {
     await _prefs.setBool(_keyNotificationsEnabled, value);
@@ -143,6 +155,49 @@ class PreferencesService extends ChangeNotifier {
       current.add(domainId);
     }
     await setHiddenDomains(current);
+  }
+
+  // Knowledge reading notifications
+  bool get knowledgeReadingEnabled =>
+      _prefs.getBool(_keyKnowledgeReadingEnabled) ?? false;
+
+  int get knowledgeReadingHour => _prefs.getInt(_keyKnowledgeReadingHour) ?? 9;
+
+  int get knowledgeReadingMinute =>
+      _prefs.getInt(_keyKnowledgeReadingMinute) ?? 0;
+
+  List<int> get knowledgeReadingDays =>
+      _prefs.getStringList(_keyKnowledgeReadingDays)?.map(int.parse).toList() ??
+      <int>[1, 2, 3, 4, 5, 6, 7];
+
+  int get knowledgeReadingFrequency =>
+      _prefs.getInt(_keyKnowledgeReadingFrequency) ?? 1;
+
+  Future<void> setKnowledgeReadingEnabled(bool value) async {
+    await _prefs.setBool(_keyKnowledgeReadingEnabled, value);
+    notifyListeners();
+  }
+
+  Future<void> setKnowledgeReadingTime({
+    required int hour,
+    required int minute,
+  }) async {
+    await _prefs.setInt(_keyKnowledgeReadingHour, hour.clamp(0, 23));
+    await _prefs.setInt(_keyKnowledgeReadingMinute, minute.clamp(0, 59));
+    notifyListeners();
+  }
+
+  Future<void> setKnowledgeReadingDays(List<int> days) async {
+    await _prefs.setStringList(
+      _keyKnowledgeReadingDays,
+      days.map((d) => d.toString()).toList(),
+    );
+    notifyListeners();
+  }
+
+  Future<void> setKnowledgeReadingFrequency(int frequency) async {
+    await _prefs.setInt(_keyKnowledgeReadingFrequency, frequency.clamp(1, 7));
+    notifyListeners();
   }
 
   Future<void> saveSession({

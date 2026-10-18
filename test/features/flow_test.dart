@@ -31,81 +31,82 @@ Future<AppServices> buildServices() async {
 
 void main() {
   group('Luồng ôn tập end-to-end (GĐ6)', () {
-    test('tạo chủ đề → kiến thức → thẻ → ôn → lịch cập nhật → còn sau restart',
-        () async {
-      AppServices services = await buildServices();
+    test(
+      'tạo chủ đề → kiến thức → thẻ → ôn → lịch cập nhật → còn sau restart',
+      () async {
+        AppServices services = await buildServices();
 
-      // Tạo chủ đề + kiến thức + thẻ.
-      final topic = await services.topics.create(name: 'Khoa học');
-      final item = await services.knowledge.create(
-        topicId: topic.id,
-        title: 'Đường cong lãng quên',
-        content: 'Trí nhớ giảm nhanh sau khi học.',
-      );
-      final DateTime now = DateTime.now().toUtc();
-      final ReviewCard card = await services.cards.create(
-        knowledgeItemId: item.id,
-        question: 'Đường cong lãng mô tả điều gì?',
-        answer: 'Mức độ quên theo thời gian.',
-        dueAt: now,
-      );
+        // Tạo chủ đề + kiến thức + thẻ.
+        final topic = await services.topics.create(name: 'Khoa học');
+        final item = await services.knowledge.create(
+          topicId: topic.id,
+          title: 'Đường cong lãng quên',
+          content: 'Trí nhớ giảm nhanh sau khi học.',
+        );
+        final DateTime now = DateTime.now().toUtc();
+        final ReviewCard card = await services.cards.create(
+          knowledgeItemId: item.id,
+          question: 'Đường cong lãng mô tả điều gì?',
+          answer: 'Mức độ quên theo thời gian.',
+          dueAt: now,
+        );
 
-      // Thẻ đến hạn.
-      final int dueCount = await services.cards.countDue(now: DateTime.now());
-      expect(dueCount, 1);
+        // Thẻ đến hạn.
+        final int dueCount = await services.cards.countDue(now: DateTime.now());
+        expect(dueCount, 1);
 
-      // Giả lập "đóng app mở lại": mở DB file mới trên cùng đường dẫn.
-      final dbFile = await openFileDb(name: 'restart_test.db');
-      final AppServices reopened = AppServices.build(
-        database: dbFile.app,
-        prefs: await SharedPreferences.getInstance(),
-        notifications: FakeNotificationService(),
-        scheduler: ReviewSchedulerService(
-          scheduler: fsrs.Scheduler(enableFuzzing: false),
-        ),
-      );
-      // Dữ liệu DB mới trống vì là DB khác —验证 file persistence bằng DB hiện tại.
-      await reopened.dispose();
-      await dbFile.dir.delete(recursive: true);
+        // Giả lập "đóng app mở lại": mở DB file mới trên cùng đường dẫn.
+        final dbFile = await openFileDb(name: 'restart_test.db');
+        final AppServices reopened = AppServices.build(
+          database: dbFile.app,
+          prefs: await SharedPreferences.getInstance(),
+          notifications: FakeNotificationService(),
+          scheduler: ReviewSchedulerService(
+            scheduler: fsrs.Scheduler(enableFuzzing: false),
+          ),
+        );
+        // Dữ liệu DB mới trống vì là DB khác —验证 file persistence bằng DB hiện tại.
+        await reopened.dispose();
+        await dbFile.dir.delete(recursive: true);
 
-      // Ôn: chấm Tốt.
-      final result = services.scheduler.schedule(
-        card: card,
-        rating: MemoryRating.good,
-        now: DateTime.now(),
-      );
-      await services.cards.saveReview(
-        updatedCard: result.card,
-        log: result.log,
-      );
+        // Ôn: chấm Tốt.
+        final result = services.scheduler.schedule(
+          card: card,
+          rating: MemoryRating.good,
+          now: DateTime.now(),
+        );
+        await services.cards.saveReview(
+          updatedCard: result.card,
+          log: result.log,
+        );
 
-      // Lịch cập nhật: không còn đến hạn.
-      final int dueAfter = await services.cards.countDue(now: DateTime.now());
-      expect(dueAfter, 0);
+        // Lịch cập nhật: không còn đến hạn.
+        final int dueAfter = await services.cards.countDue(now: DateTime.now());
+        expect(dueAfter, 0);
 
-      // "Restart": service mới trên cùng AppDatabase (cùng instance db).
-      final AppServices rebooted = AppServices.build(
-        database: services.database,
-        prefs: await SharedPreferences.getInstance(),
-        notifications: FakeNotificationService(),
-        scheduler: ReviewSchedulerService(
-          scheduler: fsrs.Scheduler(enableFuzzing: false),
-        ),
-      );
-      final ReviewCard? persisted =
-          await rebooted.cards.getById(card.id);
-      expect(persisted, isNotNull);
-      expect(persisted!.reps, 1);
-      expect(persisted.dueAt.isAfter(DateTime.now()), isTrue);
+        // "Restart": service mới trên cùng AppDatabase (cùng instance db).
+        final AppServices rebooted = AppServices.build(
+          database: services.database,
+          prefs: await SharedPreferences.getInstance(),
+          notifications: FakeNotificationService(),
+          scheduler: ReviewSchedulerService(
+            scheduler: fsrs.Scheduler(enableFuzzing: false),
+          ),
+        );
+        final ReviewCard? persisted = await rebooted.cards.getById(card.id);
+        expect(persisted, isNotNull);
+        expect(persisted!.reps, 1);
+        expect(persisted.dueAt.isAfter(DateTime.now()), isTrue);
 
-      final int logs = await rebooted.logs.countRange(
-        DateTime.now().subtract(const Duration(days: 1)),
-        DateTime.now().add(const Duration(days: 1)),
-      );
-      expect(logs, 1);
+        final int logs = await rebooted.logs.countRange(
+          DateTime.now().subtract(const Duration(days: 1)),
+          DateTime.now().add(const Duration(days: 1)),
+        );
+        expect(logs, 1);
 
-      await rebooted.dispose();
-    });
+        await rebooted.dispose();
+      },
+    );
 
     test('SaveReview atomic: card không tồn tại thì không ghi log', () async {
       final AppServices services = await buildServices();
@@ -143,23 +144,32 @@ void main() {
     });
 
     test('parse review payload / null / lạ', () {
-      expect(NotificationPayload.parse('review').kind,
-          NotificationPayload.kindReview);
-      expect(NotificationPayload.parse(null).kind,
-          NotificationPayload.kindReview);
-      expect(NotificationPayload.parse('something_else').kind,
-          NotificationPayload.kindReview);
+      expect(
+        NotificationPayload.parse('review').kind,
+        NotificationPayload.kindReview,
+      );
+      expect(
+        NotificationPayload.parse(null).kind,
+        NotificationPayload.kindReview,
+      );
+      expect(
+        NotificationPayload.parse('something_else').kind,
+        NotificationPayload.kindReview,
+      );
     });
 
-    test('FakeNotificationService showCardDue dùng payload card:<id>', () async {
-      final FakeNotificationService fake = FakeNotificationService();
-      await fake.showCardDue(
-        cardId: 'rc_9',
-        title: 'Đến giờ ôn',
-        body: 'Bạn còn nhớ không?',
-      );
-      expect(fake.calls, contains('showCardDue:rc_9'));
-    });
+    test(
+      'FakeNotificationService showCardDue dùng payload card:<id>',
+      () async {
+        final FakeNotificationService fake = FakeNotificationService();
+        await fake.showCardDue(
+          cardId: 'rc_9',
+          title: 'Đến giờ ôn',
+          body: 'Bạn còn nhớ không?',
+        );
+        expect(fake.calls, contains('showCardDue:rc_9'));
+      },
+    );
   });
 
   group('AI service (GĐ8)', () {
@@ -170,17 +180,22 @@ void main() {
         cacheTtl: const Duration(minutes: 5),
       );
       final List<AiQuestionDraft> first = await ai.draftQuestions(
-        knowledgeContent: 'Đường cong lãng quên mô tả trí nhớ giảm theo thời gian.',
+        knowledgeContent:
+            'Đường cong lãng quên mô tả trí nhớ giảm theo thời gian.',
       );
       expect(first, isNotEmpty);
       expect(first.first.question, isNotEmpty);
       expect(ai.debugCacheSize, 1);
 
       final List<AiQuestionDraft> second = await ai.draftQuestions(
-        knowledgeContent: 'Đường cong lãng quên mô tả trí nhớ giảm theo thời gian.',
+        knowledgeContent:
+            'Đường cong lãng quên mô tả trí nhớ giảm theo thời gian.',
       );
-      expect(identical(first, second) || second.first.question == first.first.question,
-          isTrue);
+      expect(
+        identical(first, second) ||
+            second.first.question == first.first.question,
+        isTrue,
+      );
       expect(ai.debugCacheSize, 1, reason: 'không tăng cache khi hit');
     });
 

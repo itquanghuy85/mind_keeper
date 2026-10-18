@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../../core/services/app_bootstrap.dart';
 import '../../core/services/app_services.dart';
 import '../../core/services/preferences_service.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../data/models/knowledge_item.dart';
 import '../../data/models/review_card.dart';
@@ -19,8 +21,8 @@ class NotificationSettingsScreen extends StatefulWidget {
       _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState
-    extends State<NotificationSettingsScreen> with WidgetsBindingObserver {
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
+    with WidgetsBindingObserver {
   /// Trạng thái quyền HIỆN TẠI đọc từ hệ thống.
   /// `null` = đang kiểm tra hoặc nền tảng không có API đọc trạng thái (iOS).
   bool? _notificationsAllowed;
@@ -54,8 +56,8 @@ class _NotificationSettingsScreenState
     _checkingPermission = true;
     try {
       final AppServices services = context.read<AppServices>();
-      final bool? allowed =
-          await services.notifications.areNotificationsEnabled();
+      final bool? allowed = await services.notifications
+          .areNotificationsEnabled();
       if (!mounted) return;
       setState(() => _notificationsAllowed = allowed);
       if (resyncSchedule && allowed == true) {
@@ -117,8 +119,7 @@ class _NotificationSettingsScreenState
         await AppBootstrap.instance.refreshReminderSchedule();
       }
       if (!mounted) return;
-      final ScaffoldMessengerState messenger =
-          ScaffoldMessenger.of(context);
+      final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
@@ -126,7 +127,7 @@ class _NotificationSettingsScreenState
             granted
                 ? 'Đã bật nhắc ôn.'
                 : 'Đã ghi nhận yêu cầu, nhưng quyền thông báo bị từ chối. '
-                    'Bật trong cài đặt hệ thống để nhận nhắc.',
+                      'Bật trong cài đặt hệ thống để nhận nhắc.',
           ),
           action: granted
               ? null
@@ -140,8 +141,7 @@ class _NotificationSettingsScreenState
     } else {
       await services.notifications.cancelAll();
       if (!mounted) return;
-      final ScaffoldMessengerState messenger =
-          ScaffoldMessenger.of(context);
+      final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         const SnackBar(
@@ -152,35 +152,35 @@ class _NotificationSettingsScreenState
   }
 
   String get _statusLabel => switch (_notificationsAllowed) {
-        true => 'Đã cho phép',
-        false => 'Bị từ chối',
-        null => 'Chưa rõ',
-      };
+    true => 'Đã cho phép',
+    false => 'Bị từ chối',
+    null => 'Chưa rõ',
+  };
 
   String get _statusHint => switch (_notificationsAllowed) {
-        true =>
-          'Thông báo được phép hiển thị. Bật công tắc bên trên để nhận nhắc '
-              'theo giờ bạn chọn.',
-        false =>
-          'Hệ thống đang chặn thông báo của MindKeeper. Cho phép quyền trong '
-              'cài đặt hệ thống (nút bên dưới) hoặc bấm "Yêu cầu quyền thông báo" '
-              'để hệ thống hỏi lại.',
-        null =>
-          'Nền tảng này không hỗ trợ đọc trạng thái tự động. Bấm "Yêu cầu '
-              'quyền thông báo" nếu hệ thống có hộp thoại cấp quyền.',
-      };
+    true =>
+      'Thông báo được phép hiển thị. Bật công tắc bên trên để nhận nhắc '
+          'theo giờ bạn chọn.',
+    false =>
+      'Hệ thống đang chặn thông báo của MindKeeper. Cho phép quyền trong '
+          'cài đặt hệ thống (nút bên dưới) hoặc bấm "Yêu cầu quyền thông báo" '
+          'để hệ thống hỏi lại.',
+    null =>
+      'Nền tảng này không hỗ trợ đọc trạng thái tự động. Bấm "Yêu cầu '
+          'quyền thông báo" nếu hệ thống có hộp thoại cấp quyền.',
+  };
 
   Color get _statusColor => switch (_notificationsAllowed) {
-        true => Theme.of(context).colorScheme.primary,
-        false => Theme.of(context).colorScheme.error,
-        null => Theme.of(context).colorScheme.onSurfaceVariant,
-      };
+    true => AppColors.success,
+    false => AppColors.danger,
+    null => AppColors.textSecondary,
+  };
 
   IconData get _statusIcon => switch (_notificationsAllowed) {
-        true => Icons.check_circle_rounded,
-        false => Icons.block_rounded,
-        null => Icons.help_outline_rounded,
-      };
+    true => Icons.check_circle_rounded,
+    false => Icons.block_rounded,
+    null => Icons.help_outline_rounded,
+  };
 
   Future<void> _sendTestNotification({required bool scheduled}) async {
     if (_sendingTest) return;
@@ -188,14 +188,14 @@ class _NotificationSettingsScreenState
     try {
       final AppServices services = context.read<AppServices>();
       final DateTime now = DateTime.now().toUtc();
-      final Topic topic = await services.topics.findByName(
-            'Kiểm thử thông báo',
-          ) ??
+      final Topic topic =
+          await services.topics.findByName('Kiểm thử thông báo') ??
           await services.topics.create(name: 'Kiểm thử thông báo');
       final KnowledgeItem item = await services.knowledge.create(
         topicId: topic.id,
         title: 'Thẻ kiểm thử GĐ15.1',
-        content: 'Nội dung riêng cho kiểm thử thông báo — không phải dữ liệu người dùng.',
+        content:
+            'Nội dung riêng cho kiểm thử thông báo — không phải dữ liệu người dùng.',
       );
       final ReviewCard card = await services.cards.create(
         knowledgeItemId: item.id,
@@ -230,6 +230,220 @@ class _NotificationSettingsScreenState
     } finally {
       if (mounted) setState(() => _sendingTest = false);
     }
+  }
+
+  String _formatDays(List<int> days) {
+    if (days.length == 7) return 'Mỗi ngày';
+    const List<String> dayNames = [
+      '',
+      'Thứ 2',
+      'Thứ 3',
+      'Thứ 4',
+      'Thứ 5',
+      'Thứ 6',
+      'Thứ 7',
+      'Chủ Nhật',
+    ];
+    return days.map((d) => dayNames[d]).join(', ');
+  }
+
+  String _formatFrequency(int frequency) {
+    switch (frequency) {
+      case 1:
+        return 'Hàng ngày';
+      case 2:
+        return 'Cách ngày';
+      case 3:
+        return '3 ngày/lần';
+      case 4:
+        return '4 ngày/lần';
+      case 5:
+        return '5 ngày/lần';
+      case 6:
+        return '6 ngày/lần';
+      case 7:
+        return 'Tuần một lần';
+      default:
+        return 'Hàng ngày';
+    }
+  }
+
+  Future<void> _toggleKnowledgeReading(bool value) async {
+    final PreferencesService prefs = context.read<PreferencesService>();
+    final AppServices services = context.read<AppServices>();
+    await prefs.setKnowledgeReadingEnabled(value);
+    if (!mounted) return;
+    if (value) {
+      final bool granted = await services.notifications.requestPermissions();
+      if (!mounted) return;
+      setState(() => _notificationsAllowed = granted);
+      if (granted) {
+        await _refreshKnowledgeReadingSchedule();
+      }
+      if (!mounted) return;
+      final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            granted
+                ? 'Đã bật nhắc đọc kiến thức.'
+                : 'Đã ghi nhận yêu cầu, nhưng quyền thông báo bị từ chối. '
+                      'Bật trong cài đặt hệ thống để nhận nhắc.',
+          ),
+          action: granted
+              ? null
+              : SnackBarAction(
+                  label: 'Mở cài đặt',
+                  onPressed: () =>
+                      services.notifications.openNotificationSettings(),
+                ),
+        ),
+      );
+    } else {
+      await services.notifications.cancelKnowledgeReadingReminder();
+      if (!mounted) return;
+      final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Đã tắt nhắc đọc kiến thức và hủy lịch đã lên.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickDays() async {
+    final PreferencesService prefs = context.read<PreferencesService>();
+    final List<int> currentDays = List<int>.from(prefs.knowledgeReadingDays);
+
+    if (!mounted) return;
+    final List<int>? selected = await showDialog<List<int>>(
+      context: context,
+      builder: (BuildContext context) {
+        List<int> tempDays = List<int>.from(currentDays);
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text('Chọn ngày trong tuần'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: <Widget>[
+                    for (int i = 1; i <= 7; i++) ...[
+                      CheckboxListTile(
+                        title: Text(_dayName(i)),
+                        value: tempDays.contains(i),
+                        onChanged: (bool? value) {
+                          setState(() {
+                            if (value == true) {
+                              tempDays.add(i);
+                            } else {
+                              tempDays.remove(i);
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Hủy'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(tempDays),
+                  child: const Text('Lưu'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (selected != null && mounted) {
+      await prefs.setKnowledgeReadingDays(selected);
+      await _refreshKnowledgeReadingSchedule();
+    }
+  }
+
+  Future<void> _pickFrequency() async {
+    final PreferencesService prefs = context.read<PreferencesService>();
+    final int current = prefs.knowledgeReadingFrequency;
+
+    if (!mounted) return;
+    final int? selected = await showDialog<int>(
+      context: context,
+      builder: (BuildContext context) {
+        return RadioGroup<int>(
+          groupValue: current,
+          onChanged: (int? value) {
+            if (value != null) {
+              Navigator.of(context).pop(value);
+            }
+          },
+          child: SimpleDialog(
+            title: const Text('Chọn tần suất nhắc'),
+            children: <Widget>[
+              for (int i = 1; i <= 7; i++) ...[
+                RadioListTile<int>(title: Text(_formatFrequency(i)), value: i),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selected != null && mounted) {
+      await prefs.setKnowledgeReadingFrequency(selected);
+      await _refreshKnowledgeReadingSchedule();
+    }
+  }
+
+  Future<void> _refreshKnowledgeReadingSchedule() async {
+    final PreferencesService prefs = context.read<PreferencesService>();
+    final AppServices services = context.read<AppServices>();
+
+    if (!prefs.knowledgeReadingEnabled) {
+      await services.notifications.cancelKnowledgeReadingReminder();
+      return;
+    }
+
+    final bool? allowed = await services.notifications
+        .areNotificationsEnabled();
+    if (allowed == false) {
+      if (kDebugMode) {
+        debugPrint('Bỏ qua lên lịch nhắc đọc: quyền thông báo bị chặn.');
+      }
+      return;
+    }
+
+    await services.notifications.scheduleKnowledgeReadingReminder(
+      title: 'Đến giờ đọc kiến thức',
+      body: 'Mở app để học bài mới hoặc ôn tập.',
+      hour: prefs.knowledgeReadingHour,
+      minute: prefs.knowledgeReadingMinute,
+      days: prefs.knowledgeReadingDays,
+      frequency: prefs.knowledgeReadingFrequency,
+    );
+  }
+
+  String _dayName(int day) {
+    const List<String> names = [
+      '',
+      'Thứ 2',
+      'Thứ 3',
+      'Thứ 4',
+      'Thứ 5',
+      'Thứ 6',
+      'Thứ 7',
+      'Chủ Nhật',
+    ];
+    return names[day];
   }
 
   @override
@@ -307,17 +521,10 @@ class _NotificationSettingsScreenState
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      Icon(
-                        _statusIcon,
-                        size: 18,
-                        color: _statusColor,
-                      ),
+                      Icon(_statusIcon, size: 18, color: _statusColor),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
-                        child: Text(
-                          'Trạng thái quyền',
-                          style: text.titleSmall,
-                        ),
+                        child: Text('Trạng thái quyền', style: text.titleSmall),
                       ),
                       Text(
                         _statusLabel,
@@ -329,8 +536,9 @@ class _NotificationSettingsScreenState
                   Text(_statusHint, style: text.bodySmall),
                   const SizedBox(height: AppSpacing.md),
                   FilledButton.tonal(
-                    onPressed:
-                        _sendingTest ? null : _requestPermissionAndSchedule,
+                    onPressed: _sendingTest
+                        ? null
+                        : _requestPermissionAndSchedule,
                     child: const Text('Yêu cầu quyền thông báo'),
                   ),
                   if (_notificationsAllowed == false) ...<Widget>[
@@ -348,6 +556,72 @@ class _NotificationSettingsScreenState
                     'thông báo sẽ không hiển thị cho đến khi bật lại trong cài '
                     'đặt hệ thống.',
                     style: text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            // Knowledge Reading Notifications
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: <Widget>[
+                  SwitchListTile(
+                    title: const Text('Bật nhắc đọc kiến thức'),
+                    subtitle: const Text(
+                      'Nhận nhắc học bài mới theo lịch bạn chọn.',
+                    ),
+                    value: prefs.knowledgeReadingEnabled,
+                    onChanged: _toggleKnowledgeReading,
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('Giờ nhắc'),
+                    subtitle: Text(
+                      '${prefs.knowledgeReadingHour.toString().padLeft(2, '0')}:${prefs.knowledgeReadingMinute.toString().padLeft(2, '0')}',
+                    ),
+                    trailing: const Icon(Icons.schedule_rounded),
+                    onTap: () async {
+                      final TimeOfDay? picked = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay(
+                          hour: prefs.knowledgeReadingHour,
+                          minute: prefs.knowledgeReadingMinute,
+                        ),
+                      );
+                      if (picked != null) {
+                        await prefs.setKnowledgeReadingTime(
+                          hour: picked.hour,
+                          minute: picked.minute,
+                        );
+                        await _refreshKnowledgeReadingSchedule();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Đã đặt giờ nhắc đọc ${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}',
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('Ngày trong tuần'),
+                    subtitle: Text(_formatDays(prefs.knowledgeReadingDays)),
+                    trailing: const Icon(Icons.calendar_today_rounded),
+                    onTap: _pickDays,
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('Tần suất'),
+                    subtitle: Text(
+                      _formatFrequency(prefs.knowledgeReadingFrequency),
+                    ),
+                    trailing: const Icon(Icons.repeat_rounded),
+                    onTap: _pickFrequency,
                   ),
                 ],
               ),
@@ -401,15 +675,21 @@ class _DebugNotificationCard extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: <Widget>[
-              FilledButton.tonalIcon(
+              AppButton(
+                label: 'Gửi ngay',
+                variant: AppButtonVariant.secondary,
+                dense: true,
+                expanded: false,
+                icon: Icons.notifications_active_rounded,
                 onPressed: sending ? null : onSendNow,
-                icon: const Icon(Icons.notifications_active_rounded, size: 18),
-                label: const Text('Gửi ngay'),
               ),
-              FilledButton.tonalIcon(
+              AppButton(
+                label: 'Lên lịch +2 phút',
+                variant: AppButtonVariant.secondary,
+                dense: true,
+                expanded: false,
+                icon: Icons.schedule_rounded,
                 onPressed: sending ? null : onSchedule,
-                icon: const Icon(Icons.schedule_rounded, size: 18),
-                label: const Text('Lên lịch +2 phút'),
               ),
             ],
           ),

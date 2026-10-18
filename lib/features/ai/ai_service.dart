@@ -6,13 +6,13 @@ import 'mock_ai_provider.dart';
 /// Không tính lịch ôn (thuộc ReviewSchedulerService).
 class AiService {
   AiService({AIProvider? provider, this.cacheTtl = defaultCacheTtl})
-      : _provider = provider ?? MockAIProvider();
+    : _provider = provider ?? MockAIProvider();
 
   static const Duration defaultCacheTtl = Duration(days: 1);
 
   /// Phiên bản prompt sinh bài học. Đổi giá trị này để invalidate
   /// cache/dedup khi yêu cầu nội dung thay đổi.
-  static const String lessonPromptVersion = 'v1';
+  static const String lessonPromptVersion = 'v2';
 
   AIProvider _provider;
   final Duration cacheTtl;
@@ -32,12 +32,15 @@ class AiService {
   }
 
   /// Tạo HttpAIProvider nếu prefs có cấu hình; ngược lại mock.
+  /// Nếu không có API key, dùng MockAIProvider và ghi log cảnh báo.
   void configureFromSettings({
     required String baseUrl,
     required String apiKey,
     required String model,
   }) {
-    if (baseUrl.trim().isEmpty || apiKey.trim().isEmpty) {
+    final bool hasValidConfig =
+        apiKey.trim().isNotEmpty && baseUrl.trim().isNotEmpty;
+    if (!hasValidConfig) {
       useProvider(MockAIProvider());
       return;
     }
@@ -48,6 +51,44 @@ class AiService {
         model: model.trim(),
       ),
     );
+  }
+
+  /// Cấu hình mặc định DeepSeek từ environment variables hoặc secret manager.
+  /// Trả về true nếu cấu hình thành công, false nếu thiếu API key.
+  bool configureDeepSeekDefault({
+    required String apiKey,
+    String? baseUrl,
+    String? model,
+  }) {
+    if (apiKey.trim().isEmpty) {
+      useProvider(MockAIProvider());
+      return false;
+    }
+    useProvider(
+      HttpAIProvider(
+        baseUrl: (baseUrl?.trim().isNotEmpty == true)
+            ? baseUrl!.trim()
+            : HttpAIProvider.defaultBaseUrl,
+        apiKey: apiKey.trim(),
+        model: (model?.trim().isNotEmpty == true)
+            ? model!.trim()
+            : HttpAIProvider.defaultModel,
+      ),
+    );
+    return true;
+  }
+
+  /// Kiểm tra xem có cấu hình AI thật hợp lệ không.
+  /// Nếu không, ném exception với mã lỗi rõ ràng.
+  void validateConfiguration() {
+    if (!isRealProvider) {
+      throw AiConfigurationException(
+        code: 'AI_NOT_CONFIGURED',
+        message: 'AI chưa được cấu hình. Cần cung cấp API key DeepSeek hợp lệ.',
+        userMessage:
+            'Tính năng AI cần cấu hình API key. Vui lòng liên hệ quản trị viên.',
+      );
+    }
   }
 
   static String _hash(String input) {
@@ -94,7 +135,8 @@ class AiService {
   }) {
     return _cached(
       _key('knowledge', <String, Object?>{'t': sourceText, 'm': maxItems}),
-      () => _provider.draftKnowledge(sourceText: sourceText, maxItems: maxItems),
+      () =>
+          _provider.draftKnowledge(sourceText: sourceText, maxItems: maxItems),
     );
   }
 

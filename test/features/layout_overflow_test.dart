@@ -37,8 +37,10 @@ Future<AppServices> _buildServices(WidgetTester tester) async {
 
 /// Chạy một thao tác DB thật trong real event loop (không treo fake-zone).
 Future<T> _db<T>(
-    WidgetTester tester, Future<T> Function(AppServices services) op,
-    {required AppServices services}) async {
+  WidgetTester tester,
+  Future<T> Function(AppServices services) op, {
+  required AppServices services,
+}) async {
   final T? result = await tester.runAsync(() => op(services));
   return result as T;
 }
@@ -112,29 +114,26 @@ void _smallScreen(WidgetTester tester) {
 
 void main() {
   group('TodayScreen — overflow responsive', () {
-    testWidgets('màn hình nhỏ, dữ liệu bình thường không ném exception',
-        (WidgetTester tester) async {
+    testWidgets('màn hình nhỏ, dữ liệu bình thường không ném exception', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
       // Seed DB trong real event loop (FFI trong fake-zone sẽ treo pumpWidget).
-      await _db<bool>(
-        tester,
-        (AppServices s) async {
-          final topic = await s.topics.create(name: 'Toán');
-          final item = await s.knowledge.create(
-            topicId: topic.id,
-            title: 'Công thức',
-            content: 'Nội dung kiểm tra.',
-          );
-          await s.cards.create(
-            knowledgeItemId: item.id,
-            question: 'Test?',
-            answer: 'A',
-            dueAt: DateTime.now(),
-          );
-          return true;
-        },
-        services: services,
-      );
+      await _db<bool>(tester, (AppServices s) async {
+        final topic = await s.topics.create(name: 'Toán');
+        final item = await s.knowledge.create(
+          topicId: topic.id,
+          title: 'Công thức',
+          content: 'Nội dung kiểm tra.',
+        );
+        await s.cards.create(
+          knowledgeItemId: item.id,
+          question: 'Test?',
+          answer: 'A',
+          dueAt: DateTime.now(),
+        );
+        return true;
+      }, services: services);
 
       _smallScreen(tester);
 
@@ -146,24 +145,22 @@ void main() {
       await _dispose(tester, services);
     });
 
-    testWidgets('màn hình nhỏ + tên chủ đề dài không tràn ngang',
-        (WidgetTester tester) async {
+    testWidgets('màn hình nhỏ + tên chủ đề dài không tràn ngang', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
-      await _db<bool>(
-        tester,
-        (AppServices s) async {
-          await s.topics.create(
-            name: 'Chủ đề học tập lập trình hướng đối tượng Java Spring Boot nâng cao',
-          );
-          await s.knowledge.create(
-            topicId: (await s.topics.list()).first.id,
-            title: 'Bài 1',
-            content: 'Nội dung',
-          );
-          return true;
-        },
-        services: services,
-      );
+      await _db<bool>(tester, (AppServices s) async {
+        await s.topics.create(
+          name:
+              'Chủ đề học tập lập trình hướng đối tượng Java Spring Boot nâng cao',
+        );
+        await s.knowledge.create(
+          topicId: (await s.topics.list()).first.id,
+          title: 'Bài 1',
+          content: 'Nội dung',
+        );
+        return true;
+      }, services: services);
 
       _smallScreen(tester);
 
@@ -174,17 +171,14 @@ void main() {
       await _dispose(tester, services);
     });
 
-    testWidgets('cỡ chữ lớn 1.5× không phá vỡ bố cục',
-        (WidgetTester tester) async {
+    testWidgets('cỡ chữ lớn 1.5× không phá vỡ bố cục', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
-      await _db<bool>(
-        tester,
-        (AppServices s) async {
-          await s.topics.create(name: 'Toán');
-          return true;
-        },
-        services: services,
-      );
+      await _db<bool>(tester, (AppServices s) async {
+        await s.topics.create(name: 'Toán');
+        return true;
+      }, services: services);
 
       _smallScreen(tester);
 
@@ -205,8 +199,9 @@ void main() {
       await _dispose(tester, services);
     });
 
-    testWidgets('trạng thái rỗng không ném exception',
-        (WidgetTester tester) async {
+    testWidgets('trạng thái rỗng không ném exception', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
 
       _smallScreen(tester);
@@ -214,24 +209,27 @@ void main() {
       await _pump(tester, _wrap(services, const TodayScreen()));
 
       expect(_exception(tester), isNull);
+      // Card trạng thái rỗng nằm dưới khung nhìn ở 360×640 — cuộn tới trước khi kiểm tra.
+      await tester.scrollUntilVisible(
+        find.text('Bạn chưa có chủ đề nào.'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Bạn chưa có chủ đề nào.'), findsOneWidget);
 
       await _dispose(tester, services);
     });
 
-    testWidgets('nhiều chủ đề gần đây không ném exception',
-        (WidgetTester tester) async {
+    testWidgets('nhiều chủ đề gần đây không ném exception', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
-      await _db<bool>(
-        tester,
-        (AppServices s) async {
-          for (int i = 0; i < 6; i++) {
-            await s.topics.create(name: 'Chủ đề số $i');
-          }
-          return true;
-        },
-        services: services,
-      );
+      await _db<bool>(tester, (AppServices s) async {
+        for (int i = 0; i < 6; i++) {
+          await s.topics.create(name: 'Chủ đề số $i');
+        }
+        return true;
+      }, services: services);
 
       _smallScreen(tester);
 
@@ -244,28 +242,25 @@ void main() {
   });
 
   group('TopicDetailScreen — overflow responsive', () {
-    testWidgets(
-        'màn hình nhỏ + tên chủ đề dài + mô tả dài không ném exception',
-        (WidgetTester tester) async {
+    testWidgets('màn hình nhỏ + tên chủ đề dài + mô tả dài không ném exception', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
-      final topic = await _db(
-        tester,
-        (AppServices s) async {
-          final created = await s.topics.create(
-            name: 'Chủ đề học tập lập trình hướng đối tượng Java Spring Boot nâng cao',
-            description:
-                'Đây là mô tả rất dài của chủ đề dùng để kiểm tra bố cục trên màn hình nhỏ. '
-                'Nội dung mô tả có thể bao gồm nhiều câu và nhiều dòng khi hiển thị.',
-          );
-          await s.knowledge.create(
-            topicId: created.id,
-            title: 'Kiến thức 1',
-            content: 'Nội dung kiến thức 1',
-          );
-          return created;
-        },
-        services: services,
-      );
+      final topic = await _db(tester, (AppServices s) async {
+        final created = await s.topics.create(
+          name:
+              'Chủ đề học tập lập trình hướng đối tượng Java Spring Boot nâng cao',
+          description:
+              'Đây là mô tả rất dài của chủ đề dùng để kiểm tra bố cục trên màn hình nhỏ. '
+              'Nội dung mô tả có thể bao gồm nhiều câu và nhiều dòng khi hiển thị.',
+        );
+        await s.knowledge.create(
+          topicId: created.id,
+          title: 'Kiến thức 1',
+          content: 'Nội dung kiến thức 1',
+        );
+        return created;
+      }, services: services);
 
       _smallScreen(tester);
 
@@ -280,8 +275,9 @@ void main() {
       await _dispose(tester, services);
     });
 
-    testWidgets('cỡ chữ lớn 1.5× không phá vỡ bố cục',
-        (WidgetTester tester) async {
+    testWidgets('cỡ chữ lớn 1.5× không phá vỡ bố cục', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
       final topic = await _db(
         tester,
@@ -293,7 +289,10 @@ void main() {
 
       await _pump(
         tester,
-        _withTextScale(1.5, _wrap(services, TopicDetailScreen(topicId: topic.id))),
+        _withTextScale(
+          1.5,
+          _wrap(services, TopicDetailScreen(topicId: topic.id)),
+        ),
       );
 
       expect(_exception(tester), isNull);
@@ -301,8 +300,9 @@ void main() {
       await _dispose(tester, services);
     });
 
-    testWidgets('trạng thái chưa có kiến thức không ném exception',
-        (WidgetTester tester) async {
+    testWidgets('trạng thái chưa có kiến thức không ném exception', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
       final topic = await _db(
         tester,
@@ -323,24 +323,21 @@ void main() {
       await _dispose(tester, services);
     });
 
-    testWidgets('nhiều kiến thức (danh sách dài) không ném exception',
-        (WidgetTester tester) async {
+    testWidgets('nhiều kiến thức (danh sách dài) không ném exception', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
-      final topic = await _db(
-        tester,
-        (AppServices s) async {
-          final created = await s.topics.create(name: 'Chủ đề nhiều bài');
-          for (int i = 0; i < 10; i++) {
-            await s.knowledge.create(
-              topicId: created.id,
-              title: 'Bài học số $i',
-              content: 'Nội dung bài học số $i dùng kiểm tra danh sách dài.',
-            );
-          }
-          return created;
-        },
-        services: services,
-      );
+      final topic = await _db(tester, (AppServices s) async {
+        final created = await s.topics.create(name: 'Chủ đề nhiều bài');
+        for (int i = 0; i < 10; i++) {
+          await s.knowledge.create(
+            topicId: created.id,
+            title: 'Bài học số $i',
+            content: 'Nội dung bài học số $i dùng kiểm tra danh sách dài.',
+          );
+        }
+        return created;
+      }, services: services);
 
       _smallScreen(tester);
 
@@ -354,8 +351,9 @@ void main() {
       await _dispose(tester, services);
     });
 
-    testWidgets('mô tả rất dài trên màn hình ngắn không tràn dọc',
-        (WidgetTester tester) async {
+    testWidgets('mô tả rất dài trên màn hình ngắn không tràn dọc', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
       final topic = await _db(
         tester,
@@ -378,8 +376,9 @@ void main() {
       await _dispose(tester, services);
     });
 
-    testWidgets('dialog sửa chủ đề mở trên màn hình nhỏ không ném exception',
-        (WidgetTester tester) async {
+    testWidgets('dialog sửa chủ đề mở trên màn hình nhỏ không ném exception', (
+      WidgetTester tester,
+    ) async {
       final services = await _buildServices(tester);
       final topic = await _db(
         tester,

@@ -6,7 +6,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 /// Không có sẵn khi chạy test/thiết bị chưa hỗ trợ → trả về false, không ném lỗi.
 class VoiceTranscriptionService {
   VoiceTranscriptionService({SpeechToText? speech})
-      : _speech = speech ?? SpeechToText();
+    : _speech = speech ?? SpeechToText();
 
   final SpeechToText _speech;
   bool _initFailed = false;

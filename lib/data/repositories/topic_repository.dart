@@ -13,7 +13,8 @@ class TopicRepository {
 
   Database get _db => _app.db;
 
-  static String normalizeName(String name) => name.trim().replaceAll(RegExp(r'\s+'), ' ');
+  static String normalizeName(String name) =>
+      name.trim().replaceAll(RegExp(r'\s+'), ' ');
 
   Future<Topic> create({
     required String name,
@@ -25,10 +26,16 @@ class TopicRepository {
   }) async {
     final String cleanName = normalizeName(name);
     if (cleanName.isEmpty) {
-      throw const ValidationException('Tên chủ đề không được để trống.', field: 'name');
+      throw const ValidationException(
+        'Tên chủ đề không được để trống.',
+        field: 'name',
+      );
     }
     if (cleanName.length > 120) {
-      throw const ValidationException('Tên chủ đề quá dài (tối đa 120 ký tự).', field: 'name');
+      throw const ValidationException(
+        'Tên chủ đề quá dài (tối đa 120 ký tự).',
+        field: 'name',
+      );
     }
     final Topic? existing = await findByName(cleanName);
     if (existing != null) {
@@ -85,7 +92,9 @@ class TopicRepository {
       where.add('is_active = 1');
     }
     if (query != null && query.trim().isNotEmpty) {
-      where.add('(LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(category) LIKE ?)');
+      where.add(
+        '(LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(category) LIKE ?)',
+      );
       final String like = '%${query.trim().toLowerCase()}%';
       args.addAll(<Object>[like, like, like]);
     }
@@ -107,7 +116,10 @@ class TopicRepository {
   Future<Topic> update(Topic topic) async {
     final String cleanName = normalizeName(topic.name);
     if (cleanName.isEmpty) {
-      throw const ValidationException('Tên chủ đề không được để trống.', field: 'name');
+      throw const ValidationException(
+        'Tên chủ đề không được để trống.',
+        field: 'name',
+      );
     }
     final Topic? clash = await findByName(cleanName);
     if (clash != null && clash.id != topic.id) {
@@ -198,6 +210,11 @@ class TopicRepository {
     );
     await txn.delete(
       'sources',
+      where: 'topic_id = ?',
+      whereArgs: <Object>[topicId],
+    );
+    await txn.delete(
+      'knowledge_generation_tasks',
       where: 'topic_id = ?',
       whereArgs: <Object>[topicId],
     );

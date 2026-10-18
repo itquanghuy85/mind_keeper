@@ -71,8 +71,10 @@ class AppDatabase {
 
   Future<void> _runMigrations(DatabaseExecutor db, int from, int to) async {
     final List<SchemaMigration> sorted = List<SchemaMigration>.of(migrations)
-      ..sort((SchemaMigration a, SchemaMigration b) =>
-          a.fromVersion.compareTo(b.fromVersion));
+      ..sort(
+        (SchemaMigration a, SchemaMigration b) =>
+            a.fromVersion.compareTo(b.fromVersion),
+      );
     int cursor = from;
     for (final SchemaMigration migration in sorted) {
       if (migration.fromVersion != cursor) continue;
@@ -81,9 +83,7 @@ class AppDatabase {
       cursor = migration.toVersion;
     }
     if (cursor < to) {
-      throw StateError(
-        'Thiếu migration từ $from đến $to (dừng ở $cursor).',
-      );
+      throw StateError('Thiếu migration từ $from đến $to (dừng ở $cursor).');
     }
   }
 

@@ -103,7 +103,9 @@ void main() {
         );
         expect(fake.scheduledCards.containsKey(cardId), isTrue);
 
-        final ReviewController controller = ReviewController(services: services);
+        final ReviewController controller = ReviewController(
+          services: services,
+        );
         prepare(controller, item);
         await controller.rate(MemoryRating.good);
 
@@ -127,66 +129,77 @@ void main() {
         try {
           final DueReviewItem item = await seedCard(services, dueAt: now);
           final String cardId = item.card.id;
-          final ReviewController controller =
-              ReviewController(services: services);
+          final ReviewController controller = ReviewController(
+            services: services,
+          );
           prepare(controller, item);
           await controller.rate(rating);
 
           expect(controller.error, isNull, reason: 'rating=${rating.name}');
           final ReviewCard saved = (await services.cards.getById(cardId))!;
           expect(saved.reps, 1, reason: 'rating=${rating.name}');
-          expect(fake.cancelledCards, contains(cardId),
-              reason: 'rating=${rating.name}');
+          expect(
+            fake.cancelledCards,
+            contains(cardId),
+            reason: 'rating=${rating.name}',
+          );
           expectScheduledAt(fake, cardId, saved);
-          expect(fake.scheduledCards[cardId]!.isAfter(now), isTrue,
-              reason: 'rating=${rating.name}');
+          expect(
+            fake.scheduledCards[cardId]!.isAfter(now),
+            isTrue,
+            reason: 'rating=${rating.name}',
+          );
         } finally {
           await services.dispose();
         }
       }
     });
-    test('chấm lại cùng thẻ: nhiều lần cancel nhưng chỉ 1 lịch (không trùng)',
-        () async {
-      final FakeNotificationService fake = FakeNotificationService()
-        ..notificationsEnabledStatus = true;
-      final AppServices services = await buildServices(fake);
-      try {
-        final DueReviewItem item = await seedCard(services, dueAt: now);
-        final String cardId = item.card.id;
-        final ReviewController controller = ReviewController(services: services);
-        prepare(controller, item);
-        await controller.rate(MemoryRating.good);
+    test(
+      'chấm lại cùng thẻ: nhiều lần cancel nhưng chỉ 1 lịch (không trùng)',
+      () async {
+        final FakeNotificationService fake = FakeNotificationService()
+          ..notificationsEnabledStatus = true;
+        final AppServices services = await buildServices(fake);
+        try {
+          final DueReviewItem item = await seedCard(services, dueAt: now);
+          final String cardId = item.card.id;
+          final ReviewController controller = ReviewController(
+            services: services,
+          );
+          prepare(controller, item);
+          await controller.rate(MemoryRating.good);
 
-        // Chấm lần 2 với trạng thái card đã lưu (mô phỏng phiên sau).
-        final ReviewCard saved1 = (await services.cards.getById(cardId))!;
-        prepare(
-          controller,
-          DueReviewItem(
-            card: saved1,
-            knowledge: item.knowledge,
-            topic: item.topic,
-          ),
-        );
-        await controller.rate(MemoryRating.hard);
+          // Chấm lần 2 với trạng thái card đã lưu (mô phỏng phiên sau).
+          final ReviewCard saved1 = (await services.cards.getById(cardId))!;
+          prepare(
+            controller,
+            DueReviewItem(
+              card: saved1,
+              knowledge: item.knowledge,
+              topic: item.topic,
+            ),
+          );
+          await controller.rate(MemoryRating.hard);
 
-        final ReviewCard saved2 = (await services.cards.getById(cardId))!;
-        expect(controller.error, isNull);
-        expect(saved2.reps, 2);
-        expect(
-          fake.cancelledCards.where((String id) => id == cardId),
-          hasLength(2),
-          reason: 'mỗi lần chấm đều hủy lịch cũ trước',
-        );
-        expect(
-          fake.scheduledCards.keys.where((String id) => id == cardId),
-          hasLength(1),
-          reason: 'Map theo cardId → không tạo lịch trùng',
-        );
-        expectScheduledAt(fake, cardId, saved2);
-      } finally {
-        await services.dispose();
-      }
-    });
+          final ReviewCard saved2 = (await services.cards.getById(cardId))!;
+          expect(controller.error, isNull);
+          expect(saved2.reps, 2);
+          expect(
+            fake.cancelledCards.where((String id) => id == cardId),
+            hasLength(2),
+            reason: 'mỗi lần chấm đều hủy lịch cũ trước',
+          );
+          expect(
+            fake.scheduledCards.keys.where((String id) => id == cardId),
+            hasLength(1),
+            reason: 'Map theo cardId → không tạo lịch trùng',
+          );
+          expectScheduledAt(fake, cardId, saved2);
+        } finally {
+          await services.dispose();
+        }
+      },
+    );
 
     test('thông báo bị tắt: chỉ hủy lịch, không lên lịch mới', () async {
       final FakeNotificationService fake = FakeNotificationService()
@@ -198,7 +211,9 @@ void main() {
           dueAt: now.subtract(const Duration(days: 1)),
         );
         final String cardId = item.card.id;
-        final ReviewController controller = ReviewController(services: services);
+        final ReviewController controller = ReviewController(
+          services: services,
+        );
         prepare(controller, item);
         await controller.rate(MemoryRating.good);
 
@@ -221,7 +236,9 @@ void main() {
           dueAt: now.subtract(const Duration(days: 1)),
         );
         final String cardId = item.card.id;
-        final ReviewController controller = ReviewController(services: services);
+        final ReviewController controller = ReviewController(
+          services: services,
+        );
         prepare(controller, item);
         await controller.rate(MemoryRating.good);
 
@@ -244,7 +261,9 @@ void main() {
           dueAt: now.subtract(const Duration(days: 1)),
         );
         final String cardId = item.card.id;
-        final ReviewController controller = ReviewController(services: services);
+        final ReviewController controller = ReviewController(
+          services: services,
+        );
         prepare(controller, item);
         // Không ném lỗi → rate() thành công dù thông báo lỗi.
         await controller.rate(MemoryRating.good);

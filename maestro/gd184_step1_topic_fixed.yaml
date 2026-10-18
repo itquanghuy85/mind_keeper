@@ -1,0 +1,27 @@
+# GĐ18.4 — Bước 1: Tạo chủ đề
+appId: com.mindkeeper.mind_keeper
+name: GD18.4 Step 1 Create Topic
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang ch\u1EE7"
+    timeout: 15000
+- tapOn: ".*T\u1EA1o ch\u1EE7 \u0111\u1EC1.*"
+- extendedWaitUntil:
+    visible: "T\u1EA1o ch\u1EE7 \u0111\u1EC1"
+    timeout: 10000
+- inputText: "QA_OPPO_GD184_20261018"
+- pressKey: BACK
+- scroll: DOWN
+- extendedWaitUntil:
+    visible: "M\u00F4 t\u1EA3"
+    timeout: 5000
+- tapOn: "M\u00F4 t\u1EA3"
+- inputText: "Ch\u1EE7 \u0111\u1EC1 ki\u1EC3m th\u1EED GD18.4"
+- pressKey: BACK
+- tapOn: "T\u1EA1o ch\u1EE7 \u0111\u1EC1"
+- extendedWaitUntil:
+    visible: "QA_OPPO_GD184_20261018"
+    timeout: 10000
+- takeScreenshot: "02_topic_created"

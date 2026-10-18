@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../data/db/app_database.dart';
+import '../../data/repositories/knowledge_generation_repository.dart';
 import '../../data/repositories/knowledge_repository.dart';
 import '../../data/repositories/lesson_repository.dart';
 import '../../data/repositories/review_repository.dart';
@@ -10,6 +12,7 @@ import '../../data/repositories/stats_repository.dart';
 import '../../data/repositories/topic_repository.dart';
 import '../../features/ai/ai_service.dart';
 import '../../features/discover/discovery_service.dart';
+import '../../features/knowledge/knowledge_generation_service.dart';
 import '../../features/lessons/lesson_service.dart';
 import 'notification_service.dart';
 import 'preferences_service.dart';
@@ -32,6 +35,7 @@ class AppServices {
     required this.ai,
     required this.discovery,
     required this.lessonService,
+    required this.knowledgeGeneration,
   });
 
   final AppDatabase database;
@@ -48,6 +52,7 @@ class AppServices {
   final AiService ai;
   final DiscoveryService discovery;
   final LessonService lessonService;
+  final KnowledgeGenerationService knowledgeGeneration;
 
   static AppServices build({
     required AppDatabase database,
@@ -64,14 +69,28 @@ class AppServices {
     final ReviewLogRepository logs = ReviewLogRepository(database);
     final StatsRepository stats = StatsRepository(database);
     final LessonRepository lessons = LessonRepository(database);
+    final KnowledgeGenerationRepository knowledgeGenerationRepo =
+        KnowledgeGenerationRepository(database);
     final AiService aiService = ai ?? AiService();
-    aiService.configureFromSettings(
-      baseUrl: preferences.aiBaseUrl,
+    // Cấu hình DeepSeek mặc định từ environment variables
+    final bool configured = aiService.configureDeepSeekDefault(
       apiKey: preferences.aiApiKey,
+      baseUrl: preferences.aiBaseUrl,
       model: preferences.aiModel,
     );
+    if (!configured) {
+      // Log warning in debug mode
+      if (kDebugMode) {
+        debugPrint(
+          '⚠️ AI: Chưa cấu hình API key DeepSeek. Dùng MockAIProvider. '
+          'Set DEEPSEEK_API_KEY environment variable để bật AI thật.',
+        );
+      }
+    }
     final NotificationService notificationService =
         notifications ?? LocalNotificationService();
+    final ReviewSchedulerService reviewScheduler =
+        scheduler ?? ReviewSchedulerService();
     return AppServices(
       database: database,
       topics: topics,
@@ -83,7 +102,7 @@ class AppServices {
       lessons: lessons,
       prefs: preferences,
       notifications: notificationService,
-      scheduler: scheduler ?? ReviewSchedulerService(),
+      scheduler: reviewScheduler,
       ai: aiService,
       discovery: DiscoveryService(
         topics: topics,
@@ -96,9 +115,16 @@ class AppServices {
         topics: topics,
         knowledge: knowledge,
         cards: cards,
-        scheduler: scheduler ?? ReviewSchedulerService(),
+        scheduler: reviewScheduler,
         notifications: notificationService,
         prefs: preferences,
+        ai: aiService,
+      ),
+      knowledgeGeneration: KnowledgeGenerationService(
+        topics: topics,
+        knowledge: knowledge,
+        lessons: lessons,
+        generationRepo: knowledgeGenerationRepo,
         ai: aiService,
       ),
     );

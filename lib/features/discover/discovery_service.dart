@@ -63,7 +63,10 @@ class DiscoveryService {
         .toList(growable: true);
     if (pool.isEmpty) return const <DiscoverySuggestion>[];
 
-    final List<Topic> existing = await topics.list(activeOnly: false, limit: 500);
+    final List<Topic> existing = await topics.list(
+      activeOnly: false,
+      limit: 500,
+    );
     final Set<String> savedEntryIds = <String>{};
     for (final Topic t in existing) {
       if (t.description.startsWith('catalog:')) {
@@ -72,19 +75,26 @@ class DiscoveryService {
     }
 
     final String day = _dayKey(moment);
-    final List<DiscoveryEntry> fresh =
-        pool.where((DiscoveryEntry e) => !savedEntryIds.contains(e.id)).toList();
-    final List<DiscoveryEntry> source =
-        fresh.isNotEmpty ? fresh : pool.toList();
+    final List<DiscoveryEntry> fresh = pool
+        .where((DiscoveryEntry e) => !savedEntryIds.contains(e.id))
+        .toList();
+    final List<DiscoveryEntry> source = fresh.isNotEmpty
+        ? fresh
+        : pool.toList();
 
     // Ưu tiên lĩnh vực yêu thích.
-    final List<DiscoveryEntry> preferred =
-        source.where((DiscoveryEntry e) => favorites.contains(e.category)).toList();
-    final List<DiscoveryEntry> rest =
-        source.where((DiscoveryEntry e) => !favorites.contains(e.category)).toList();
+    final List<DiscoveryEntry> preferred = source
+        .where((DiscoveryEntry e) => favorites.contains(e.category))
+        .toList();
+    final List<DiscoveryEntry> rest = source
+        .where((DiscoveryEntry e) => !favorites.contains(e.category))
+        .toList();
     rest.shuffle(_random);
     preferred.shuffle(_random);
-    final List<DiscoveryEntry> ordered = <DiscoveryEntry>[...preferred, ...rest];
+    final List<DiscoveryEntry> ordered = <DiscoveryEntry>[
+      ...preferred,
+      ...rest,
+    ];
 
     final int take = wanted.clamp(1, ordered.length);
     // Deterministic theo ngày: xoay vòng nhẹ dựa trên hash ngày.
@@ -96,11 +106,13 @@ class DiscoveryService {
 
     return rotated
         .take(take)
-        .map((DiscoveryEntry e) => DiscoverySuggestion(
-              entry: e,
-              isSaved: savedEntryIds.contains(e.id),
-              isStudied: false,
-            ))
+        .map(
+          (DiscoveryEntry e) => DiscoverySuggestion(
+            entry: e,
+            isSaved: savedEntryIds.contains(e.id),
+            isStudied: false,
+          ),
+        )
         .toList(growable: false);
   }
 

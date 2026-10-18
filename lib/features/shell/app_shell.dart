@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/app_bootstrap.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/widgets/app_icon_badge.dart';
 import '../../features/home/today_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/stats/stats_screen.dart';
@@ -57,31 +58,36 @@ class _AppShellState extends State<AppShell> {
     ];
     return Scaffold(
       body: IndexedStack(index: _index, children: tabs),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _select,
-        destinations: const <NavigationDestination>[
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Trang chủ',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view_rounded),
-            label: 'Chủ đề',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_rounded),
-            selectedIcon: Icon(Icons.bar_chart_rounded),
-            label: 'Thống kê',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Hồ sơ',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: _select,
+          destinations: const <NavigationDestination>[
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Trang chủ',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view_rounded),
+              label: 'Chủ đề',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_rounded),
+              selectedIcon: Icon(Icons.bar_chart_rounded),
+              label: 'Thống kê',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
+              label: 'Hồ sơ',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -101,7 +107,13 @@ class TabPlaceholder extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(icon, size: 48, color: AppColors.primary),
+            AppIconBadge(
+              icon: icon,
+              tone: AppIconTone.primary,
+              size: 56,
+              radius: AppRadius.xl,
+              iconSize: 32,
+            ),
             const SizedBox(height: AppSpacing.lg),
             Text(title, style: Theme.of(context).textTheme.titleLarge),
           ],
