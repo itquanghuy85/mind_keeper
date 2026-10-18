@@ -220,7 +220,10 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_topic?.name ?? 'Chủ đề'),
+        title: Text(
+          _topic?.name ?? 'Chủ đề',
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: <Widget>[
           IconButton(
             tooltip: 'Sửa',
@@ -266,8 +269,10 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
       return AppErrorState(message: _error, onRetry: _load);
     }
     final Topic topic = _topic!;
-    return Column(
-      children: <Widget>[
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg,
@@ -354,76 +359,80 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
             ],
           ),
         ),
-        Expanded(
-          child: _items.isEmpty
-              ? AppEmptyState(
+        _items.isEmpty
+            ? SizedBox(
+                width: double.infinity,
+                child: AppEmptyState(
                   title: 'Chưa có kiến thức',
                   message: 'Thêm kiến thức đầu tiên cho chủ đề này.',
                   icon: Icons.lightbulb_outline_rounded,
                   actionLabel: 'Thêm kiến thức',
                   onAction: _addKnowledge,
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    0,
-                    AppSpacing.lg,
-                    AppSpacing.xxxl,
-                  ),
-                  itemCount: _items.length,
-                        separatorBuilder: (BuildContext context, int index) =>
-                            const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (BuildContext context, int index) {
-                    final KnowledgeItem item = _items[index];
-                    return AppCard(
-                      onTap: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) =>
-                                KnowledgeDetailScreen(itemId: item.id),
-                          ),
-                        );
-                        if (mounted) await _load();
-                      },
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Row(
-                            children: <Widget>[
-                              Expanded(
-                                child: Text(
-                                  item.title,
-                                  style: Theme.of(context).textTheme.titleSmall,
-                                ),
-                              ),
-                              if (item.isFavorite)
-                                const Icon(
-                                  Icons.favorite_rounded,
-                                  size: 18,
-                                  color: AppColors.danger,
-                                ),
-                              if (item.isPaused)
-                                const Icon(
-                                  Icons.pause_rounded,
-                                  size: 18,
-                                  color: AppColors.warning,
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            item.content,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
                 ),
-        ),
-      ],
+              )
+            : ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  0,
+                  AppSpacing.lg,
+                  AppSpacing.xxxl,
+                ),
+                itemCount: _items.length,
+                separatorBuilder: (BuildContext context, int index) =>
+                    const SizedBox(height: AppSpacing.sm),
+                itemBuilder: (BuildContext context, int index) {
+                  final KnowledgeItem item = _items[index];
+                  return AppCard(
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              KnowledgeDetailScreen(itemId: item.id),
+                        ),
+                      );
+                      if (mounted) await _load();
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                item.title,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ),
+                            if (item.isFavorite)
+                              const Icon(
+                                Icons.favorite_rounded,
+                                size: 18,
+                                color: AppColors.danger,
+                              ),
+                            if (item.isPaused)
+                              const Icon(
+                                Icons.pause_rounded,
+                                size: 18,
+                                color: AppColors.warning,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          item.content,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+        ],
+      ),
     );
   }
 }

@@ -179,9 +179,13 @@ class _TodayScreenState extends State<TodayScreen> {
               color: AppColors.textSecondary,
             ),
             const SizedBox(width: AppSpacing.xs),
-            Text(
-              _formatDate(_loadedAt ?? DateTime.now()),
-              style: Theme.of(context).textTheme.bodySmall,
+            Expanded(
+              child: Text(
+                _formatDate(_loadedAt ?? DateTime.now()),
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -459,48 +463,50 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Bố cục dọc: chịu được 3 card chia 1/3 màn hình + font scale lớn,
+    // không tràn ngang như Row (icon + text + chevron) trước đây.
     return AppCard(
       semanticsLabel: semanticsLabel,
       onTap: onTap,
-      child: Row(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: iconBg,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: 22,
+              ),
             ),
           ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.textTertiary,
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodySmall,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
         ],
       ),

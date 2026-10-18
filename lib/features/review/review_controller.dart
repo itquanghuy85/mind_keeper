@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/services/app_services.dart';
 import '../../data/models/due_review_item.dart';
 import '../../data/models/enums.dart';
+import '../../data/models/review_card.dart';
 
 /// Trạng thái phiên ôn tập.
 enum ReviewPhase { question, answer, finished }
@@ -127,6 +128,31 @@ class ReviewController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Hủy lịch thông báo cũ của thẻ và lên lịch lại theo [dueAt] mới (nếu còn trong tương lai
+  /// và thông báo đang được bật). Không tự bật lại thông báo nếu người dùng đã tắt/chưa cấp quyền.
+  Future<void> _syncNotificationAfterRating(
+    DueReviewItem item,
+    ReviewCard card,
+    DateTime now,
+  ) async {
+    final bool? enabled = await _services.notifications.areNotificationsEnabled();
+    if (enabled == true) {
+      await _services.notifications.cancelCardNotification(card.id);
+      if (card.dueAt.isAfter(now)) {
+        await _services.notifications.scheduleCardDueAt(
+          cardId: card.id,
+          title: 'Nhắc ôn tập',
+          body: card.question,
+          at: card.dueAt,
+        );
+      }
+    } else if (enabled == false) {
+      // Người dùng đã tắt thông báo: hủy lịch cũ, không tự bật lại.
+      await _services.notifications.cancelCardNotification(card.id);
+    }
+    // enabled == null: nền tảng không đọc được trạng thái (vd. iOS) — không can thiệp.
+  }
+
   Future<void> rate(MemoryRating rating) async {
     final DueReviewItem? item = current;
     if (item == null || phase != ReviewPhase.answer) return;
@@ -142,6 +168,13 @@ class ReviewController extends ChangeNotifier {
         updatedCard: result.card,
         log: result.log,
       );
+      // Đồng bộ thông báo sau khi dữ liệu ôn tập đã lưu thành công.
+      // Lỗi thông báo KHÔNG được làm mất dữ liệu đã lưu.
+      try {
+        await _syncNotificationAfterRating(item, result.card, now);
+      } catch (_) {
+        // Bỏ qua: dữ liệu ôn tập đã lưu, thông báo sẽ được reschedule lần sau.
+      }
       reviewedCount++;
       if (rating == MemoryRating.again) {
         againCount++;
