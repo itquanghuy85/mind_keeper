@@ -13,6 +13,7 @@ class KnowledgeItem {
     this.isFavorite = false,
     this.isPaused = false,
     this.startedAt,
+    this.lastReadAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -32,6 +33,10 @@ class KnowledgeItem {
   /// Null nếu chưa từng mở bài để đọc.
   final DateTime? startedAt;
 
+  /// Thời điểm người dùng mở bài đọc gần nhất (cập nhật mỗi lần mở reader).
+  /// Khác startedAt (không đổi) và khác updatedAt (bị mọi thao tác sửa ảnh hưởng).
+  final DateTime? lastReadAt;
+
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -48,6 +53,7 @@ class KnowledgeItem {
     bool? isFavorite,
     bool? isPaused,
     DateTime? startedAt,
+    DateTime? lastReadAt,
     DateTime? updatedAt,
   }) {
     return KnowledgeItem(
@@ -62,6 +68,7 @@ class KnowledgeItem {
       isFavorite: isFavorite ?? this.isFavorite,
       isPaused: isPaused ?? this.isPaused,
       startedAt: startedAt ?? this.startedAt,
+      lastReadAt: lastReadAt ?? this.lastReadAt,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -79,6 +86,7 @@ class KnowledgeItem {
     'is_favorite': isFavorite ? 1 : 0,
     'is_paused': isPaused ? 1 : 0,
     'started_at': startedAt?.toUtc().millisecondsSinceEpoch,
+    'last_read_at': lastReadAt?.toUtc().millisecondsSinceEpoch,
     'created_at': createdAt.toUtc().millisecondsSinceEpoch,
     'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
   };
@@ -97,6 +105,12 @@ class KnowledgeItem {
     startedAt: map['started_at'] != null
         ? DateTime.fromMillisecondsSinceEpoch(
             (map['started_at']! as num).toInt(),
+            isUtc: true,
+          )
+        : null,
+    lastReadAt: map['last_read_at'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(
+            (map['last_read_at']! as num).toInt(),
             isUtc: true,
           )
         : null,

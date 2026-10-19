@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mind_keeper/data/db/app_database.dart';
+import 'package:mind_keeper/data/db/schema.dart';
 import 'package:mind_keeper/data/models/knowledge_item.dart';
 import 'package:mind_keeper/data/models/lesson.dart';
 import 'package:mind_keeper/data/models/topic.dart';
@@ -268,6 +269,196 @@ void main() {
       indexes,
       isNotEmpty,
       reason: 'idx_knowledge_lesson index should exist',
+    );
+
+    await app.close();
+  });
+
+  test(
+    'findByTitle với lessonId không nhận row đã gắn lesson khác (không gộp nhầm)',
+    () async {
+      final AppDatabase app = await openMemoryDb();
+      final KnowledgeRepository knowledge = KnowledgeRepository(app);
+      final TopicRepository topics = TopicRepository(app);
+      final LessonRepository lessons = LessonRepository(app);
+
+      await createTestLesson(lessons, 'ls_1', 'Bài trùng');
+      final Topic topic = await topics.create(name: 'Test Topic');
+      final DateTime now = DateTime.now().toUtc();
+
+      // Row đã gắn lesson ls_1, cùng title
+      await app.db.insert(
+        'knowledge_items',
+        KnowledgeItem(
+          id: 'ki_bound',
+          topicId: topic.id,
+          title: 'Bài trùng',
+          content: 'Nội dung 1',
+          lessonId: 'ls_1',
+          createdAt: now,
+          updatedAt: now,
+        ).toMap(),
+      );
+
+      // Tìm với lessonId ls_2 (chưa có) -> KHÔNG được nhận row của ls_1
+      final KnowledgeItem? found = await knowledge.findByTitle(
+        topic.id,
+        'Bài trùng',
+        lessonId: 'ls_2',
+      );
+      expect(
+        found,
+        isNull,
+        reason: 'title fallback phải bỏ qua row đã gắn lesson khác',
+      );
+
+      // Row legacy chưa gắn lesson -> vẫn nhận được (tương thích ngược)
+      await app.db.insert(
+        'knowledge_items',
+        KnowledgeItem(
+          id: 'ki_legacy',
+          topicId: topic.id,
+          title: 'Bài legacy',
+          content: 'Nội dung legacy',
+          createdAt: now,
+          updatedAt: now,
+        ).toMap(),
+      );
+      final KnowledgeItem? legacy = await knowledge.findByTitle(
+        topic.id,
+        'Bài legacy',
+        lessonId: 'ls_9',
+      );
+      expect(legacy?.id, 'ki_legacy');
+
+      await app.close();
+    },
+  );
+
+  test('listEnrolled trả về đủ item đã đăng ký kể cả khi query rỗng', () async {
+    final AppDatabase app = await openMemoryDb();
+    final KnowledgeRepository knowledge = KnowledgeRepository(app);
+    final TopicRepository topics = TopicRepository(app);
+
+    final Topic topic = await topics.create(name: 'Test Topic');
+    final DateTime now = DateTime.now().toUtc();
+
+    // 1 item đã đăng ký, 1 item chưa đọc (title ASCII vì SQLite LOWER chỉ
+    // lower ký tự ASCII)
+    await app.db.insert(
+      'knowledge_items',
+      KnowledgeItem(
+        id: 'ki_enrolled',
+        topicId: topic.id,
+        title: 'Da doc',
+        content: 'Noi dung',
+        startedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      ).toMap(),
+    );
+    await app.db.insert(
+      'knowledge_items',
+      KnowledgeItem(
+        id: 'ki_new',
+        topicId: topic.id,
+        title: 'Chua doc',
+        content: 'Noi dung',
+        createdAt: now,
+        updatedAt: now,
+      ).toMap(),
+    );
+
+    final List<KnowledgeItem> all = await knowledge.listEnrolled();
+    expect(all, hasLength(1), reason: 'chỉ item có startedAt mới vào Kho');
+    expect(all.first.id, 'ki_enrolled');
+
+    // Query lọc theo title
+    final List<KnowledgeItem> byQuery = await knowledge.listEnrolled(
+      query: 'da doc',
+    );
+    expect(byQuery, hasLength(1));
+
+    // Query không khớp -> rỗng (nhưng query rỗng ở trên vẫn trả dữ liệu)
+    expect(await knowledge.listEnrolled(query: 'zzz'), isEmpty);
+
+    await app.close();
+  });
+
+  test('touchLastRead cập nhật last_read_at, không đổi startedAt', () async {
+    final AppDatabase app = await openMemoryDb();
+    final KnowledgeRepository knowledge = KnowledgeRepository(app);
+    final TopicRepository topics = TopicRepository(app);
+
+    final Topic topic = await topics.create(name: 'Test Topic');
+    final DateTime started = DateTime.now().toUtc().subtract(
+      const Duration(days: 2),
+    );
+
+    await app.db.insert(
+      'knowledge_items',
+      KnowledgeItem(
+        id: 'ki_touch',
+        topicId: topic.id,
+        title: 'Bài đọc',
+        content: 'Nội dung',
+        startedAt: started,
+        createdAt: started,
+        updatedAt: started,
+      ).toMap(),
+    );
+
+    final DateTime readAt = DateTime.now().toUtc();
+    final KnowledgeItem? updated = await knowledge.touchLastRead(
+      'ki_touch',
+      now: readAt,
+    );
+
+    expect(updated, isNotNull);
+    expect(updated!.lastReadAt, isNotNull);
+    expect(
+      updated.lastReadAt!.difference(readAt).abs(),
+      lessThan(const Duration(seconds: 1)),
+    );
+    expect(
+      updated.startedAt!.difference(started).abs(),
+      lessThan(const Duration(seconds: 1)),
+      reason: 'startedAt không được thay đổi',
+    );
+
+    // Đọc lại lần nữa -> lastReadAt mới, startedAt giữ nguyên
+    final DateTime readAt2 = readAt.add(const Duration(hours: 1));
+    final KnowledgeItem? again = await knowledge.touchLastRead(
+      'ki_touch',
+      now: readAt2,
+    );
+    expect(
+      again!.lastReadAt!.difference(readAt2).abs(),
+      lessThan(const Duration(seconds: 1)),
+    );
+    expect(
+      again.startedAt!.difference(started).abs(),
+      lessThan(const Duration(seconds: 1)),
+    );
+
+    await app.close();
+  });
+
+  test('migration v5->v6 thêm last_read_at column', () async {
+    final AppDatabase app = await openMemoryDb();
+
+    final columns = await app.db.rawQuery('PRAGMA table_info(knowledge_items)');
+    expect(
+      columns.any((c) => c['name'] == 'last_read_at'),
+      isTrue,
+      reason: 'last_read_at column should exist after migration',
+    );
+    final List<Map<String, Object?>> version = await app.db.rawQuery(
+      'PRAGMA user_version',
+    );
+    expect(
+      (version.first['user_version']! as num).toInt(),
+      DbSchema.currentVersion,
     );
 
     await app.close();

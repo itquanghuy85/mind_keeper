@@ -13,6 +13,7 @@ import '../../core/widgets/app_icon_badge.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../data/models/enums.dart';
 import 'review_controller.dart';
+import '../../core/theme/app_palette.dart';
 
 /// Màn hình ôn tập: một câu hỏi mỗi lần, tự nhớ trước khi xem đáp án.
 class ReviewScreen extends StatefulWidget {
@@ -170,8 +171,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 ] else ...<Widget>[
                   if (c.userAnswer.trim().isNotEmpty) ...<Widget>[
                     AppCard(
-                      color: AppColors.surfaceMuted,
-                      border: AppColors.border,
+                      color: context.appColors.surfaceMuted,
+                      border: context.appColors.border,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
@@ -187,7 +188,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     const SizedBox(height: AppSpacing.md),
                   ],
                   AppCard(
-                    color: AppColors.successSoft,
+                    color: context.appColors.successSoft,
                     border: AppColors.success.withValues(alpha: 0.45),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,7 +196,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         Text(
                           'Đáp án',
                           style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(color: AppColors.successText),
+                              ?.copyWith(color: context.appColors.successText),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(item.card.answer),
@@ -247,7 +248,7 @@ class _RatingBar extends StatelessWidget {
           label: 'Quên',
           icon: Icons.close_rounded,
           color: AppColors.ratingAgain,
-          soft: AppColors.ratingAgainSoft,
+          soft: context.appColors.ratingAgainSoft,
           onTap: () => controller.rate(MemoryRating.again),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -255,7 +256,7 @@ class _RatingBar extends StatelessWidget {
           label: 'Khó',
           icon: Icons.sentiment_dissatisfied_rounded,
           color: AppColors.ratingHard,
-          soft: AppColors.ratingHardSoft,
+          soft: context.appColors.ratingHardSoft,
           onTap: () => controller.rate(MemoryRating.hard),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -263,7 +264,7 @@ class _RatingBar extends StatelessWidget {
           label: 'Tốt',
           icon: Icons.check_rounded,
           color: AppColors.ratingGood,
-          soft: AppColors.ratingGoodSoft,
+          soft: context.appColors.ratingGoodSoft,
           onTap: () => controller.rate(MemoryRating.good),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -271,7 +272,7 @@ class _RatingBar extends StatelessWidget {
           label: 'Dễ',
           icon: Icons.sentiment_very_satisfied_rounded,
           color: AppColors.ratingEasy,
-          soft: AppColors.ratingEasySoft,
+          soft: context.appColors.ratingEasySoft,
           onTap: () => controller.rate(MemoryRating.easy),
         ),
       ],

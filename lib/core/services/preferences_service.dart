@@ -18,6 +18,7 @@ class PreferencesService extends ChangeNotifier {
   static const String _keyAiBaseUrl = 'ai_base_url';
   static const String _keyAiApiKey = 'ai_api_key';
   static const String _keyAiModel = 'ai_model';
+  static const String _keyAiProxyMode = 'ai_proxy_mode';
   static const String _keyLessonDefaultMode = 'lesson_default_mode';
   static const String _keyFavoriteDomains = 'favorite_domains';
   static const String _keyHiddenDomains = 'hidden_domains';
@@ -39,6 +40,9 @@ class PreferencesService extends ChangeNotifier {
   );
   static const String _envDeepSeekModel = String.fromEnvironment(
     'DEEPSEEK_MODEL',
+  );
+  static const bool _envDeepSeekProxyMode = bool.fromEnvironment(
+    'DEEPSEEK_PROXY_MODE',
   );
 
   bool get notificationsEnabled =>
@@ -64,6 +68,10 @@ class PreferencesService extends ChangeNotifier {
   String get aiApiKey => _prefs.getString(_keyAiApiKey) ?? _envDeepSeekApiKey;
 
   String get aiModel => _prefs.getString(_keyAiModel) ?? _envDeepSeekModel;
+
+  /// True khi gọi AI qua proxy backend: client không giữ key DeepSeek.
+  bool get aiProxyMode =>
+      _prefs.getBool(_keyAiProxyMode) ?? _envDeepSeekProxyMode;
 
   Future<void> setNotificationsEnabled(bool value) async {
     await _prefs.setBool(_keyNotificationsEnabled, value);
@@ -100,10 +108,14 @@ class PreferencesService extends ChangeNotifier {
     required String baseUrl,
     required String apiKey,
     required String model,
+    bool? proxyMode,
   }) async {
     await _prefs.setString(_keyAiBaseUrl, baseUrl.trim());
     await _prefs.setString(_keyAiApiKey, apiKey.trim());
     await _prefs.setString(_keyAiModel, model.trim());
+    if (proxyMode != null) {
+      await _prefs.setBool(_keyAiProxyMode, proxyMode);
+    }
     notifyListeners();
   }
 

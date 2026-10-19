@@ -14,6 +14,7 @@ import '../../data/models/knowledge_item.dart';
 import '../../data/models/topic.dart';
 import '../../features/knowledge/knowledge_detail_screen.dart';
 import '../../features/knowledge/knowledge_editor_screen.dart';
+import '../../features/knowledge/knowledge_library_screen.dart';
 import '../import/media_import_flow.dart';
 import '../import/text_import_screen.dart';
 import '../import/voice_import_screen.dart';
@@ -230,6 +231,18 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
       appBar: AppBar(
         title: Text(_topic?.name ?? 'Chủ đề', overflow: TextOverflow.ellipsis),
         actions: <Widget>[
+          IconButton(
+            tooltip: 'Kho kiến thức',
+            onPressed: _topic == null
+                ? null
+                : () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          KnowledgeLibraryScreen(topicId: _topic!.id),
+                    ),
+                  ),
+            icon: const Icon(Icons.library_books_outlined),
+          ),
           IconButton(
             tooltip: 'Sửa',
             onPressed: _editTopic,

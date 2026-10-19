@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/app_services.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_chip.dart';
@@ -14,6 +13,7 @@ import '../../data/models/topic.dart';
 import '../../data/repositories/topic_repository.dart';
 import 'create_topic_screen.dart';
 import 'topic_detail_screen.dart';
+import '../../core/theme/app_palette.dart';
 
 enum _TopicFilter { all, mine, learned, favorite }
 
@@ -281,17 +281,17 @@ class _TopicsScreenState extends State<TopicsScreen> {
                   ),
                 ),
                 if (topic.origin == TopicOrigin.discovered)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(right: AppSpacing.xs),
                     child: Icon(
                       Icons.explore_rounded,
                       size: AppSizes.iconSm,
-                      color: AppColors.primary,
+                      color: context.appColors.primary,
                     ),
                   ),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
-                  color: AppColors.textTertiary,
+                  color: context.appColors.textTertiary,
                 ),
               ],
             ),

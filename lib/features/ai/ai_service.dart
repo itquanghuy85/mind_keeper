@@ -37,9 +37,10 @@ class AiService {
     required String baseUrl,
     required String apiKey,
     required String model,
+    bool proxyMode = false,
   }) {
     final bool hasValidConfig =
-        apiKey.trim().isNotEmpty && baseUrl.trim().isNotEmpty;
+        baseUrl.trim().isNotEmpty && (proxyMode || apiKey.trim().isNotEmpty);
     if (!hasValidConfig) {
       useProvider(MockAIProvider());
       return;
@@ -49,18 +50,25 @@ class AiService {
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim(),
         model: model.trim(),
+        proxyMode: proxyMode,
       ),
     );
   }
 
   /// Cấu hình mặc định DeepSeek từ environment variables hoặc secret manager.
   /// Trả về true nếu cấu hình thành công, false nếu thiếu API key.
+  /// [proxyMode] = true khi baseUrl là proxy backend (không cần key ở client).
   bool configureDeepSeekDefault({
     required String apiKey,
     String? baseUrl,
     String? model,
+    bool proxyMode = false,
   }) {
-    if (apiKey.trim().isEmpty) {
+    if (!proxyMode && apiKey.trim().isEmpty) {
+      useProvider(MockAIProvider());
+      return false;
+    }
+    if (proxyMode && (baseUrl?.trim().isEmpty ?? true)) {
       useProvider(MockAIProvider());
       return false;
     }
@@ -73,6 +81,7 @@ class AiService {
         model: (model?.trim().isNotEmpty == true)
             ? model!.trim()
             : HttpAIProvider.defaultModel,
+        proxyMode: proxyMode,
       ),
     );
     return true;

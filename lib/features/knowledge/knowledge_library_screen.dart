@@ -16,6 +16,7 @@ import '../../data/models/knowledge_generation.dart';
 import '../../data/models/knowledge_item.dart';
 import '../../data/models/topic.dart';
 import '../../features/knowledge/knowledge_detail_screen.dart';
+import '../../core/theme/app_palette.dart';
 
 /// Màn hình thư viện kiến thức của một chủ đề.
 class KnowledgeLibraryScreen extends StatefulWidget {
@@ -173,7 +174,7 @@ class _KnowledgeLibraryScreenState extends State<KnowledgeLibraryScreen> {
                 child: Text(
                   '${(_generationTask!.progress * 100).toInt()}%',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.primary,
+                    color: context.appColors.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -282,7 +283,7 @@ class _KnowledgeLibraryScreenState extends State<KnowledgeLibraryScreen> {
                     width: AppSizes.badgeLg,
                     height: AppSizes.badgeLg,
                     decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
+                      color: context.appColors.primarySoft,
                       borderRadius: BorderRadius.circular(AppRadius.xl),
                     ),
                     alignment: Alignment.center,
@@ -343,9 +344,9 @@ class _KnowledgeLibraryScreenState extends State<KnowledgeLibraryScreen> {
             Expanded(
               child: LinearProgressIndicator(
                 value: task.totalPlanned > 0 ? task.progress : 0,
-                backgroundColor: AppColors.primarySoft,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.primary,
+                backgroundColor: context.appColors.primarySoft,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  context.appColors.primary,
                 ),
               ),
             ),
@@ -542,9 +543,9 @@ class _KnowledgeLibraryScreenState extends State<KnowledgeLibraryScreen> {
               item.details,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.appColors.textTertiary,
+              ),
             ),
           ],
         ],

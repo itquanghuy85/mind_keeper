@@ -12,6 +12,7 @@ import '../../core/widgets/app_card.dart';
 import '../../data/models/knowledge_item.dart';
 import '../../data/models/review_card.dart';
 import '../../data/models/topic.dart';
+import '../../core/theme/app_palette.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -173,7 +174,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   Color get _statusColor => switch (_notificationsAllowed) {
     true => AppColors.success,
     false => AppColors.danger,
-    null => AppColors.textSecondary,
+    null => context.appColors.textSecondary,
   };
 
   IconData get _statusIcon => switch (_notificationsAllowed) {

@@ -7,6 +7,13 @@ import 'ai_provider.dart';
 
 /// Provider HTTP thật (OpenAI-compatible).
 /// Cấu hình baseUrl/apiKey/model từ cài đặt — KHÔNG nhúng key trong mã nguồn.
+///
+/// Hai chế độ:
+/// - Trực tiếp (`proxyMode = false`): client giữ API key và gửi
+///   `Authorization: Bearer <key>` tới `baseUrl`.
+/// - Proxy (`proxyMode = true`): `baseUrl` là endpoint proxy của backend
+///   (vd Cloud Functions). Client KHÔNG cần và KHÔNG gửi key DeepSeek;
+///   backend giữ key trong secret và tự thêm header khi gọi DeepSeek.
 class HttpAIProvider implements AIProvider {
   static const String defaultBaseUrl = 'https://api.deepseek.com';
   static const String defaultModel = 'deepseek-chat';
@@ -15,6 +22,8 @@ class HttpAIProvider implements AIProvider {
     String? baseUrl,
     String? apiKey,
     String? model,
+    this.proxyMode = false,
+    String? clientToken,
     http.Client? client,
     this.timeout = const Duration(seconds: 60),
   }) : _baseUrl = (baseUrl?.trim().isNotEmpty == true)
@@ -24,19 +33,27 @@ class HttpAIProvider implements AIProvider {
        _model = (model?.trim().isNotEmpty == true)
            ? model!.trim()
            : defaultModel,
+       _clientToken = clientToken?.trim() ?? '',
        _client = client ?? http.Client();
 
   final String _baseUrl;
   final String _apiKey;
   final String _model;
   final http.Client _client;
+
+  /// True khi gọi qua proxy backend (key nằm ở server, không ở client).
+  final bool proxyMode;
+
+  /// Token định danh client gửi kèm khi dùng proxy (không phải API key DeepSeek).
+  final String _clientToken;
+
   final Duration timeout;
 
   @override
-  String get name => 'deepseek';
+  String get name => proxyMode ? 'deepseek-proxy' : 'deepseek';
 
   @override
-  bool get isConfigured => _apiKey.isNotEmpty;
+  bool get isConfigured => proxyMode ? _baseUrl.isNotEmpty : _apiKey.isNotEmpty;
 
   String get baseUrl => _baseUrl;
   String get apiKey => _apiKey;
@@ -44,7 +61,8 @@ class HttpAIProvider implements AIProvider {
 
   Map<String, String> get _headers => <String, String>{
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer $_apiKey',
+    if (!proxyMode && _apiKey.isNotEmpty) 'Authorization': 'Bearer $_apiKey',
+    if (proxyMode && _clientToken.isNotEmpty) 'X-Client-Token': _clientToken,
   };
 
   Future<String> _chat(String systemPrompt, String userPrompt) async {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/services/app_bootstrap.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/widgets/app_icon_badge.dart';
 import '../../features/home/today_screen.dart';
@@ -10,6 +9,7 @@ import '../../features/stats/stats_screen.dart';
 import '../../features/topics/create_topic_screen.dart';
 import '../../features/topics/topics_screen.dart';
 import '../../data/models/topic.dart';
+import '../../core/theme/app_palette.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -59,8 +59,10 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       body: IndexedStack(index: _index, children: tabs),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: context.appColors.border, width: 1),
+          ),
         ),
         child: NavigationBar(
           selectedIndex: _index,

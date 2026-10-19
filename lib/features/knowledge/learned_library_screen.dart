@@ -13,6 +13,7 @@ import '../../core/widgets/app_text_field.dart';
 import '../../data/models/knowledge_item.dart';
 import '../../data/models/review_card.dart';
 import 'knowledge_detail_screen.dart';
+import '../../core/theme/app_palette.dart';
 
 class LearnedLibraryScreen extends StatefulWidget {
   const LearnedLibraryScreen({super.key});
@@ -99,10 +100,9 @@ class _LearnedLibraryScreenState extends State<LearnedLibraryScreen> {
       _error = null;
     });
     try {
-      final List<KnowledgeItem> allItems = await services.knowledge.search('');
-      final List<KnowledgeItem> enrolledItems = allItems
-          .where((item) => item.isEnrolled)
-          .toList(growable: false);
+      // search('') trả về rỗng → phải dùng listEnrolled để luôn có dữ liệu
+      final List<KnowledgeItem> enrolledItems = await services.knowledge
+          .listEnrolled(query: _query.isNotEmpty ? _query : null);
 
       final Map<String, List<ReviewCard>> cardsByItem =
           <String, List<ReviewCard>>{};
@@ -122,17 +122,6 @@ class _LearnedLibraryScreenState extends State<LearnedLibraryScreen> {
           .toList(growable: false);
 
       List<_LearnedItem> filtered = _applyFilter(learnedItems);
-
-      if (_query.isNotEmpty) {
-        final String q = _query.toLowerCase();
-        filtered = filtered
-            .where((item) {
-              return item.title.toLowerCase().contains(q) ||
-                  item.content.toLowerCase().contains(q) ||
-                  item.details.toLowerCase().contains(q);
-            })
-            .toList(growable: false);
-      }
 
       filtered = _applySort(filtered);
 
@@ -155,7 +144,10 @@ class _LearnedLibraryScreenState extends State<LearnedLibraryScreen> {
       case _LearnedFilter.all:
         return items;
       case _LearnedFilter.notRated:
-        return items.where((item) => item.hasNewCard).toList(growable: false);
+        // Chưa đánh giá = chưa có thẻ nào được chấm, hoặc item chưa có thẻ nào
+        return items
+            .where((item) => item.cards.isEmpty || item.hasNewCard)
+            .toList(growable: false);
       case _LearnedFilter.reviewing:
         return items.where((item) => item.isReviewing).toList(growable: false);
       case _LearnedFilter.due:
@@ -177,8 +169,9 @@ class _LearnedLibraryScreenState extends State<LearnedLibraryScreen> {
         break;
       case _LearnedSort.lastRead:
         sorted.sort(
-          (a, b) =>
-              b.knowledgeItem.updatedAt.compareTo(a.knowledgeItem.updatedAt),
+          (a, b) => (b.item.lastReadAt ?? b.startedAt ?? b.updatedAt).compareTo(
+            a.item.lastReadAt ?? a.startedAt ?? a.updatedAt,
+          ),
         );
         break;
       case _LearnedSort.dueSoon:
@@ -350,7 +343,7 @@ class _LearnedLibraryScreenState extends State<LearnedLibraryScreen> {
               ),
               const PopupMenuItem(
                 value: _LearnedSort.lastRead,
-                child: Text('Đọc gần nhất'),
+                child: Text('Lần đọc gần nhất'),
               ),
               const PopupMenuItem(
                 value: _LearnedSort.dueSoon,
@@ -388,10 +381,10 @@ class _LearnedLibraryScreenState extends State<LearnedLibraryScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.search_off_rounded,
                 size: 48,
-                color: AppColors.textTertiary,
+                color: context.appColors.textTertiary,
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
@@ -414,10 +407,10 @@ class _LearnedLibraryScreenState extends State<LearnedLibraryScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.library_books_outlined,
                 size: 48,
-                color: AppColors.textTertiary,
+                color: context.appColors.textTertiary,
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
@@ -504,9 +497,9 @@ class _LearnedLibraryScreenState extends State<LearnedLibraryScreen> {
         if (item.startedAt != null)
           Text(
             'Bắt đầu: ${_formatDate(item.startedAt!)}',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.appColors.textTertiary,
+            ),
           ),
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -522,9 +515,9 @@ class _LearnedLibraryScreenState extends State<LearnedLibraryScreen> {
               item.details,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.appColors.textTertiary,
+              ),
             ),
           ),
       ],

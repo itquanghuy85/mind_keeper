@@ -11,6 +11,7 @@ import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/app_feedback.dart';
 import '../../core/widgets/app_icon_badge.dart';
 import '../../data/repositories/stats_repository.dart';
+import '../../core/theme/app_palette.dart';
 
 enum _Range { d7, d30, all }
 
@@ -135,7 +136,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   title: 'Tổng chủ đề',
                   value: '${stats.topicCount}',
                   icon: Icons.folder_outlined,
-                  color: AppColors.primary,
+                  color: context.appColors.primary,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -333,7 +334,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                 backgroundColor: AppChartTheme.progressTrack(
                                   context,
                                 ),
-                                color: AppColors.primary,
+                                color: context.appColors.primary,
                               ),
                             ),
                             const SizedBox(height: AppSpacing.xs),
@@ -361,7 +362,7 @@ class _StatsScreenState extends State<StatsScreen> {
                         child: Text(
                           'Và ${_topics.length - 10} chủ đề khác...',
                           style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.textTertiary),
+                              ?.copyWith(color: context.appColors.textTertiary),
                         ),
                       ),
                     ),

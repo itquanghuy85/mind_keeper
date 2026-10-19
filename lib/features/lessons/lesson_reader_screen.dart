@@ -12,11 +12,13 @@ import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_feedback.dart';
 import '../../core/widgets/app_icon_badge.dart';
 import '../../data/models/enums.dart';
+import '../../data/models/knowledge_item.dart';
 import '../../data/models/lesson.dart';
 import '../../data/models/topic.dart';
 import '../../data/repositories/topic_repository.dart';
 import '../topics/topic_detail_screen.dart';
 import 'lesson_service.dart';
+import '../../core/theme/app_palette.dart';
 
 /// Màn đọc bài học AI + quiz ghi nhớ. Sau khi đọc, người dùng làm quiz
 /// (mỗi câu một lần, tự nhớ trước khi xem đáp án) để đưa bài vào lịch ôn FSRS.
@@ -103,13 +105,16 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
           ? lesson.content.summary
           : lesson.content.introduction;
 
-      await services.knowledge.enroll(
+      final KnowledgeItem enrolled = await services.knowledge.enroll(
         topicId: topic.id,
         title: lesson.title,
         content: summary,
         details: lesson.content.keyPoints.join(' — '),
+        lessonId: lesson.id,
         origin: KnowledgeOrigin.aiSuggested,
       );
+      // Ghi nhận lần đọc gần nhất (mỗi lần mở reader, không đổi startedAt)
+      await services.knowledge.touchLastRead(enrolled.id);
       // Cập nhật lesson local để biết đã enrolled
       if (mounted) {
         setState(() {});
@@ -281,16 +286,16 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: AppColors.warningSoft,
+                    color: context.appColors.warningSoft,
                     borderRadius: AppRadius.lgAll,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Nội dung về sức khỏe chỉ mang tính tham khảo, '
                     'không thay thế tư vấn y tế chuyên môn.',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.4,
-                      color: AppColors.warningText,
+                      color: context.appColors.warningText,
                     ),
                   ),
                 ),
@@ -320,7 +325,7 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
                 for (final LessonConcept concept
                     in lesson.content.concepts) ...<Widget>[
                   AppCard(
-                    color: AppColors.infoSoft,
+                    color: context.appColors.infoSoft,
                     border: AppColors.info.withValues(alpha: 0.3),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,8 +392,8 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
               if (lesson.content.summary.isNotEmpty) ...<Widget>[
                 const SizedBox(height: AppSpacing.lg),
                 AppCard(
-                  color: AppColors.primarySoftAlt,
-                  border: AppColors.border,
+                  color: context.appColors.primarySoftAlt,
+                  border: context.appColors.border,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -482,7 +487,7 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
                   )
                 else ...<Widget>[
                   AppCard(
-                    color: AppColors.successSoft,
+                    color: context.appColors.successSoft,
                     border: AppColors.success.withValues(alpha: 0.45),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,7 +495,7 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
                         Text(
                           'Đáp án',
                           style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(color: AppColors.successText),
+                              ?.copyWith(color: context.appColors.successText),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(question.answer),
@@ -609,18 +614,18 @@ class _VerificationTag extends StatelessWidget {
       IconData icon,
     ) = switch (lesson.verification) {
       LessonVerification.confirmed => (
-        AppColors.successSoft,
-        AppColors.successText,
+        context.appColors.successSoft,
+        context.appColors.successText,
         Icons.verified_rounded,
       ),
       LessonVerification.sourced => (
-        AppColors.infoSoft,
+        context.appColors.infoSoft,
         AppColors.info,
         Icons.link_rounded,
       ),
       LessonVerification.unverified => (
-        AppColors.warningSoft,
-        AppColors.warningText,
+        context.appColors.warningSoft,
+        context.appColors.warningText,
         Icons.help_outline_rounded,
       ),
     };
@@ -679,10 +684,10 @@ class _SourcesSection extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Icon(
+                  Icon(
                     Icons.link_rounded,
                     size: 16,
-                    color: AppColors.textTertiary,
+                    color: context.appColors.textTertiary,
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
@@ -724,9 +729,13 @@ class _Bullet extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 7),
-            child: Icon(Icons.circle, size: 6, color: AppColors.primary),
+            child: Icon(
+              Icons.circle,
+              size: 6,
+              color: context.appColors.primary,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -751,7 +760,7 @@ class _QuizRatingBar extends StatelessWidget {
           label: 'Quên',
           icon: Icons.close_rounded,
           color: AppColors.ratingAgain,
-          soft: AppColors.ratingAgainSoft,
+          soft: context.appColors.ratingAgainSoft,
           onTap: () => onRate(MemoryRating.again),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -759,7 +768,7 @@ class _QuizRatingBar extends StatelessWidget {
           label: 'Khó',
           icon: Icons.sentiment_dissatisfied_rounded,
           color: AppColors.ratingHard,
-          soft: AppColors.ratingHardSoft,
+          soft: context.appColors.ratingHardSoft,
           onTap: () => onRate(MemoryRating.hard),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -767,7 +776,7 @@ class _QuizRatingBar extends StatelessWidget {
           label: 'Tốt',
           icon: Icons.check_rounded,
           color: AppColors.ratingGood,
-          soft: AppColors.ratingGoodSoft,
+          soft: context.appColors.ratingGoodSoft,
           onTap: () => onRate(MemoryRating.good),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -775,7 +784,7 @@ class _QuizRatingBar extends StatelessWidget {
           label: 'Dễ',
           icon: Icons.sentiment_very_satisfied_rounded,
           color: AppColors.ratingEasy,
-          soft: AppColors.ratingEasySoft,
+          soft: context.appColors.ratingEasySoft,
           onTap: () => onRate(MemoryRating.easy),
         ),
       ],

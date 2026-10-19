@@ -14,7 +14,7 @@ class SchemaMigration {
 
 abstract final class DbSchema {
   /// Phiên bản schema hiện tại của ứng dụng.
-  static const int currentVersion = 5;
+  static const int currentVersion = 6;
 
   static const String topics = '''
 CREATE TABLE topics (
@@ -58,6 +58,7 @@ CREATE TABLE knowledge_items (
   is_favorite INTEGER NOT NULL DEFAULT 0,
   is_paused INTEGER NOT NULL DEFAULT 0,
   started_at INTEGER,
+  last_read_at INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )''';
@@ -173,6 +174,7 @@ CREATE TABLE knowledge_generation_tasks (
     SchemaMigration(fromVersion: 2, toVersion: 3, upgrade: _upgradeToV3),
     SchemaMigration(fromVersion: 3, toVersion: 4, upgrade: _upgradeToV4),
     SchemaMigration(fromVersion: 4, toVersion: 5, upgrade: _upgradeToV5),
+    SchemaMigration(fromVersion: 5, toVersion: 6, upgrade: _upgradeToV6),
   ];
 
   static Future<void> _upgradeToV2(DatabaseExecutor db) async {
@@ -184,7 +186,9 @@ CREATE TABLE knowledge_generation_tasks (
       await db.execute(statement);
     }
     await db.execute('CREATE INDEX idx_sources_topic ON sources(topic_id)');
-    await db.execute('CREATE INDEX idx_cards_item ON review_cards(knowledge_item_id)');
+    await db.execute(
+      'CREATE INDEX idx_cards_item ON review_cards(knowledge_item_id)',
+    );
     await db.execute('CREATE INDEX idx_cards_due ON review_cards(due_at)');
     await db.execute('CREATE INDEX idx_logs_card ON review_logs(card_id)');
     await db.execute('CREATE INDEX idx_logs_time ON review_logs(reviewed_at)');
@@ -206,6 +210,16 @@ CREATE TABLE knowledge_generation_tasks (
     await db.execute(
       'ALTER TABLE knowledge_items ADD COLUMN lesson_id TEXT REFERENCES lessons(id) ON DELETE SET NULL',
     );
-    await db.execute('CREATE INDEX idx_knowledge_lesson ON knowledge_items(lesson_id)');
+    await db.execute(
+      'CREATE INDEX idx_knowledge_lesson ON knowledge_items(lesson_id)',
+    );
+  }
+
+  static Future<void> _upgradeToV6(DatabaseExecutor db) async {
+    // Thêm last_read_at để sort "Lần đọc gần nhất" đúng nghĩa,
+    // không dùng updated_at (bị thay đổi bởi mọi thao tác sửa/chỉnh).
+    await db.execute(
+      'ALTER TABLE knowledge_items ADD COLUMN last_read_at INTEGER',
+    );
   }
 }

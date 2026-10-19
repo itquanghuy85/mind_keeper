@@ -31,6 +31,10 @@ Nguồn trạng thái duy nhất. Cập nhật sau mỗi giai đoạn.
 | GĐ13 | Bài học AI khám phá kiến thức | PASS | Sinh bài AI trọn gói (dedup theo lĩnh vực/chủ đề/chế độ/prompt version), đọc bài + quiz ghi nhớ → tạo chủ đề + thẻ FSRS + nhắc ôn |
 | GĐ14 | Audit và cải thiện UI/UX | PASS | Findings P1/P2 sửa trong code (semantics, emoji, AppBar), analyze 0, test pass, build + cài lên CPH2203 |
 | GĐ15 | Nghiệm thu thực tế & nâng cấp UI + iOS | PASS | Redesign 3 màn hình (Today/Topics/Stats), Podfile + pbxproj → iOS 15.5, xóa flow Maestro thừa; analyze 0, test 75/75, build APK OK |
+| GĐ16 | Đồng bộ lịch thông báo sau khi chấm thẻ FSRS | PASS | `ReviewController.rate()` cancel + schedule lại theo `dueAt` mới, lỗi thông báo không làm mất dữ liệu; test `review_notification_sync_test.dart` (6 test) |
+| GĐ18 | Nghiệm thu thực tế trên OPPO (3 bản) | PASS | `DOCS/QA/GD18_3_OPPO_ACCEPTANCE.md`, `GD18_4`, `GD18_5_OPPO_FINAL_ACCEPTANCE.md` |
+| GĐ19 | Modern UI/UX redesign + hoàn thiện | PASS | `DOCS/QA/GD19_UI_REDESIGN.md`, `GD19_1_UI_COMPLETION.md`; 18 màn hình dùng Design System |
+| GĐ20 | Palette theme-aware + entry point + enrollment/dedup + proxy DeepSeek | PARTIAL | `DOCS/QA/GD20_FINAL_ACCEPTANCE.md`: palette 54 token light/dark, entry point Kho kiến thức/Kho đã học, migration v6 (`last_read_at`), `listEnrolled`, proxy client (8 test); analyze 0, test **131/131**; ⛔ deploy proxy backend BLOCKED (không có Firebase project/`firebase.json`) |
 
 ## File quan trọng đã thêm/sửa
 
@@ -406,4 +410,35 @@ Dùng `FakeNotificationService` (có sẵn trong `notification_service.dart`) + 
 2. Chưa xác minh được thông báo thật bắn đến giờ trên thiết bị (có thể dùng debug card +2 phút trong NotificationSettingsScreen — tính năng từ GĐ15.1).
 3. iOS build vẫn cần macOS (không đổi từ GĐ15.x).
 Không commit/push.
+
+## GĐ20 — PALETTE THEME-AWARE + ENTRY POINT + SỬA ENROLLMENT/DEDUP + DEEPSEEK PROXY (2026-10-19)
+
+Báo cáo đầy đủ: **`DOCS/QA/GD20_FINAL_ACCEPTANCE.md`** (kèm ảnh `DOCS/QA/artifacts/GD20/`). Tóm tắt:
+
+### 1. Palette theme-aware (light + dark)
+- Thêm `lib/core/theme/app_palette.dart` — `ThemeExtension<AppPalette>` với **54 token** × 2 bộ (`lightPalette`, `darkPalette`), truy cập `context.appColors`; đăng ký trong `AppTheme.light()/dark()`.
+- 13 màn hình + 7 widget dùng chung chuyển từ `AppColors` hardcode sang `context.appColors`. `AppColors.primary` giữ static ở chỗ fill nền sau chữ trắng.
+- Test mới `test/core/theme_palette_test.dart` (5 test). Trên máy thật: luminance ảnh homepage light **212.6** vs dark **38.1** (đổi theme bằng `adb shell cmd uimode night yes|no` — `settings put secure` bị từ chối vì thiếu `WRITE_SECURE_SETTINGS`).
+
+### 2. Sửa enrollment / dedup / Kho đã học
+- **Lỗi:** reader gọi `enroll()` thiếu `lessonId` → bản ghi không gắn bài học; `findByTitle` fallback gộp nhầm 2 bài cùng tiêu đề; "Kho đã học" dùng `search('')` (hàm này `return []` khi rỗng) → **hiển thị rỗng trên máy thật**; filter "Chưa đánh giá" loại nhầm item chưa có thẻ; sort "Lần đọc gần nhất" không có cột dữ liệu.
+- **Sửa:** truyền `lessonId` + `touchLastRead` trong reader; `findByTitle` fallback chỉ áp dụng cho `lesson_id IS NULL`; thêm `KnowledgeRepository.listEnrolled({query})`; filter `notRated = cards.isEmpty || hasNewCard`; schema **v6** thêm cột `last_read_at` (migration 5→6, `ALTER TABLE ... ADD COLUMN`) + field `KnowledgeItem.lastReadAt`; sort theo `lastReadAt ?? startedAt ?? updatedAt`.
+- **Verify trên device:** `before.db` user_version 5, không có `last_read_at` → `after.db` user_version 6, có cột, **toàn bộ count giữ nguyên** (topics 2, knowledge_items 2, review_cards 1, review_logs 1, lessons 2, enrolled 1) → không mất dữ liệu.
+- Test: `test/data/enrollment_dedup_test.dart` (9 test, gồm migration v5→v6) + `test/features/learned_library_enrolled_test.dart` (2 test hồi quy: list hiển thị bài đã học, tìm kiếm).
+- Bẫy test đã gặp: `Database.getVersion()` không tồn tại trong `sqflite_common` → dùng `PRAGMA user_version`; FK bật nên phải tạo lesson trước khi insert `lesson_id` (`SqliteException(787)`); `LOWER()` SQLite chỉ hạ chữ ASCII → dùng dữ liệu test ASCII.
+
+### 3. Entry point điều hướng
+- `topic_detail_screen.dart`: AppBar IconButton tooltip `'Kho kiến thức'` → `KnowledgeLibraryScreen(topicId)` (`onPressed` null khi chưa có topic). Profile → "Kho đã học" đã kiểm chứng hoạt động.
+- Test mới `test/features/navigation_entry_test.dart` (2 test).
+
+### 4. DeepSeek proxy (client-side an toàn)
+- `HttpAIProvider` thêm `proxyMode`/`clientToken` (proxy không cần key, gửi `X-Client-Token`, bỏ `Authorization`); `AiService.configureFromSettings/configureDeepSeekDefault` nhận `proxyMode`; `PreferencesService.aiProxyMode` đọc `bool.fromEnvironment('DEEPSEEK_PROXY_MODE')`; Profile có switch "Gọi qua proxy backend".
+- Test mới `test/features/ai_proxy_test.dart` (8 test).
+- ⛔ **BLOCKED:** deploy Cloud Functions proxy — repo không có `functions/`/`firebase.json`/project Firebase → không deploy được. Client đã sẵn sàng; các bước deploy ghi trong `GD20_FINAL_ACCEPTANCE.md` §8.
+
+### Kết quả verify GĐ20
+- `flutter analyze`: **0 issue**. `flutter test`: **+131 All tests passed** (trước GĐ20: 111). `dart format lib test` đã chạy (giữ LF).
+- `flutter build apk --debug` SUCCESS; `adb install -r` giữ dữ liệu; cold-start không exception/crash trong logcat.
+- **Hạn chế phiên này:** agent không đọc được nội dung ảnh nên không tự xác nhận thị giác screenshot (đã lưu ảnh để người dùng đối chiếu); `uiautomator dump` không trả text với Flutter (semantics chưa bật) nên không lái UI bằng toạ độ.
+- Không commit/push.
 

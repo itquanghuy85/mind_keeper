@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
+import '../theme/app_palette.dart';
 
 /// Thẻ nội dung chuẩn: nền trắng, viền mảnh, bóng mờ nhẹ, bo góc 16.
 class AppCard extends StatelessWidget {
@@ -11,7 +12,7 @@ class AppCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(AppSpacing.lg),
     this.margin = EdgeInsets.zero,
     this.onTap,
-    this.color = AppColors.surface,
+    this.color,
     this.border,
     this.radius = AppRadius.lg,
     this.highlighted = false,
@@ -23,7 +24,7 @@ class AppCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry margin;
   final VoidCallback? onTap;
-  final Color color;
+  final Color? color;
   final Color? border;
   final double radius;
   final bool highlighted;
@@ -35,14 +36,16 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color effectiveBorder =
-        border ?? (highlighted ? AppColors.primary : AppColors.border);
+        border ??
+        (highlighted ? context.appColors.primary : context.appColors.border);
+    final Color effectiveColor = color ?? context.appColors.surface;
 
     final Widget content = Padding(padding: padding, child: child);
 
     final Widget card = Padding(
       padding: margin,
       child: Material(
-        color: color,
+        color: effectiveColor,
         borderRadius: BorderRadius.circular(radius),
         child: InkWell(
           onTap: onTap,
@@ -126,8 +129,8 @@ class AppSectionHeader extends StatelessWidget {
                 ),
                 child: Text(
                   actionLabel!,
-                  style: const TextStyle(
-                    color: AppColors.primary,
+                  style: TextStyle(
+                    color: context.appColors.primary,
                     fontWeight: FontWeight.w600,
                     fontSize: 13.5,
                     letterSpacing: 0.1,

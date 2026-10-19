@@ -86,7 +86,7 @@ class KnowledgeRepository {
   }) async {
     final String cleanTitle = title.trim();
     if (cleanTitle.isEmpty) return null;
-    
+
     // Nếu có lessonId, tìm theo lessonId trước (định danh ổn định)
     if (lessonId != null) {
       final List<Map<String, Object?>> rowsByLesson = await _db.query(
@@ -99,11 +99,17 @@ class KnowledgeRepository {
         return KnowledgeItem.fromMap(rowsByLesson.first);
       }
     }
-    
-    // Fallback: tìm theo title (để tương thích ngược)
+
+    // Fallback: tìm theo title (tương thích ngược).
+    // Nếu đã biết lessonId, CHỈ nhận row legacy chưa gắn lesson nào
+    // (lesson_id IS NULL) để không gộp nhầm hai bài khác nhau cùng title.
+    String where = 'topic_id = ? AND LOWER(title) = LOWER(?)';
+    if (lessonId != null) {
+      where += ' AND lesson_id IS NULL';
+    }
     final List<Map<String, Object?>> rows = await _db.query(
       'knowledge_items',
-      where: 'topic_id = ? AND LOWER(title) = LOWER(?)',
+      where: where,
       whereArgs: <Object>[topicId, cleanTitle],
       limit: 1,
     );
@@ -129,7 +135,7 @@ class KnowledgeRepository {
 
     // Kiểm tra đã đăng ký chưa
     KnowledgeItem? existing;
-    
+
     if (lessonId != null) {
       // Nếu có lessonId: CHỈ tìm theo lessonId (KHÔNG fallback title)
       // Điều này tránh gộp sai 2 bài khác nhau cùng title nhưng khác lessonId
@@ -181,6 +187,48 @@ class KnowledgeRepository {
     );
     await _db.insert('knowledge_items', item.toMap());
     return item;
+  }
+
+  /// Danh sách mục tiêu đã đăng ký (started_at NOT NULL) cho Kho đã học.
+  /// Khác [search]: search('') trả về rỗng, nên màn Kho đã học phải dùng
+  /// hàm này để luôn hiển thị đủ dữ liệu khi không có từ khóa.
+  Future<List<KnowledgeItem>> listEnrolled({String? query}) async {
+    final List<String> where = <String>['started_at IS NOT NULL'];
+    final List<Object> args = <Object>[];
+    final String? value = query?.trim();
+    if (value != null && value.isNotEmpty) {
+      where.add(
+        '(LOWER(title) LIKE ? OR LOWER(content) LIKE ? OR LOWER(details) LIKE ?)',
+      );
+      final String like = '%${value.toLowerCase()}%';
+      args.addAll(<Object>[like, like, like]);
+    }
+    final List<Map<String, Object?>> rows = await _db.query(
+      'knowledge_items',
+      where: where.join(' AND '),
+      whereArgs: args,
+      orderBy: 'started_at DESC',
+      limit: 500,
+    );
+    return rows.map(KnowledgeItem.fromMap).toList(growable: false);
+  }
+
+  /// Ghi nhận thời điểm mở bài đọc gần nhất (không đổi started_at).
+  Future<KnowledgeItem?> touchLastRead(String id, {DateTime? now}) async {
+    final KnowledgeItem? item = await getById(id);
+    if (item == null) return null;
+    final DateTime timestamp = (now ?? DateTime.now()).toUtc();
+    final KnowledgeItem updated = item.copyWith(
+      lastReadAt: timestamp,
+      updatedAt: timestamp,
+    );
+    await _db.update(
+      'knowledge_items',
+      updated.toMap(),
+      where: 'id = ?',
+      whereArgs: <Object>[id],
+    );
+    return updated;
   }
 
   Future<KnowledgeItem?> getById(String id) async {

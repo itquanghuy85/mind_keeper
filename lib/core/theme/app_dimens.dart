@@ -28,8 +28,12 @@ abstract final class AppRadius {
   static const BorderRadius xlAll = BorderRadius.all(Radius.circular(xl));
   static const BorderRadius xxlAll = BorderRadius.all(Radius.circular(xxl));
   static const BorderRadius xxxlAll = BorderRadius.all(Radius.circular(xxxl));
-  static const BorderRadius xxlTop = BorderRadius.vertical(top: Radius.circular(xxl));
-  static const BorderRadius xlTop = BorderRadius.vertical(top: Radius.circular(xl));
+  static const BorderRadius xxlTop = BorderRadius.vertical(
+    top: Radius.circular(xxl),
+  );
+  static const BorderRadius xlTop = BorderRadius.vertical(
+    top: Radius.circular(xl),
+  );
   static const BorderRadius pillAll = BorderRadius.all(Radius.circular(pill));
 }
 

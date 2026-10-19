@@ -77,13 +77,15 @@ class AppServices {
       apiKey: preferences.aiApiKey,
       baseUrl: preferences.aiBaseUrl,
       model: preferences.aiModel,
+      proxyMode: preferences.aiProxyMode,
     );
     if (!configured) {
       // Log warning in debug mode
       if (kDebugMode) {
         debugPrint(
           '⚠️ AI: Chưa cấu hình API key DeepSeek. Dùng MockAIProvider. '
-          'Set DEEPSEEK_API_KEY environment variable để bật AI thật.',
+          'Set DEEPSEEK_API_KEY (hoặc DEEPSEEK_BASE_URL + DEEPSEEK_PROXY_MODE=true) '
+          'khi build để bật AI thật.',
         );
       }
     }

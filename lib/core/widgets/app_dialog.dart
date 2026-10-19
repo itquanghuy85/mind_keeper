@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 import 'app_button.dart';
+import '../theme/app_palette.dart';
 
 Future<bool> showAppConfirmDialog(
   BuildContext context, {
@@ -120,7 +121,7 @@ void showAppSnack(
       ? AppColors.danger
       : success
       ? AppColors.success
-      : AppColors.textPrimary;
+      : context.appColors.textPrimary;
   final IconData icon = error
       ? Icons.error_outline_rounded
       : success

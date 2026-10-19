@@ -18,6 +18,7 @@ import '../import/media_import_flow.dart';
 import '../import/text_import_screen.dart';
 import '../import/voice_import_screen.dart';
 import 'notification_settings_screen.dart';
+import '../../core/theme/app_palette.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -76,7 +77,7 @@ class ProfileScreen extends StatelessWidget {
                       '${prefs.dailyGoal} mục tiêu',
                       style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
+                        color: context.appColors.textSecondary,
                       ),
                     ),
                     onTap: () => _editDailyGoal(context, prefs),
@@ -93,7 +94,7 @@ class ProfileScreen extends StatelessWidget {
                       '${prefs.newTopicsPerDay}',
                       style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
+                        color: context.appColors.textSecondary,
                       ),
                     ),
                     onTap: () => _editNewTopics(context, prefs),
@@ -112,7 +113,7 @@ class ProfileScreen extends StatelessWidget {
                           : '${prefs.favoriteCategories.length}',
                       style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
+                        color: context.appColors.textSecondary,
                       ),
                     ),
                     onTap: () => _editCategories(context, prefs),
@@ -157,7 +158,7 @@ class ProfileScreen extends StatelessWidget {
                       '${prefs.reminderHour.toString().padLeft(2, '0')}:${prefs.reminderMinute.toString().padLeft(2, '0')}',
                       style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
+                        color: context.appColors.textSecondary,
                       ),
                     ),
                     onTap: () async {
@@ -488,58 +489,77 @@ class ProfileScreen extends StatelessWidget {
     final TextEditingController model = TextEditingController(
       text: prefs.aiModel,
     );
+    bool proxyMode = prefs.aiProxyMode;
     final bool? saved = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('Cấu hình AI'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                'Để trống để dùng mock AI (nội dung mẫu, không gọi dịch vụ thật). '
-                'Không lưu key vào mã nguồn.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              AppTextField(
-                controller: baseUrl,
-                label: 'Base URL (OpenAI-compatible)',
-                hint: 'https://api.openai.com/v1',
-              ),
-              const SizedBox(height: AppSpacing.md),
-              AppTextField(
-                controller: apiKey,
-                label: 'API key',
-                obscureText: true,
-                hint: 'sk-...',
-              ),
-              const SizedBox(height: AppSpacing.md),
-              AppTextField(
-                controller: model,
-                label: 'Model',
-                hint: 'gpt-4o-mini',
-              ),
-            ],
+      builder: (BuildContext dialogContext) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setDialogState) => AlertDialog(
+          title: const Text('Cấu hình AI'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  'Để trống để dùng mock AI (nội dung mẫu, không gọi dịch vụ thật). '
+                  'Không lưu key vào mã nguồn.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: const Icon(Icons.shield_outlined),
+                  title: const Text('Gọi qua proxy backend'),
+                  subtitle: const Text(
+                    'Key DeepSeek nằm ở server, không lưu trên máy. '
+                    'Base URL là endpoint proxy.',
+                  ),
+                  value: proxyMode,
+                  onChanged: (bool value) =>
+                      setDialogState(() => proxyMode = value),
+                ),
+                const Divider(height: 1),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  controller: baseUrl,
+                  label: 'Base URL (OpenAI-compatible)',
+                  hint: 'https://api.openai.com/v1',
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  controller: apiKey,
+                  label: proxyMode
+                      ? 'API key (để trống khi dùng proxy)'
+                      : 'API key',
+                  obscureText: true,
+                  hint: 'sk-...',
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  controller: model,
+                  label: 'Model',
+                  hint: 'gpt-4o-mini',
+                ),
+              ],
+            ),
           ),
+          actions: <Widget>[
+            AppButton(
+              label: 'Hủy',
+              variant: AppButtonVariant.tonal,
+              dense: true,
+              expanded: false,
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            AppButton(
+              label: 'Lưu',
+              variant: AppButtonVariant.primary,
+              dense: true,
+              expanded: false,
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
         ),
-        actions: <Widget>[
-          AppButton(
-            label: 'Hủy',
-            variant: AppButtonVariant.tonal,
-            dense: true,
-            expanded: false,
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          AppButton(
-            label: 'Lưu',
-            variant: AppButtonVariant.primary,
-            dense: true,
-            expanded: false,
-            onPressed: () => Navigator.of(context).pop(true),
-          ),
-        ],
       ),
     );
     if (saved == true) {
@@ -547,11 +567,13 @@ class ProfileScreen extends StatelessWidget {
         baseUrl: baseUrl.text,
         apiKey: apiKey.text,
         model: model.text,
+        proxyMode: proxyMode,
       );
       services.ai.configureFromSettings(
         baseUrl: prefs.aiBaseUrl,
         apiKey: prefs.aiApiKey,
         model: prefs.aiModel,
+        proxyMode: prefs.aiProxyMode,
       );
       if (context.mounted) {
         showAppSnack(

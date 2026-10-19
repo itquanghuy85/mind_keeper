@@ -16,6 +16,7 @@ import '../../features/discover/discover_screen.dart';
 import '../../features/lessons/lesson_discover_screen.dart';
 import '../../features/review/review_screen.dart';
 import '../../features/topics/topic_detail_screen.dart';
+import '../../core/theme/app_palette.dart';
 
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key, this.onCreateTopic, this.reloadListenable});
@@ -162,9 +163,9 @@ class _TodayScreenState extends State<TodayScreen> {
         // Header
         Text(
           'Chào bạn',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: context.appColors.textSecondary,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -174,10 +175,10 @@ class _TodayScreenState extends State<TodayScreen> {
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: <Widget>[
-            const Icon(
+            Icon(
               Icons.event_rounded,
               size: AppSizes.iconSm,
-              color: AppColors.textSecondary,
+              color: context.appColors.textSecondary,
             ),
             const SizedBox(width: AppSpacing.xs),
             Expanded(
@@ -234,7 +235,7 @@ class _TodayScreenState extends State<TodayScreen> {
               Text(
                 '$_dueCount',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: AppColors.primary,
+                  color: context.appColors.primary,
                   fontFeatures: AppTheme.tabularFigures,
                 ),
               ),
@@ -262,7 +263,7 @@ class _TodayScreenState extends State<TodayScreen> {
           child: LinearProgressIndicator(
             value: goalProgress,
             minHeight: 10,
-            backgroundColor: AppColors.surfaceMuted,
+            backgroundColor: context.appColors.surfaceMuted,
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -286,7 +287,7 @@ class _TodayScreenState extends State<TodayScreen> {
                 semanticsLabel: 'Bài học AI',
                 icon: Icons.auto_awesome_rounded,
                 iconColor: AppColors.info,
-                iconBg: AppColors.infoSoft,
+                iconBg: context.appColors.infoSoft,
                 title: 'Bài học AI',
                 subtitle: 'Soạn bài + quiz ghi nhớ',
                 onTap: () async {
@@ -305,7 +306,7 @@ class _TodayScreenState extends State<TodayScreen> {
                 semanticsLabel: 'Tạo chủ đề của tôi',
                 icon: Icons.add_rounded,
                 iconColor: AppColors.success,
-                iconBg: AppColors.successSoft,
+                iconBg: context.appColors.successSoft,
                 title: 'Tạo chủ đề',
                 subtitle: 'Thêm kiến thức từ ghi chú',
                 onTap: widget.onCreateTopic,
@@ -316,8 +317,8 @@ class _TodayScreenState extends State<TodayScreen> {
               child: _QuickActionCard(
                 semanticsLabel: 'Khám phá chủ đề mới',
                 icon: Icons.explore_rounded,
-                iconColor: AppColors.primary,
-                iconBg: AppColors.primarySoft,
+                iconColor: context.appColors.primary,
+                iconBg: context.appColors.primarySoft,
                 title: 'Khám phá',
                 subtitle: 'Lĩnh vực mới mỗi ngày',
                 onTap: () async {
@@ -403,9 +404,9 @@ class _TodayScreenState extends State<TodayScreen> {
                         ],
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right_rounded,
-                      color: AppColors.textTertiary,
+                      color: context.appColors.textTertiary,
                     ),
                   ],
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
+import '../theme/app_palette.dart';
 
 class AppLoading extends StatelessWidget {
   const AppLoading({super.key, this.label});
@@ -16,12 +17,12 @@ class AppLoading extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const SizedBox(
+            SizedBox(
               width: 28,
               height: 28,
               child: CircularProgressIndicator(
                 strokeWidth: 2.6,
-                color: AppColors.primary,
+                color: context.appColors.primary,
               ),
             ),
             if (label != null) ...<Widget>[
@@ -60,7 +61,7 @@ class AppErrorState extends StatelessWidget {
     return AppStatusView(
       icon: icon,
       iconColor: AppColors.danger,
-      iconBackground: AppColors.dangerSoft,
+      iconBackground: context.appColors.dangerSoft,
       title: title,
       message: message,
       actionLabel: onRetry == null ? null : retryLabel,
@@ -89,8 +90,8 @@ class AppEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppStatusView(
       icon: icon,
-      iconColor: AppColors.primary,
-      iconBackground: AppColors.primarySoft,
+      iconColor: context.appColors.primary,
+      iconBackground: context.appColors.primarySoft,
       title: title,
       message: message,
       actionLabel: actionLabel,
@@ -105,7 +106,7 @@ class AppStatusView extends StatelessWidget {
     required this.icon,
     required this.title,
     this.iconColor = AppColors.primary,
-    this.iconBackground = AppColors.primarySoft,
+    this.iconBackground,
     this.message,
     this.actionLabel,
     this.onAction,
@@ -114,7 +115,7 @@ class AppStatusView extends StatelessWidget {
 
   final IconData icon;
   final Color iconColor;
-  final Color iconBackground;
+  final Color? iconBackground;
   final String title;
   final String? message;
   final String? actionLabel;
@@ -132,7 +133,7 @@ class AppStatusView extends StatelessWidget {
           width: badgeSize,
           height: badgeSize,
           decoration: BoxDecoration(
-            color: iconBackground,
+            color: iconBackground ?? context.appColors.primarySoft,
             borderRadius: BorderRadius.circular(
               compact ? AppRadius.lg : AppRadius.xl,
             ),
@@ -191,7 +192,7 @@ class AppSkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: context.appColors.surfaceMuted,
         borderRadius: BorderRadius.circular(radius),
       ),
     );

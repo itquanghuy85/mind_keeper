@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 import 'app_icon_badge.dart';
+import '../theme/app_palette.dart';
 
 enum AppButtonVariant { primary, secondary, tonal, danger, ghost, fab }
 
@@ -48,7 +49,7 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color labelColor = _labelColor;
+    final Color labelColor = _labelColor(context);
     final double fontSize = dense ? 13.5 : 15;
 
     final Widget child = loading
@@ -136,15 +137,15 @@ class AppButton extends StatelessWidget {
                   states,
                 ) {
                   if (states.contains(WidgetState.disabled)) {
-                    return AppColors.surfaceContainerHigh;
+                    return context.appColors.surfaceContainerHigh;
                   }
                   if (states.contains(WidgetState.pressed)) {
-                    return AppColors.primarySoftAlt;
+                    return context.appColors.primarySoftAlt;
                   }
-                  return AppColors.primaryContainer;
+                  return context.appColors.primaryContainer;
                 }),
-                foregroundColor: const WidgetStatePropertyAll<Color>(
-                  AppColors.onPrimaryContainer,
+                foregroundColor: WidgetStatePropertyAll<Color>(
+                  context.appColors.onPrimaryContainer,
                 ),
                 overlayColor: WidgetStatePropertyAll<Color>(
                   AppColors.primary.withValues(alpha: 0.08),
@@ -223,7 +224,7 @@ class AppButton extends StatelessWidget {
     ),
   );
 
-  Color get _labelColor {
+  Color _labelColor(BuildContext context) {
     if (!_enabled) {
       return switch (variant) {
         AppButtonVariant.primary ||
@@ -231,14 +232,14 @@ class AppButton extends StatelessWidget {
         AppButtonVariant.fab => Colors.white,
         AppButtonVariant.secondary ||
         AppButtonVariant.tonal ||
-        AppButtonVariant.ghost => AppColors.textTertiary,
+        AppButtonVariant.ghost => context.appColors.textTertiary,
       };
     }
     return switch (variant) {
       AppButtonVariant.primary || AppButtonVariant.danger => Colors.white,
-      AppButtonVariant.secondary => AppColors.primaryDark,
-      AppButtonVariant.tonal => AppColors.onPrimaryContainer,
-      AppButtonVariant.ghost => AppColors.primary,
+      AppButtonVariant.secondary => context.appColors.primaryDark,
+      AppButtonVariant.tonal => context.appColors.onPrimaryContainer,
+      AppButtonVariant.ghost => context.appColors.primary,
       AppButtonVariant.fab => Colors.white,
     };
   }
@@ -266,18 +267,18 @@ class AppIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color background = switch (tone) {
       AppIconTone.neutral =>
-        filled ? AppColors.primarySoft : Colors.transparent,
+        filled ? context.appColors.primarySoft : Colors.transparent,
       AppIconTone.primary => AppColors.primary,
-      AppIconTone.surface => AppColors.surfaceMuted,
-      AppIconTone.danger => AppColors.dangerSoft,
-      AppIconTone.success => AppColors.successSoft,
-      AppIconTone.warning => AppColors.warningSoft,
-      AppIconTone.info => AppColors.infoSoft,
+      AppIconTone.surface => context.appColors.surfaceMuted,
+      AppIconTone.danger => context.appColors.dangerSoft,
+      AppIconTone.success => context.appColors.successSoft,
+      AppIconTone.warning => context.appColors.warningSoft,
+      AppIconTone.info => context.appColors.infoSoft,
     };
     final Color foreground = switch (tone) {
-      AppIconTone.neutral => AppColors.textPrimary,
+      AppIconTone.neutral => context.appColors.textPrimary,
       AppIconTone.primary => Colors.white,
-      AppIconTone.surface => AppColors.textSecondary,
+      AppIconTone.surface => context.appColors.textSecondary,
       AppIconTone.danger => AppColors.danger,
       AppIconTone.success => AppColors.success,
       AppIconTone.warning => AppColors.warning,
@@ -287,7 +288,7 @@ class AppIconButton extends StatelessWidget {
     final Widget child = Icon(
       icon,
       size: AppSizes.iconMd,
-      color: onPressed == null ? AppColors.textTertiary : foreground,
+      color: onPressed == null ? context.appColors.textTertiary : foreground,
     );
 
     return Semantics(

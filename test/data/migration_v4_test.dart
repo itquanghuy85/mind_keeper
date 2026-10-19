@@ -155,7 +155,11 @@ CREATE TABLE knowledge_generation_tasks (
     final bool hasStartedAt = columns.any(
       (Map<String, Object?> c) => c['name'] == 'started_at',
     );
-    expect(hasStartedAt, isTrue, reason: 'started_at column should exist after migration');
+    expect(
+      hasStartedAt,
+      isTrue,
+      reason: 'started_at column should exist after migration',
+    );
 
     // Check data preserved
     final List<Map<String, Object?>> items = await upgraded.db.query(
@@ -189,26 +193,28 @@ CREATE TABLE knowledge_generation_tasks (
     await temp.delete(recursive: true);
   });
 
-  test('migration v1->v4 runs all intermediate migrations and keeps data', () async {
-    final Directory temp = await Directory.systemTemp.createTemp(
-      'mk_migration_v1_to_v4',
-    );
-    final String dbPath = '${temp.path}/v1.db';
+  test(
+    'migration v1->v4 runs all intermediate migrations and keeps data',
+    () async {
+      final Directory temp = await Directory.systemTemp.createTemp(
+        'mk_migration_v1_to_v4',
+      );
+      final String dbPath = '${temp.path}/v1.db';
 
-    // Create v1 database (minimal schema)
-    final Database legacy = await databaseFactoryFfi.openDatabase(
-      dbPath,
-      options: OpenDatabaseOptions(
-        version: 1,
-        onCreate: (Database db, int version) async {
-          await db.execute('''
+      // Create v1 database (minimal schema)
+      final Database legacy = await databaseFactoryFfi.openDatabase(
+        dbPath,
+        options: OpenDatabaseOptions(
+          version: 1,
+          onCreate: (Database db, int version) async {
+            await db.execute('''
 CREATE TABLE topics (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )''');
-          await db.execute('''
+            await db.execute('''
 CREATE TABLE knowledge_items (
   id TEXT PRIMARY KEY,
   topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
@@ -222,75 +228,76 @@ CREATE TABLE knowledge_items (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )''');
-        },
-      ),
-    );
+          },
+        ),
+      );
 
-    // Insert test data
-    await legacy.insert('topics', <String, Object?>{
-      'id': 'tp_v1',
-      'name': 'Chủ đề v1',
-      'created_at': 1,
-      'updated_at': 1,
-    });
-    await legacy.insert('knowledge_items', <String, Object?>{
-      'id': 'ki_v1',
-      'topic_id': 'tp_v1',
-      'title': 'Mục v1',
-      'content': 'Nội dung v1',
-      'created_at': 1,
-      'updated_at': 1,
-    });
-    await legacy.close();
+      // Insert test data
+      await legacy.insert('topics', <String, Object?>{
+        'id': 'tp_v1',
+        'name': 'Chủ đề v1',
+        'created_at': 1,
+        'updated_at': 1,
+      });
+      await legacy.insert('knowledge_items', <String, Object?>{
+        'id': 'ki_v1',
+        'topic_id': 'tp_v1',
+        'title': 'Mục v1',
+        'content': 'Nội dung v1',
+        'created_at': 1,
+        'updated_at': 1,
+      });
+      await legacy.close();
 
-    // Open with current version (4) - should run all migrations
-    final AppDatabase upgraded = AppDatabase(
-      factory: databaseFactoryFfi,
-      name: 'v1.db',
-      directory: temp.path,
-    );
-    await upgraded.open();
-    expect(await upgraded.db.getVersion(), DbSchema.currentVersion);
+      // Open with current version (4) - should run all migrations
+      final AppDatabase upgraded = AppDatabase(
+        factory: databaseFactoryFfi,
+        name: 'v1.db',
+        directory: temp.path,
+      );
+      await upgraded.open();
+      expect(await upgraded.db.getVersion(), DbSchema.currentVersion);
 
-    // Check all tables exist
-    final List<Map<String, Object?>> tables = await upgraded.db.rawQuery(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
-    );
-    final List<String> tableNames = tables
-        .map((Map<String, Object?> row) => row['name']! as String)
-        .toList();
-    expect(
-      tableNames,
-      containsAll(<String>[
-        'topics',
-        'sources',
+      // Check all tables exist
+      final List<Map<String, Object?>> tables = await upgraded.db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+      );
+      final List<String> tableNames = tables
+          .map((Map<String, Object?> row) => row['name']! as String)
+          .toList();
+      expect(
+        tableNames,
+        containsAll(<String>[
+          'topics',
+          'sources',
+          'knowledge_items',
+          'review_cards',
+          'review_logs',
+          'lessons',
+          'knowledge_generation_tasks',
+        ]),
+      );
+
+      // Check started_at column exists
+      final List<Map<String, Object?>> columns = await upgraded.db.rawQuery(
+        "PRAGMA table_info(knowledge_items)",
+      );
+      final bool hasStartedAt = columns.any(
+        (Map<String, Object?> c) => c['name'] == 'started_at',
+      );
+      expect(hasStartedAt, isTrue);
+
+      // Check data preserved
+      final List<Map<String, Object?>> items = await upgraded.db.query(
         'knowledge_items',
-        'review_cards',
-        'review_logs',
-        'lessons',
-        'knowledge_generation_tasks',
-      ]),
-    );
+        where: 'id = ?',
+        whereArgs: <Object>['ki_v1'],
+      );
+      expect(items, hasLength(1));
+      expect(items.first['title'], 'Mục v1');
 
-    // Check started_at column exists
-    final List<Map<String, Object?>> columns = await upgraded.db.rawQuery(
-      "PRAGMA table_info(knowledge_items)",
-    );
-    final bool hasStartedAt = columns.any(
-      (Map<String, Object?> c) => c['name'] == 'started_at',
-    );
-    expect(hasStartedAt, isTrue);
-
-    // Check data preserved
-    final List<Map<String, Object?>> items = await upgraded.db.query(
-      'knowledge_items',
-      where: 'id = ?',
-      whereArgs: <Object>['ki_v1'],
-    );
-    expect(items, hasLength(1));
-    expect(items.first['title'], 'Mục v1');
-
-    await upgraded.close();
-    await temp.delete(recursive: true);
-  });
+      await upgraded.close();
+      await temp.delete(recursive: true);
+    },
+  );
 }

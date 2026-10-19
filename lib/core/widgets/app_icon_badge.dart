@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
+import '../theme/app_palette.dart';
 
 enum AppIconTone { primary, success, warning, danger, info, neutral, surface }
 
@@ -26,19 +27,28 @@ class AppIconBadge extends StatelessWidget {
   final Color? background;
   final double? iconSize;
 
-  (Color, Color) get _toneColors => switch (tone) {
-    AppIconTone.primary => (AppColors.primary, AppColors.primarySoft),
-    AppIconTone.success => (AppColors.success, AppColors.successSoft),
-    AppIconTone.warning => (AppColors.warning, AppColors.warningSoft),
-    AppIconTone.danger => (AppColors.danger, AppColors.dangerSoft),
-    AppIconTone.info => (AppColors.info, AppColors.infoSoft),
-    AppIconTone.neutral => (AppColors.textSecondary, AppColors.surfaceMuted),
-    AppIconTone.surface => (AppColors.primary, AppColors.primarySoft),
+  (Color, Color) _toneColors(BuildContext context) => switch (tone) {
+    AppIconTone.primary => (
+      context.appColors.primary,
+      context.appColors.primarySoft,
+    ),
+    AppIconTone.success => (AppColors.success, context.appColors.successSoft),
+    AppIconTone.warning => (AppColors.warning, context.appColors.warningSoft),
+    AppIconTone.danger => (AppColors.danger, context.appColors.dangerSoft),
+    AppIconTone.info => (AppColors.info, context.appColors.infoSoft),
+    AppIconTone.neutral => (
+      context.appColors.textSecondary,
+      context.appColors.surfaceMuted,
+    ),
+    AppIconTone.surface => (
+      context.appColors.primary,
+      context.appColors.primarySoft,
+    ),
   };
 
   @override
   Widget build(BuildContext context) {
-    final (Color toneColor, Color toneBackground) = _toneColors;
+    final (Color toneColor, Color toneBackground) = _toneColors(context);
     final Color foreground = color ?? toneColor;
     final double resolvedIconSize =
         iconSize ??

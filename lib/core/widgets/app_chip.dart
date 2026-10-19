@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
+import '../theme/app_palette.dart';
 
 /// Chip lọc/hành động: bo góc 16, cao 36, trạng thái chọn rõ ràng.
 class AppChip extends StatelessWidget {
@@ -24,9 +25,15 @@ class AppChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color background = selected ? AppColors.primary : AppColors.surface;
-    final Color foreground = selected ? Colors.white : AppColors.textSecondary;
-    final Color borderColor = selected ? AppColors.primary : AppColors.border;
+    final Color background = selected
+        ? AppColors.primary
+        : context.appColors.surface;
+    final Color foreground = selected
+        ? Colors.white
+        : context.appColors.textSecondary;
+    final Color borderColor = selected
+        ? AppColors.primary
+        : context.appColors.border;
 
     final Widget chip = Material(
       color: background,
@@ -67,7 +74,7 @@ class AppChip extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: selected
                         ? Colors.white.withValues(alpha: 0.18)
-                        : AppColors.surfaceContainerHigh,
+                        : context.appColors.surfaceContainerHigh,
                     borderRadius: AppRadius.pillAll,
                   ),
                   child: Text(
@@ -78,7 +85,9 @@ class AppChip extends StatelessWidget {
                       fontFeatures: const <FontFeature>[
                         FontFeature.tabularFigures(),
                       ],
-                      color: selected ? Colors.white : AppColors.textSecondary,
+                      color: selected
+                          ? Colors.white
+                          : context.appColors.textSecondary,
                     ),
                   ),
                 ),
@@ -116,18 +125,36 @@ class AppTag extends StatelessWidget {
   final AppTagTone tone;
   final IconData? icon;
 
-  (Color, Color) get _colors => switch (tone) {
-        AppTagTone.neutral => (AppColors.surfaceContainerHigh, AppColors.textSecondary),
-        AppTagTone.primary => (AppColors.primaryContainer, AppColors.onPrimaryContainer),
-        AppTagTone.success => (AppColors.successContainer, AppColors.onSuccessContainer),
-        AppTagTone.warning => (AppColors.warningContainer, AppColors.onWarningContainer),
-        AppTagTone.danger => (AppColors.dangerContainer, AppColors.onDangerContainer),
-        AppTagTone.info => (AppColors.infoContainer, AppColors.onInfoContainer),
-      };
+  (Color, Color) _colors(BuildContext context) => switch (tone) {
+    AppTagTone.neutral => (
+      context.appColors.surfaceContainerHigh,
+      context.appColors.textSecondary,
+    ),
+    AppTagTone.primary => (
+      context.appColors.primaryContainer,
+      context.appColors.onPrimaryContainer,
+    ),
+    AppTagTone.success => (
+      context.appColors.successContainer,
+      context.appColors.onSuccessContainer,
+    ),
+    AppTagTone.warning => (
+      context.appColors.warningContainer,
+      context.appColors.onWarningContainer,
+    ),
+    AppTagTone.danger => (
+      context.appColors.dangerContainer,
+      context.appColors.onDangerContainer,
+    ),
+    AppTagTone.info => (
+      context.appColors.infoContainer,
+      context.appColors.onInfoContainer,
+    ),
+  };
 
   @override
   Widget build(BuildContext context) {
-    final (Color bg, Color fg) = _colors;
+    final (Color bg, Color fg) = _colors(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm + 2,

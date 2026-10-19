@@ -14,6 +14,7 @@ import '../../data/models/lesson.dart';
 import '../discover/domain_catalog.dart';
 import 'lesson_reader_screen.dart';
 import 'lesson_service.dart';
+import '../../core/theme/app_palette.dart';
 
 /// Khám phá kiến thức bằng bài học AI: chọn lĩnh vực → chủ đề → chế độ,
 /// AI sinh bài trọn gói rồi mở màn đọc + quiz ghi nhớ.
@@ -95,15 +96,15 @@ class _LessonDiscoverScreenState extends State<LessonDiscoverScreen> {
                 if (domain.isHealth) ...<Widget>[
                   const SizedBox(height: AppSpacing.md),
                   AppCard(
-                    color: AppColors.warningSoft,
+                    color: context.appColors.warningSoft,
                     border: AppColors.warning.withValues(alpha: 0.45),
-                    child: const Text(
+                    child: Text(
                       'Nội dung về sức khỏe chỉ mang tính tham khảo, '
                       'không thay thế tư vấn y tế chuyên môn.',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,
-                        color: AppColors.warningText,
+                        color: context.appColors.warningText,
                       ),
                     ),
                   ),
@@ -402,7 +403,9 @@ class _LessonTile extends StatelessWidget {
           Icon(
             lesson.isRead ? Icons.chevron_right_rounded : Icons.circle_rounded,
             size: 18,
-            color: lesson.isRead ? AppColors.textTertiary : AppColors.primary,
+            color: lesson.isRead
+                ? context.appColors.textTertiary
+                : context.appColors.primary,
           ),
         ],
       ),
@@ -426,8 +429,10 @@ class _ModeTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: AppCard(
-        color: selected ? AppColors.primarySoft : AppColors.surface,
-        border: selected ? AppColors.primary : AppColors.border,
+        color: selected
+            ? context.appColors.primarySoft
+            : context.appColors.surface,
+        border: selected ? context.appColors.primary : context.appColors.border,
         radius: AppRadius.lg,
         onTap: onTap,
         child: Padding(
@@ -439,7 +444,9 @@ class _ModeTile extends StatelessWidget {
                     ? Icons.radio_button_checked_rounded
                     : Icons.radio_button_off_rounded,
                 size: 20,
-                color: selected ? AppColors.primary : AppColors.textTertiary,
+                color: selected
+                    ? context.appColors.primary
+                    : context.appColors.textTertiary,
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

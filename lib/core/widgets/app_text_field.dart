@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
+import '../theme/app_palette.dart';
 
 class AppTextField extends StatelessWidget {
   const AppTextField({
@@ -64,11 +65,11 @@ class AppTextField extends StatelessWidget {
             child: Text.rich(
               TextSpan(
                 text: label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.1,
-                  color: AppColors.textSecondary,
+                  color: context.appColors.textSecondary,
                 ),
                 children: <InlineSpan>[
                   if (required)
@@ -100,17 +101,21 @@ class AppTextField extends StatelessWidget {
           textCapitalization: textCapitalization,
           cursorColor: AppColors.primary,
           cursorWidth: 1.6,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             height: 1.4,
-            color: AppColors.textPrimary,
+            color: context.appColors.textPrimary,
           ),
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
             prefixIcon: prefixIcon == null
                 ? null
-                : Icon(prefixIcon, size: 20, color: AppColors.textTertiary),
+                : Icon(
+                    prefixIcon,
+                    size: 20,
+                    color: context.appColors.textTertiary,
+                  ),
             prefixIconConstraints: const BoxConstraints(
               minWidth: AppSizes.touchTarget,
             ),
@@ -123,10 +128,10 @@ class AppTextField extends StatelessWidget {
             padding: const EdgeInsets.only(left: 2, top: 6),
             child: Text(
               helper!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 height: 1.35,
-                color: AppColors.textTertiary,
+                color: context.appColors.textTertiary,
               ),
             ),
           ),
@@ -162,10 +167,10 @@ class AppSearchField extends StatelessWidget {
       prefixIcon: Icons.search_rounded,
       onChanged: onChanged,
       suffix: IconButton(
-        icon: const Icon(
+        icon: Icon(
           Icons.cancel_rounded,
           size: 18,
-          color: AppColors.textTertiary,
+          color: context.appColors.textTertiary,
         ),
         onPressed: onClear,
         visualDensity: VisualDensity.compact,

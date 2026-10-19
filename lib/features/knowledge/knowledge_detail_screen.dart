@@ -12,6 +12,7 @@ import '../../data/models/knowledge_item.dart';
 import '../../data/models/review_card.dart';
 import '../ai/ai_provider.dart';
 import 'knowledge_editor_screen.dart';
+import '../../core/theme/app_palette.dart';
 
 class KnowledgeDetailScreen extends StatefulWidget {
   const KnowledgeDetailScreen({super.key, required this.itemId});
@@ -225,7 +226,7 @@ class _KnowledgeDetailScreenState extends State<KnowledgeDetailScreen> {
         if (_tutorNote != null) ...<Widget>[
           const SizedBox(height: AppSpacing.md),
           AppCard(
-            color: AppColors.infoSoft,
+            color: context.appColors.infoSoft,
             border: AppColors.info.withValues(alpha: 0.45),
             child: Text(
               _tutorNote!,
