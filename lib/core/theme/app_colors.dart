@@ -136,8 +136,8 @@ abstract final class AppColors {
   static const Color overlay = Color(0x66101223);
   static const Color overlayDark = Color(0x80000000);
 
-  static const Color shadow = Color(0x120A1B33);
-  static const Color shadowStrong = Color(0x1F0A1B33);
+  static const Color shadow = Color(0x0F0A1B33);
+  static const Color shadowStrong = Color(0x1A0A1B33);
   static const Color shadowDark = Color(0x33000000);
 
   // Selection

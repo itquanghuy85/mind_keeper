@@ -220,6 +220,8 @@ class _TodayScreenState extends State<TodayScreen> {
                           ? 'Không có thẻ nào đến hạn'
                           : 'Dành 5–10 phút để củng cố trí nhớ',
                       style: Theme.of(context).textTheme.titleMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
@@ -227,13 +229,20 @@ class _TodayScreenState extends State<TodayScreen> {
                           ? 'Tuyệt vời! Hãy quay lại sau khi có thẻ đến hạn.'
                           : '$_dueCount thẻ đang chờ bạn ôn tập.',
                       style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
+              // Số thẻ đến hạn là điểm nhấn — luôn giữ trên một dòng, không bị
+              // nội dung bên trái đè lên (Row xếp widget non-flex trước).
               Text(
                 '$_dueCount',
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.end,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: context.appColors.primary,
                   fontFeatures: AppTheme.tabularFigures,
@@ -280,58 +289,63 @@ class _TodayScreenState extends State<TodayScreen> {
         // 3. Nhanh tập trung — 3 hành động chính
         AppSectionHeader(title: 'Nhanh tập trung', padding: EdgeInsets.zero),
         const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _QuickActionCard(
-                semanticsLabel: 'Bài học AI',
-                icon: Icons.auto_awesome_rounded,
-                iconColor: AppColors.info,
-                iconBg: context.appColors.infoSoft,
-                title: 'Bài học AI',
-                subtitle: 'Soạn bài + quiz ghi nhớ',
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LessonDiscoverScreen(),
-                    ),
-                  );
-                  if (mounted) await _load();
-                },
+        // IntrinsicHeight + stretch: ba thẻ luôn cao bằng nhau dù mô tả dài
+        // ngắn khác nhau hoặc font scale lớn (trước đây mỗi thẻ một chiều cao).
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(
+                child: _QuickActionCard(
+                  semanticsLabel: 'Bài học AI',
+                  icon: Icons.auto_awesome_rounded,
+                  iconColor: AppColors.info,
+                  iconBg: context.appColors.infoSoft,
+                  title: 'Bài học AI',
+                  subtitle: 'Soạn bài + quiz',
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LessonDiscoverScreen(),
+                      ),
+                    );
+                    if (mounted) await _load();
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _QuickActionCard(
-                semanticsLabel: 'Tạo chủ đề của tôi',
-                icon: Icons.add_rounded,
-                iconColor: AppColors.success,
-                iconBg: context.appColors.successSoft,
-                title: 'Tạo chủ đề',
-                subtitle: 'Thêm kiến thức từ ghi chú',
-                onTap: widget.onCreateTopic,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _QuickActionCard(
+                  semanticsLabel: 'Tạo chủ đề của tôi',
+                  icon: Icons.add_rounded,
+                  iconColor: AppColors.success,
+                  iconBg: context.appColors.successSoft,
+                  title: 'Tạo chủ đề',
+                  subtitle: 'Từ ghi chú của bạn',
+                  onTap: widget.onCreateTopic,
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _QuickActionCard(
-                semanticsLabel: 'Khám phá chủ đề mới',
-                icon: Icons.explore_rounded,
-                iconColor: context.appColors.primary,
-                iconBg: context.appColors.primarySoft,
-                title: 'Khám phá',
-                subtitle: 'Lĩnh vực mới mỗi ngày',
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const DiscoverScreen(),
-                    ),
-                  );
-                  if (mounted) await _load();
-                },
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _QuickActionCard(
+                  semanticsLabel: 'Khám phá chủ đề mới',
+                  icon: Icons.explore_rounded,
+                  iconColor: context.appColors.primary,
+                  iconBg: context.appColors.primarySoft,
+                  title: 'Khám phá',
+                  subtitle: 'Lĩnh vực mới mỗi ngày',
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const DiscoverScreen(),
+                      ),
+                    );
+                    if (mounted) await _load();
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
 
         const SizedBox(height: AppSpacing.xxl),
@@ -471,17 +485,22 @@ class _QuickActionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
+          // Tiêu đề cho phép 2 dòng: "Bài học AI" không bị cắt cụt ở font scale lớn.
           Text(
             title,
             style: Theme.of(context).textTheme.titleSmall,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xs),
+          // Mô tả: tối đa 2 dòng, giãn dòng nhẹ cho dễ đọc, câu chữ đã rút gọn
+          // ở call site để không phải ellipsis ở cỡ chữ thường.
           Text(
             subtitle,
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(height: 1.25),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,

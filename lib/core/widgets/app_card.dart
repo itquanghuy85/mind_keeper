@@ -39,44 +39,56 @@ class AppCard extends StatelessWidget {
         border ??
         (highlighted ? context.appColors.primary : context.appColors.border);
     final Color effectiveColor = color ?? context.appColors.surface;
+    final BorderRadius shape = BorderRadius.circular(radius);
 
     final Widget content = Padding(padding: padding, child: child);
 
+    // Bóng đổ phải nằm NGOÀI thẻ: vẽ shadow ở lớp ngoài (DecoratedBox) rồi phủ
+    // lớp Material ĐỤC lên trên. Nếu gắn boxShadow vào chính lớp chứa nội dung
+    // (lớp không có màu nền), shadow translucent bị nhìn xuyên qua toàn bộ mặt
+    // thẻ → thẻ trắng thành xám (#EEEFF0) và bóng lem cả vào khe giữa các thẻ.
     final Widget card = Padding(
       padding: margin,
-      child: Material(
-        color: effectiveColor,
-        borderRadius: BorderRadius.circular(radius),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(radius),
-          splashColor: AppColors.primary.withValues(alpha: 0.06),
-          highlightColor: AppColors.primary.withValues(alpha: 0.04),
-          child: Container(
-            width: double.infinity,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(
-                color: effectiveBorder,
-                width: highlighted ? 1.4 : AppSizes.dividerThickness,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: shape,
+          boxShadow: <BoxShadow>[
+            if (elevated)
+              const BoxShadow(
+                color: AppColors.shadowStrong,
+                blurRadius: 20,
+                spreadRadius: -4,
+                offset: Offset(0, 6),
+              )
+            else
+              const BoxShadow(
+                color: AppColors.shadow,
+                blurRadius: 14,
+                spreadRadius: -4,
+                offset: Offset(0, 4),
               ),
-              boxShadow: <BoxShadow>[
-                if (elevated)
-                  const BoxShadow(
-                    color: AppColors.shadowStrong,
-                    blurRadius: 24,
-                    offset: Offset(0, 8),
-                  )
-                else
-                  const BoxShadow(
-                    color: AppColors.shadow,
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-              ],
+          ],
+        ),
+        child: Material(
+          color: effectiveColor,
+          borderRadius: shape,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: shape,
+            splashColor: AppColors.primary.withValues(alpha: 0.06),
+            highlightColor: AppColors.primary.withValues(alpha: 0.04),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: shape,
+                border: Border.all(
+                  color: effectiveBorder,
+                  width: highlighted ? 1.4 : AppSizes.dividerThickness,
+                ),
+              ),
+              child: content,
             ),
-            child: content,
           ),
         ),
       ),
@@ -113,11 +125,16 @@ class AppSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: padding,
-      child: Row(
+      // Wrap thay vì Row: khi cỡ chữ lớn (font scale ≥ 1.5–2.0×) nhãn hành động
+      // không vừa một dòng với tiêu đề, nó tự xuống dòng thay vì tràn ra ngoài.
+      // Khi vừa đủ, bố cục vẫn là tiêu đề trái – hành động phải.
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        runSpacing: AppSpacing.xs,
+        spacing: AppSpacing.sm,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
-          Expanded(
-            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
-          ),
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
           if (actionLabel != null)
             InkWell(
               onTap: onAction,
