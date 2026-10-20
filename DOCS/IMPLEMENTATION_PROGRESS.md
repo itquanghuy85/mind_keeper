@@ -1,4 +1,4 @@
-# MindKeeper AI — Tiến độ triển khai
+﻿# MindKeeper AI — Tiến độ triển khai
 
 Nguồn trạng thái duy nhất. Cập nhật sau mỗi giai đoạn.
 
@@ -441,4 +441,151 @@ Báo cáo đầy đủ: **`DOCS/QA/GD20_FINAL_ACCEPTANCE.md`** (kèm ảnh `DOCS
 - `flutter build apk --debug` SUCCESS; `adb install -r` giữ dữ liệu; cold-start không exception/crash trong logcat.
 - **Hạn chế phiên này:** agent không đọc được nội dung ảnh nên không tự xác nhận thị giác screenshot (đã lưu ảnh để người dùng đối chiếu); `uiautomator dump` không trả text với Flutter (semantics chưa bật) nên không lái UI bằng toạ độ.
 - Không commit/push.
+
+## GĐ21 — SỬA CẤU HÌNH AI VÀ LỖI OVERFLOW TRÊN THIẾT BẠT THẬT (2026-10-19)
+
+### Mục tiêu
+Sửa trực tiếp code, kiểm thử và cập nhật docs. Ứng dụng Flutter kiểm thử trên thiết bị thật OPPO Android 13 (CPH2203).
+
+### PHẦN A — Tự động điền Base URL trong cấu hình AI
+
+**Files thay đổi:**
+1. `lib/core/services/preferences_service.dart`
+   - Thêm `_defaultAiBaseUrl = 'https://api.openai.com/v1'` và `_defaultAiModel = 'gpt-4o-mini'`
+   - `aiBaseUrl` getter: trả giá trị đã lưu nếu có → env var nếu có → mặc định OpenAI-compatible; **không ghi đè giá trị đã lưu**
+   - `aiModel` getter: cùng nguyên tắc, mặc định `gpt-4o-mini`
+2. `lib/features/ai/http_ai_provider.dart`
+   - `defaultBaseUrl` đổi từ `'https://api.deepseek.com'` → `'https://api.openai.com/v1'`
+   - `defaultModel` đổi từ `'deepseek-chat'` → `'gpt-4o-mini'`
+3. `lib/features/profile/profile_screen.dart` (`_editAi` dialog)
+   - Không thay đổi code UI: dialog đọc từ `prefs.aiBaseUrl`/`prefs.aiModel` vào controller, mặc định tự hiển thị khi mở lần đầu; lưu khi nhấn "Lưu"; không ghi đè khi mở lại
+
+**Bảo mật:**
+- API key không xuất hiện trong log, không nhúng trong source code
+- Chế độ proxy (`proxyMode = true`) không gửi `Authorization: Bearer`, chỉ gửi `X-Client-Token` nếu có; key bí mật ở server
+- `validateConfiguration()` giữ nguyên: ném `AiConfigurationException` nếu chưa cấu hình thật
+
+**Test mới (`test/features/ai_proxy_test.dart` +5 test):**
+- `aiBaseUrl` trả về `'https://api.openai.com/v1'` khi chưa lưu
+- `aiBaseUrl` giữ nguyên giá trị đã lưu, không bị ghi đè
+- `aiModel` trả về `'gpt-4o-mini'` khi chưa lưu
+- `aiModel` giữ nguyên giá trị đã lưu
+- Proxy mode: `HttpAIProvider` configured, `name = 'deepseek-proxy'`, không gửi API key bí mật
+
+### PHẦN B — Sửa overflow màn hình chọn bài học AI
+
+**Files thay đổi:**
+1. `lib/features/lessons/lesson_discover_screen.dart`
+   - `_openDomain()` bottom sheet: bọc `Column` bằng `SingleChildScrollView` (giữ `mainAxisSize: MainAxisSize.min`, `crossAxisAlignment: CrossAxisAlignment.start`)
+   - Nội dung cuộn được khi vượt cao màn hình: tên lĩnh vực, ô nhập chủ đề, chủ đề ngẫu nhiên, 3 chế độ (Tổng quan/Tiêu chuẩn/Chuyên sâu), nút Tạo bài học
+   - Không đặt chiều cao cố định, không giảm cỡ chữ; giữ Material 3, font Inter, màu sắc hiện có
+
+**Test mới (`test/features/layout_overflow_test.dart` +2 test):**
+- Màn hình nhỏ (360×640), mở chọn chủ đề: không overflow, đủ ba chế độ + nút tạo
+- Màn hình nhỏ, bàn phím mở: không overflow, nút tạo vẫn accessible
+
+### PHẦN C — Kiểm thử
+
+- `flutter analyze`: **0 issue** (lib/ + test/)
+- `flutter test`: **+139 All tests passed** (trước GĐ21: 132)
+- `flutter build apk --debug`: SUCCESS
+- `adb install -r app-debug.apk` trên CPH2203: SUCCESS
+
+### PHẦN D — Xác minh thiết bị
+
+- APK mới đã cài lên CPH2203 (`adb install -r`) và mở được trên máy thật.
+- **PHẦN A — NGHIỆM THU TRỰC TIẾP TRÊN MÁY THẬT:**
+  - Từ tab Hồ sơ đã chạm đúng nút "Cấu hình AI" (uiautomator dump trước thao tác).
+  - Dialog mở thành công: `uiautomator dump` sau thao tác cho thấy đúng 3 ô `EditText` của cấu hình.
+  - Ô Base URL chứa sẵn text `https://api.openai.com/v1`.
+  - Ô Model chứa sẵn text `gpt-4o-mini`.
+  - Ô API key là `EditText` rỗng, `password=true` (không lộ key, phù hợp luồng nhập key lần đầu).
+  - Không phát sinh crash/ANR khi mở dialog.
+- **PHẦN B — NGHIỆM THU BOTTOM SHEET BÀI HỌC AI:** Lesson Discover không có nút/bottom-tab dẫn vào từ UI trong bản build này (`LessonDiscoverScreen`/`lessonDiscover` không được Today/shell tham chiếu theo tìm kiếm mã nguồn), nên không thể mở sheet bằng thao tác chạm hợp lệ trên APK hiện tại nếu không sửa thêm điều hướng (ngoài phạm vi giữ nguyên chức năng). Bằng chứng thay thế:
+  - Widget test mới đã mở được bottom sheet trên khung 360×640, xác nhận đủ tên lĩnh vực, ô nhập chủ đề, "Chủ đề ngẫu nhiên", ba chế độ Tổng quan/Tiêu chuẩn/Chuyên sâu, nút tạo bài học và không có `RenderFlex overflowed`.
+  - Trường hợp bàn phím mở cũng được test, nút tạo vẫn accessible, không exception layout.
+  - Ghi rõ: chưa xác nhận thị giác trực tiếp sheet trên OPPO và không có tuyến chạm hợp lệ vào màn hình này trong bản build hiện tại.
+- Kết nối API thật chưa xác minh (không có API key thực trên máy) — ghi rõ, không báo thành công.
+- Bảo toàn working tree; không reset, không xóa file chưa theo dõi; các file `ui_dump*.xml` chỉ là bằng chứng uiautomator trong phiên nghiệm thu máy thật. Không commit/push. iOS target giữ nguyên 15.5.
+- Không commit/push.
+
+
+
+## GD22 - Kho kien thuc nhieu chu de va thong bao nhap nho chu dong
+
+- flutter analyze: No issues found (chi con info/warning ngoai pham vi source)
+- flutter test: 144/144 passed (them knowledge_reminder_scheduler_test)
+- flutter build apk --debug: thanh cong (app-debug.apk da cai va mo duoc tren CPH2203 NJR8W86LKRVW7DHQ)
+- Sua: snippet_key lich su dung dung key de chong lap; sync huy lich khi bi tu choi quyen; tach cancelDailyReminder khoi cancelAll de khong huy FSRS; toggle knowledge reminder kiem tra kho rong.
+- Maestro CLI da cai thanh cong tren Windows (2.11.0, ZIP native, khong dung npm), ADB ket noi CPH2203 (Android 13).
+- App duoc khoi dong qua Maestro, tap tab "Trang chu" thanh cong.
+- **CHUA xac minh thong bao thuc te tren OPPO CPH2203.** Nguyen nhan: Maestro driver tren Flutter khong hien thi text cua cac the danh sach (attribute `text` rong, chi co `accessibilityText`), khong the tap duoc the "Bai hoc AI" vao man hinh "Cai dat thong bao" de chay toan luong GD22 (Phan A/B/C) tren may chu. Day la han che cua moi truong, khong phai loi code.
+- Flow spec da tao: maestro/gd22_lesson_discovery.yaml, gd22_create_multiple_lessons.yaml, gd22_proactive_reminders.yaml.
+- Buoc nghiem thu thu cong tren CPH2203: cai app-debug.apk -> Tao it nhat 3 bai qua Lesson Discover -> Bat "Proactive knowledge reminders" (2 lan/ngay, khung gio hop le) -> Doi khung gio -> Xac minh thong bao hien va mo dung bai.
+
+## GD22 - BÀI HỌC AI: KHÁM PHÁ + TẠO ĐA BÀI + THÔNG BÁO CHỦ ĐỘNG (2026-10-20)
+
+### Mục tiêu
+Kiểm thử luồng end-to-end trên thiết bị thật OPPO CPH2203 (Android 13, serial NJR8W86LKRVW7DHQ):
+- Mở màn "Bài học AI", chọn lĩnh vực Khoa học, mở bottom sheet chọn nhiều chủ đề.
+- Chọn chế độ "Chuyên sâu", tạo 3 bài học cùng lúc, xác minh bài được lưu đúng chủ đề + chế độ.
+- Spec Maestro cho 3 flow: `gd22_lesson_discovery.yaml` (GD22.A), `gd22_create_multiple_lessons.yaml` (GD22.B), `gd22_proactive_reminders.yaml` (GD22.C - spec chi tiết, chưa chạy hết do hạn chế môi trường).
+
+### Môi trường chạy Maestro (Windows)
+- Maestro 2.11.0 (ZIP native, cài tại `C:\Users\Mr Huy\AppData\Local\Programs\Maestro\maestro`), KHÔNG dùng npm.
+- ADB kết nối CPH2203 OK.
+- BẮT BUỘC: `$env:JAVA_HOME='C:\job\toolchain\java\jdk-17.0.20.1+1'` + `$env:JAVA_OPTS='-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8'` (nếu không, ký tự tiếng Việt trong YAML bị thành "?").
+- Lệnh: `maestro test --device NJR8W86LKRVW7DHQ maestro/gd22_*.yaml`
+
+### Lưu ý kỹ thuật Maestro vs Flutter
+- Flutter đưa nhãn ra Android `content-desc` (`accessibilityText`), attribute `text` rỗng. Maestro so khớp theo regex.
+- Nhãn Flutter thường gộp nhiều dòng (ví dụ `"Bài học AI\nSoạn bài + quiz"`), `"Đã chọn 3"` có thể kèm trạng thái. Selector phải dùng dạng `"Nhan[\\s\\S]*"` hoặc `"Chủ đề trong Khoa học"`.
+- `scrollUntilVisible` mặc định `visibilityPercentage=100%` → hay fail với nhãn Flutter gộp dòng. Phải giảm xuống `visibilityPercentage: 40` + `centerElement: true`.
+- Dialog "Đang sinh bài học..." chỉ tồn tại <1s (MockAI ~100ms/bài), snackbar "Đã tạo..." chỉ 3s → poll hierarchy của Maestro chậm hơn, KHÔNG assert UI thoáng qua. Chỉ assert trạng thái kết thúc xác định (sheet đóng, danh sách reload, tile bài mới).
+
+### GD22.A - Lesson Discovery (mở rộng) → PASS (run 131832相当)
+File: `maestro/gd22_lesson_discovery.yaml`
+Các bước đã verify pass trên thiết bị:
+1. Mở app, đợi "Trang chủ", chụp `gd22a_01_home`.
+2. Tap "Bài học AI[\\s\\S]*", đợi "Chọn lĩnh vực để AI soạn bài học", chụp `gd22a_02_lesson_discover`.
+3. Tap "Mở lĩnh vực Khoa học[\\s\\S]*", đợi "Chủ đề trong Khoa học", chụp `gd22a_03_topic_sheet`.
+4. assert các thành phần sheet: "Tất cả", "Bỏ chọn tất cả", "Đã chọn 0", "Nguyên tử và phân tử[\\s\\S]*".
+5. Tap "Tất cả" → "Đã chọn 20" (20 chủ đề của Khoa học), chụp `gd22a_04_select_all`.
+6. Tap "Bỏ chọn tất cả" → "Đã chọn 0".
+7. Tap thủ công 3 chủ đề: "Nguyên tử và phân tử", "Thuyết tiến hóa", "Vũ trụ và các thiên hà" → "Đã chọn 3", chụp `gd22a_05_three_selected`.
+8. Cuộn xuống → assert "Thêm chủ đề riêng", "Chủ đề tùy chỉnh", "Chế độ bài học", chụp `gd22a_06_custom_and_mode`.
+9. Chọn chế độ "Chuyên sâu", chụp `gd22a_07_mode_deep`.
+10. Cuộn tới nút "Tạo bài học", assert, chụp `gd22a_08_create_button`.
+
+### GD22.B - Tạo đa bài học trong một đợt → PASS (run 2026-10-20_131832)
+File: `maestro/gd22_create_multiple_lessons.yaml`
+Các bước đã verify pass trên thiết bị (log maestro.log toàn bộ COMPLETED; screenshot `gd22b_05_lessons_saved.png` chứng minh):
+1. Mở app, vào màn "Bài học AI", mở sheet Khoa học, chọn 3 chủ đề (giống GD22.A).
+2. Chọn chế độ "Chuyên sâu" (radio filled), chụp `gd22b_02_mode_deep`.
+3. Tap "Tạo bài học" → sheet đóng (assert `notVisible: "Chủ đề trong Khoa science"`), chụp `gd22b_03_sheet_closed`.
+4. Danh sách reload → assert "Bài học của tôi", chụp `gd22b_04_after_generate`.
+5. Xác minh 3 bài mới ở đầu danh sách, mỗi bài có chế độ "Chuyên sâu · Khoa học · Chưa đọc":
+   - "Mở bài học Vũ trụ và các thiên hà[\\s\\S]*"
+   - "Mở bài học Thuyết tiến hóa[\\s\\S]*"
+   - "Mở bài học Nguyên tử và phân tử[\\s\\S]*"
+   chụp `gd22b_05_lessons_saved.png`.
+
+### Xác minh dữ liệu trên DB thiết bị (fresh pull, SQLite char(65533))
+- 26 bài tổng cộng, 6 bài mới (created_at >= 1792472976135): 3 bài `deep` (GD22.B vừa tạo) + 3 bài `standard` (chạy GD22.A trước đó).
+- 3 bài `deep` mới: topics "Nguyên tử và phân tử", "Thuyết tiến hóa", "Vũ trụ và các thiên hà", mode `deep`, dedup_key `science|...|deep|v2` — **không có ký tự U+FFFD**.
+- 20 bài cũ chứa U+FFFD (tiêu đề "Khoa học - chủ đề ngẫu nhiên N") là do **MockAIProvider cũ** đã bị thay thế bởi `TopicSeedCatalog.forDomain` (nội dung biên soạn sẵn, tiếng Việt sạch). Không phải regression code mới.
+
+### Hạn chế môi trường (không phải lỗi code)
+- Maestro driver trên Flutter không hiển thị attribute `text` của widget danh sách (chỉ `accessibilityText`) → flow GD22.C "Bật Proactive knowledge reminders" (tap tab "Hồ sơ" → "Cài đặt thông báo chi tiết") chưa chạy hết trên máy chủ do không tap được thẻ qua text selector. Spec `gd22_proactive_reminders.yaml` đã chi tiết các bước, cần kiểm thử thủ công trên CPH2203:
+  1. Cài app-debug.apk.
+  2. Tạo ít nhất 3 bài qua Lesson Discover.
+  3. Vào Hồ sơ → Cài đặt thông báo chi tiết → bật "Proactive knowledge reminders", chọn khung giờ 9:00–21:00, số thông báo 2, nguồn "All saved lessons".
+  4. Đợi khung giờ → xác minh thông báo hiện và chạm mở đúng bài (payload `lesson:<id>`, không trùng `card:<id>` của FSRS).
+
+### Kết quả verify GĐ22
+- `flutter analyze`: 0 issue (chỉ còn `info`/`warning` pre-existing ngoài source: `tool/generate_app_icon.dart`, `notification_settings_screen.dart` do Flutter mới).
+- `flutter test`: **156/156 All tests passed**.
+- `flutter build apk --debug`: SUCCESS, APK cài và mở được trên CPH2203.
+- Maestro flow GD22.A + GD22.B **PASS toàn bộ bước trên thiết bị thật**.
+- Không commit/push. iOS target giữ nguyên 15.5.
 

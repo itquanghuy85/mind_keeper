@@ -259,7 +259,7 @@ void main() {
       await tester.tap(reviewSwitch);
       await tester.pumpAndSettle();
 
-      expect(fake.calls, contains('cancelAll'));
+      expect(fake.calls, contains('cancelDailyReminder'));
       expect(services.prefs.notificationsEnabled, isFalse);
       expect(tester.widget<SwitchListTile>(reviewSwitch).value, isFalse);
 

@@ -1,0 +1,117 @@
+# GĐ22.B - Tạo nhiều bài học trong một đợt (luồng thật, chạy trên thiết bị).
+#
+# LƯU Ý MÔI TRƯỜNG (Windows):
+# 1) Phải chạy với JAVA_OPTS="-Dfile.encoding=UTF-8" để Maestro đọc được
+#    tiếng Việt trong YAML.
+# 2) Nhãn Flutter nằm ở content-desc và có thể gộp nhiều dòng => selector phải
+#    là regex có phần tử khớp thêm ở cuối, ví dụ "Tạo bài học[\\s\\S]*".
+# 3) scrollUntilVisible cần visibilityPercentage < 100 và centerElement: true.
+#
+# Chạy:
+#   $env:JAVA_HOME='C:\job\toolchain\java\jdk-17.0.20.1+1'
+#   $env:JAVA_OPTS='-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8'
+#   maestro test --device NJR8W86LKRVW7DHQ maestro/gd22_create_multiple_lessons.yaml
+appId: com.mindkeeper.mind_keeper
+name: GD22.B Create multiple lessons in a batch
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang chủ"
+    timeout: 20000
+# Mở màn "Bài học AI"
+- tapOn: "Bài học AI[\\s\\S]*"
+- extendedWaitUntil:
+    visible: "Chọn lĩnh vực để AI soạn bài học"
+    timeout: 15000
+# Mở sheet chọn chủ đề của lĩnh vực Khoa học
+- tapOn: "Mở lĩnh vực Khoa học[\\s\\S]*"
+- extendedWaitUntil:
+    visible: "Chủ đề trong Khoa học"
+    timeout: 15000
+# Chọn 3 chủ đề
+- tapOn: "Nguyên tử và phân tử[\\s\\S]*"
+- tapOn: "Thuyết tiến hóa[\\s\\S]*"
+- tapOn: "Vũ trụ và các thiên hà[\\s\\S]*"
+- extendedWaitUntil:
+    visible: "Đã chọn 3"
+    timeout: 10000
+- takeScreenshot: "gd22b_01_three_selected"
+# Chọn chế độ "Chuyên sâu" (nằm dưới "Tiêu chuẩn" ngoài viewport) rồi tạo bài.
+# scrollUntilVisible cần một "mốc" ở giữa trước, nếu không nó cuộn quá mục tiêu.
+# Retry 2 lần: bottom sheet đôi khi chưa settle sau tap chọn chủ đề.
+- scrollUntilVisible:
+    element: "Thêm chủ đề riêng"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 20000
+    optional: true
+- scrollUntilVisible:
+    element: "Thêm chủ đề riêng"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Chế độ bài học Chuyên sâu[\\s\\S]*"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 20000
+- tapOn: "Chế độ bài học Chuyên sâu[\\s\\S]*"
+- takeScreenshot: "gd22b_02_mode_deep"
+# Cuộn tới nút tạo
+- scrollUntilVisible:
+    element: "Tạo bài học"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 20000
+- takeScreenshot: "gd22b_03_before_create"
+# Bấm "Tạo bài học" => sheet đóng, sinh bài (MockAI ~100ms/bài), reload danh sách.
+# NOTE: dialog "Đang sinh bài học..." (<1s) và snackbar "Đã tạo..." (3s) đều là
+# UI thoáng qua — poll hierarchy của Maestro chậm hơn nên KHÔNG assert chúng.
+# Chỉ assert trạng thái kết thúc xác định.
+- tapOn: "Tạo bài học[\\s\\S]*"
+# Sheet phải đóng lại
+- extendedWaitUntil:
+    notVisible: "Chủ đề trong Khoa học"
+    timeout: 120000
+- takeScreenshot: "gd22b_03_sheet_closed"
+# Danh sách reload xong: cuộn xuống section bài học rồi xác minh header + đếm
+- scrollUntilVisible:
+    element: "Bài học của tôi"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 30000
+- assertVisible: "Bài học của tôi"
+# NOTE: text "26 bài đã lưu" có dấu gạch dưới trang trí nên Matcher text thuần
+# không tìm thấy — chỉ ghi lại bằng screenshot, không assert.
+- takeScreenshot: "gd22b_04_after_generate"
+# 3 bài mới nhất ở đầu danh sách: cuộn tới từng tile rồi xác minh nội dung +
+# đúng chế độ Chuyên sâu. Mỗi assert đơn lẻ (ổn định hơn gộp regex dài).
+- scrollUntilVisible:
+    element: "Mở bài học Vũ trụ và các thiên hà[\\s\\S]*"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 30000
+- assertVisible: "Mở bài học Vũ trụ và các thiên hà[\\s\\S]*"
+- assertVisible: "Chuyên sâu · Khoa học[\\s\\S]*"
+- scrollUntilVisible:
+    element: "Mở bài học Thuyết tiến hóa[\\s\\S]*"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 30000
+- assertVisible: "Mở bài học Thuyết tiến hóa[\\s\\S]*"
+- scrollUntilVisible:
+    element: "Mở bài học Nguyên tử và phân tử[\\s\\S]*"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 30000
+- assertVisible: "Mở bài học Nguyên tử và phân tử[\\s\\S]*"
+- takeScreenshot: "gd22b_05_lessons_saved"

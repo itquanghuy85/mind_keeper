@@ -15,7 +15,7 @@ import 'features/knowledge/knowledge_library_screen.dart';
 import 'features/knowledge/learned_library_screen.dart';
 import 'features/lessons/lesson_discover_screen.dart';
 import 'features/lessons/lesson_reader_screen.dart';
-import 'features/profile/notification_settings_screen.dart';
+import 'package:mind_keeper/features/profile/notification_settings_screen.dart';
 import 'features/review/review_screen.dart';
 import 'features/shell/app_shell.dart';
 import 'features/topics/create_topic_screen.dart';

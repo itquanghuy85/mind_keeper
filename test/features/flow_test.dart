@@ -380,4 +380,12 @@ class _FailingProvider implements AIProvider {
   }) async {
     throw Exception('AI down');
   }
+
+  @override
+  Future<List<AiTopicSuggestion>> suggestTopics({
+    required String domain,
+    int count = 20,
+  }) async {
+    throw Exception('AI down');
+  }
 }

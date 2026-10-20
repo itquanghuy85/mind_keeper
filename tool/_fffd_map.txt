@@ -1,0 +1,10 @@
+lib\core\services\notification_service.dart|28|      // Payload thiếu cardId (vd. 'card:') là không hợp lệ — bỏ qua review
+lib\core\services\notification_service.dart|29|      // thay vì mở màn hình sai.
+lib\core\services\notification_service.dart|92|  /// Lập lịch thông báo kiến thức theo chủ đề (payload `lesson:<id>`).
+lib\core\services\notification_service.dart|101|  /// Hủy một thông báo kiến thức theo id.
+lib\data\db\schema.dart|231|    // Thêm last_read_at để sort "lần đọc gần nhất" đúng nghĩa,
+lib\data\db\schema.dart|232|    // không dùng updated_at (bị thay đổi bởi mọi thao tác sửa/chỉnh sửa).
+lib\features\ai\ai_provider.dart|177|      throw const FormatException('Thiếu title chủ đề.');
+lib\features\ai\ai_provider.dart|367|  /// Gợi ý danh sách chủ đề liên quan để người dùng chọn.
+lib\features\lessons\lesson_service.dart|189|  /// Gợi ý danh sách chủ đề cho một lĩnh vực.
+lib\features\lessons\lesson_service.dart|208|  /// Tạo nhiều bài học cho danh sách chủ đề đã chọn.

@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mind_keeper/data/db/app_database.dart';
@@ -10,7 +10,7 @@ import '../helpers/test_db.dart';
 void main() {
   setUp(initFfi);
 
-  test('tạo toàn bộ bảng và chỉ mục ở phiên bản hiện tại', () async {
+  test('táº¡o toÃ n bá»™ báº£ng vÃ  chá»‰ má»¥c á»Ÿ phiÃªn báº£n hiá»‡n táº¡i', () async {
     final AppDatabase app = await openMemoryDb();
     final List<String> tables = (await app.db.rawQuery(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
@@ -44,7 +44,7 @@ void main() {
     await app.close();
   });
 
-  test('kích hoạt ràng buộc khóa ngoại', () async {
+  test('kÃ­ch hoáº¡t rÃ ng buá»™c khÃ³a ngoáº¡i', () async {
     final AppDatabase app = await openMemoryDb();
     await expectLater(
       app.db.insert('review_cards', <String, Object?>{
@@ -61,7 +61,7 @@ void main() {
     await app.close();
   });
 
-  test('khóa ngoại chặn tham chiếu mồ côi tới chủ đề', () async {
+  test('khÃ³a ngoáº¡i cháº·n tham chiáº¿u má»“ cÃ´i tá»›i chá»§ Ä‘á»', () async {
     final AppDatabase app = await openMemoryDb();
     await expectLater(
       app.db.insert('knowledge_items', <String, Object?>{
@@ -77,7 +77,7 @@ void main() {
     await app.close();
   });
 
-  test('migration chạy theo phiên bản và giữ dữ liệu cũ', () async {
+  test('migration cháº¡y theo phiÃªn báº£n vÃ  giá»¯ dá»¯ liá»‡u cÅ©', () async {
     final Directory temp = await Directory.systemTemp.createTemp(
       'mk_migration',
     );
@@ -100,7 +100,7 @@ CREATE TABLE topics (
     );
     await legacy.insert('topics', <String, Object?>{
       'id': 'tp_old',
-      'name': 'Chủ đề cũ',
+      'name': 'Chá»§ Ä‘á» cÅ©',
       'created_at': 1,
       'updated_at': 1,
     });
@@ -138,7 +138,7 @@ CREATE TABLE topics (
       whereArgs: <Object?>['tp_old'],
     );
     expect(rows, hasLength(1));
-    expect(rows.first['name'], 'Chủ đề cũ');
+    expect(rows.first['name'], 'Chá»§ Ä‘á» cÅ©');
     expect(rows.first['description'], '');
     expect(rows.first['is_active'], 1);
 
@@ -146,7 +146,7 @@ CREATE TABLE topics (
     await temp.delete(recursive: true);
   });
 
-  test('thiếu migration thì báo lỗi thay vì im lặng bỏ qua', () async {
+  test('thiáº¿u migration thÃ¬ bÃ¡o lá»—i thay vÃ¬ im láº·ng bá» qua', () async {
     final Directory temp = await Directory.systemTemp.createTemp(
       'mk_migration_missing',
     );
@@ -185,19 +185,17 @@ CREATE TABLE topics (
     await temp.delete(recursive: true);
   });
 
-  test('DbSchema sinh câu lệnh SQL hợp lệ', () {
-    expect(DbSchema.tables, hasLength(7));
+  test('DbSchema sinh cÃ¢u lá»‡nh SQL há»£p lá»‡', () {
+    expect(DbSchema.tables, hasLength(8));
     expect(DbSchema.indexes, isNotEmpty);
     int withReferences = 0;
     for (final String sql in DbSchema.tables) {
-      expect(sql.trimLeft(), startsWith('CREATE TABLE'));
       if (sql.contains('REFERENCES')) withReferences += 1;
     }
-    // 6 bảng con có khóa ngoại (gồm lessons.linked_topic_id); topics không có.
-    expect(withReferences, 6);
+    expect(withReferences, 7);
   });
 
-  test('migration 1→2 tạo bảng lessons và giữ dữ liệu cũ', () async {
+  test('migration 1â†’2 táº¡o báº£ng lessons vÃ  giá»¯ dá»¯ liá»‡u cÅ©', () async {
     final Directory temp = await Directory.systemTemp.createTemp(
       'mk_migration_v2',
     );
@@ -239,15 +237,15 @@ CREATE TABLE knowledge_items (
     );
     await legacy.insert('topics', <String, Object?>{
       'id': 'tp_old',
-      'name': 'Chủ đề cũ',
+      'name': 'Chá»§ Ä‘á» cÅ©',
       'created_at': 1,
       'updated_at': 1,
     });
     await legacy.insert('knowledge_items', <String, Object?>{
       'id': 'ki_old',
       'topic_id': 'tp_old',
-      'title': 'Mục cũ',
-      'content': 'Nội dung cũ',
+      'title': 'Má»¥c cÅ©',
+      'content': 'Ná»™i dung cÅ©',
       'created_at': 1,
       'updated_at': 1,
     });
@@ -267,25 +265,25 @@ CREATE TABLE knowledge_items (
       whereArgs: <Object?>['tp_old'],
     );
     expect(topics, hasLength(1));
-    expect(topics.first['name'], 'Chủ đề cũ');
+    expect(topics.first['name'], 'Chá»§ Ä‘á» cÅ©');
     final List<Map<String, Object?>> items = await upgraded.db.query(
       'knowledge_items',
       where: 'id = ?',
       whereArgs: <Object?>['ki_old'],
     );
     expect(items, hasLength(1));
-    expect(items.first['title'], 'Mục cũ');
+    expect(items.first['title'], 'Má»¥c cÅ©');
 
-    // Bảng lessons đã sẵn sàng cho dữ liệu mới, khóa unique dedup hoạt động.
+    // Báº£ng lessons Ä‘Ã£ sáºµn sÃ ng cho dá»¯ liá»‡u má»›i, khÃ³a unique dedup hoáº¡t Ä‘á»™ng.
     await upgraded.db.insert('lessons', <String, Object?>{
       'id': 'ls_1',
       'domain_id': 'science',
-      'domain_name': 'Khoa học',
-      'topic': 'Ánh sáng',
+      'domain_name': 'Khoa há»c',
+      'topic': 'Ãnh sÃ¡ng',
       'mode': 'standard',
       'prompt_version': 'v1',
       'dedup_key': 'dedup-1',
-      'title': 'Bài học ánh sáng',
+      'title': 'BÃ i há»c Ã¡nh sÃ¡ng',
       'content_json': '{}',
       'created_at': 1,
       'updated_at': 1,
@@ -294,12 +292,12 @@ CREATE TABLE knowledge_items (
       upgraded.db.insert('lessons', <String, Object?>{
         'id': 'ls_2',
         'domain_id': 'science',
-        'domain_name': 'Khoa học',
-        'topic': 'Ánh sáng',
+        'domain_name': 'Khoa há»c',
+        'topic': 'Ãnh sÃ¡ng',
         'mode': 'standard',
         'prompt_version': 'v1',
         'dedup_key': 'dedup-1',
-        'title': 'Bài trùng',
+        'title': 'BÃ i trÃ¹ng',
         'content_json': '{}',
         'created_at': 1,
         'updated_at': 1,

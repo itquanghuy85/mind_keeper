@@ -283,4 +283,13 @@ abstract final class LearningDomains {
     }
     return null;
   }
+
+  /// Tìm lĩnh vực theo tên hiển thị (không phân biệt hoa/thường).
+  static LearningDomain? byName(String name) {
+    final String key = name.trim().toLowerCase();
+    for (final LearningDomain domain in all) {
+      if (domain.name.toLowerCase() == key) return domain;
+    }
+    return null;
+  }
 }

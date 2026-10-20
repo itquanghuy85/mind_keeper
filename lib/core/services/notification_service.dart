@@ -9,13 +9,15 @@ import 'package:timezone/timezone.dart' as tz;
 /// - `card:<cardId>` → mở đúng ReviewCard
 /// - `review` → mở phiên ôn tập chung
 class NotificationPayload {
-  const NotificationPayload._({this.cardId, this.kind = kindReview});
+  const NotificationPayload._({this.cardId, this.lessonId, this.kind = kindReview});
 
   final String? cardId;
+  final String? lessonId;
   final String kind;
 
   static const String kindCard = 'card';
   static const String kindReview = 'review';
+  static const String kindLesson = 'lesson';
 
   static NotificationPayload parse(String? raw) {
     if (raw == null || raw.isEmpty) {
@@ -23,10 +25,16 @@ class NotificationPayload {
     }
     if (raw.startsWith('$kindCard:')) {
       final String id = raw.substring(kindCard.length + 1);
-      // Payload thiếu cardId (vd. 'card:') là không hợp lệ — rơi về review
-      // thay vì mở một thẻ rỗng.
+      // Payload thiếu cardId (vd. 'card:') là không hợp lệ — bỏ qua review
+      // thay vì mở màn hình sai.
       if (id.isNotEmpty) {
         return NotificationPayload._(kind: kindCard, cardId: id);
+      }
+    }
+    if (raw.startsWith('$kindLesson:')) {
+      final String id = raw.substring(kindLesson.length + 1);
+      if (id.isNotEmpty) {
+        return NotificationPayload._(kind: kindLesson, lessonId: id);
       }
     }
     return const NotificationPayload._(kind: kindReview);
@@ -49,6 +57,7 @@ abstract class NotificationService {
   Future<bool> openNotificationSettings();
 
   Future<void> cancelAll();
+  Future<void> cancelDailyReminder();
   Future<void> scheduleDailyReminder({
     required String title,
     required String body,
@@ -79,6 +88,18 @@ abstract class NotificationService {
 
   /// Hủy lịch thông báo của thẻ (idempotent).
   Future<void> cancelCardNotification(String cardId);
+
+  /// Lập lịch thông báo kiến thức theo chủ đề (payload `lesson:<id>`).
+  Future<void> scheduleKnowledgeReminder({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    String payload = 'lesson:',
+  });
+
+  /// Hủy một thông báo kiến thức theo id.
+  Future<void> cancelKnowledgeReminder(int id);
 
   /// Lập lịch nhắc đọc kiến thức theo ngày/lịch tuần.
   /// [days] là danh sách ngày trong tuần (1=Thứ 2, ..., 7=Chủ Nhật).
@@ -151,6 +172,11 @@ class FakeNotificationService implements NotificationService {
   }
 
   @override
+  Future<void> cancelDailyReminder() async {
+    calls.add('cancelDailyReminder');
+  }
+
+  @override
   Future<void> scheduleDailyReminder({
     required String title,
     required String body,
@@ -198,6 +224,26 @@ class FakeNotificationService implements NotificationService {
     cancelledCards.add(cardId);
     scheduledCards.remove(cardId);
     calls.add('cancelCard:$cardId');
+  }
+
+  final Map<int, DateTime> scheduledKnowledgeReminders = <int, DateTime>{};
+
+  @override
+  Future<void> scheduleKnowledgeReminder({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    String payload = 'lesson:',
+  }) async {
+    scheduledKnowledgeReminders[id] = at.toUtc();
+    calls.add('scheduleKnowledgeReminder:$id:$payload');
+  }
+
+  @override
+  Future<void> cancelKnowledgeReminder(int id) async {
+    scheduledKnowledgeReminders.remove(id);
+    calls.add('cancelKnowledgeReminder:$id');
   }
 
   @override
@@ -360,6 +406,11 @@ class LocalNotificationService implements NotificationService {
   Future<void> cancelAll() => _plugin.cancelAll();
 
   @override
+  Future<void> cancelDailyReminder() async {
+    await _plugin.cancel(id: _dailyReminderId);
+  }
+
+  @override
   Future<void> scheduleDailyReminder({
     required String title,
     required String body,
@@ -459,6 +510,35 @@ class LocalNotificationService implements NotificationService {
   @override
   Future<void> cancelCardNotification(String cardId) async {
     await _plugin.cancel(id: cardNotificationId(cardId));
+  }
+
+  @override
+  Future<void> scheduleKnowledgeReminder({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    String payload = 'lesson:',
+  }) async {
+    final DateTime utc = at.toUtc();
+    if (!utc.isAfter(DateTime.now().toUtc())) return;
+    await _plugin.zonedSchedule(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(utc, tz.local),
+      notificationDetails: const NotificationDetails(
+        android: _androidDetails,
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: payload.startsWith('lesson:') ? payload : 'lesson:$payload',
+    );
+  }
+
+  @override
+  Future<void> cancelKnowledgeReminder(int id) async {
+    await _plugin.cancel(id: id);
   }
 
   @override

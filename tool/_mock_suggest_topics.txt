@@ -1,0 +1,20 @@
+  @override
+  Future<List<AiTopicSuggestion>> suggestTopics({
+    required String domain,
+    int count = 20,
+  }) async {
+    await _delay();
+    final int total = count.clamp(1, 40);
+    // Mock KHÔNG tự chế chuỗi ngẫu nhiên: dùng catalog chủ đề tiếng Việt
+    // đã biên soạn để nội dung luôn đọc được và khác nhau về ý nghĩa.
+    final LearningDomain? learningDomain = LearningDomains.byName(domain);
+    final List<TopicSeed> seeds = TopicSeedCatalog.forDomain(
+      domain,
+      learningDomain?.sampleTopics ?? const <String>[],
+      count: total,
+    );
+    return <AiTopicSuggestion>[
+      for (final TopicSeed seed in seeds)
+        AiTopicSuggestion(title: seed.title, description: seed.description),
+    ];
+  }

@@ -1,0 +1,94 @@
+# GD22.A - Khám phá bài học AI (mở rộng).
+# Chạy: maestro test --device NJR8W86LKRVW7DHQ maestro/gd22_lesson_discovery.yaml
+# GĐ22.A - Mở rộng luồng "Bài học AI" + bottom sheet chọn nhiều chủ đề.
+# Yêu cầu: đã cài app-debug.apk lên CPH2203 (NJR8W86LKRVW7DHQ).
+#
+# LƯU Ý MÔI TRƯỜNG (Windows):
+# 1) Maestro đọc YAML theo charset mặc định của JVM => ký tự tiếng Việt bị
+#    thành "?". Phải chạy với JAVA_OPTS="-Dfile.encoding=UTF-8".
+# 2) Flutter đưa nhãn ra Android `content-desc` (accessibilityText), Maestro đọc
+#    attribute này nhưng so khớp theo regex; nhãn của Flutter có thể gộp
+#    nhiều dòng (ví dụ "Bài học AI\nSoạn bài + quiz") nên phải dùng regex
+#    có phần tử khớp thêm ở cuối, ví dụ "Bài học AI[\\s\\S]*".
+#
+# Chạy:
+#   $env:JAVA_HOME='C:\job\toolchain\java\jdk-17.0.20.1+1'
+#   $env:JAVA_OPTS='-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8'
+#   maestro test --device NJR8W86LKRVW7DHQ maestro/gd22_lesson_discovery.yaml
+appId: com.mindkeeper.mind_keeper
+name: GD22.A Lesson Discovery (mở rộng)
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang chủ"
+    timeout: 20000
+- takeScreenshot: "gd22a_01_home"
+# Mở màn "Bài học AI" từ thẻ nhanh ở trang chủ
+- tapOn: "Bài học AI[\\s\\S]*"
+- extendedWaitUntil:
+    visible: "Chọn lĩnh vực để AI soạn bài học"
+    timeout: 15000
+- takeScreenshot: "gd22a_02_lesson_discover"
+# Mở bottom sheet chọn chủ đề của lĩnh vực Khoa học
+- tapOn: "Mở lĩnh vực Khoa học[\\s\\S]*"
+- extendedWaitUntil:
+    visible: "Chủ đề trong Khoa học"
+    timeout: 15000
+- takeScreenshot: "gd22a_03_topic_sheet"
+# Các thành phần bắt buộc của bottom sheet
+- assertVisible: "Tất cả"
+- assertVisible: "Bỏ chọn tất cả"
+- assertVisible: "Đã chọn 0"
+- assertVisible: "Nguyên tử và phân tử[\\s\\S]*"
+# Chọn tất cả => đếm 20 chủ đề
+- tapOn: "Tất cả"
+- extendedWaitUntil:
+    visible: "Đã chọn 20"
+    timeout: 10000
+- takeScreenshot: "gd22a_04_select_all"
+# Bỏ chọn tất cả => về 0
+- tapOn: "Bỏ chọn tất cả"
+- extendedWaitUntil:
+    visible: "Đã chọn 0"
+    timeout: 10000
+# Chọn thủ công 3 chủ đề
+- tapOn: "Nguyên tử và phân tử[\\s\\S]*"
+- tapOn: "Thuyết tiến hóa[\\s\\S]*"
+- tapOn: "Vũ trụ và các thiên hà[\\s\\S]*"
+- extendedWaitUntil:
+    visible: "Đã chọn 3"
+    timeout: 10000
+- takeScreenshot: "gd22a_05_three_selected"
+# Cuộn xuống phần chủ đề riêng + chế độ bài học
+# (scrollUntilVisible mặc định visibilityPercentage=100% nên fail với nhãn
+#  Flutter gộp nhiều dòng; hạ xuống 40% + căn giữa cho ổn định)
+- scrollUntilVisible:
+    element: "Thêm chủ đề riêng"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 20000
+- assertVisible: "Thêm chủ đề riêng"
+- assertVisible: "Chủ đề tùy chỉnh"
+- assertVisible: "Chế độ bài học"
+- takeScreenshot: "gd22a_06_custom_and_mode"
+# Đổi chế độ bài học sang "Chuyên sâu"
+- scrollUntilVisible:
+    element: "Chế độ bài học Chuyên sâu[\\s\\S]*"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 20000
+- tapOn: "Chế độ bài học Chuyên sâu[\\s\\S]*"
+- takeScreenshot: "gd22a_07_mode_deep"
+# Cuộn tới nút tạo bài học
+- scrollUntilVisible:
+    element: "Tạo bài học"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 20000
+- assertVisible: "Tạo bài học"
+- takeScreenshot: "gd22a_08_create_button"
+

@@ -40,6 +40,9 @@ class AppBootstrap {
       if (services.prefs.notificationsEnabled) {
         await _scheduleReminder(services);
       }
+      if (services.prefs.knowledgeReminderEnabled) {
+        await services.knowledgeReminders.sync();
+      }
       services.notifications.setOnNotificationOpened((
         NotificationPayload payload,
       ) {
@@ -82,6 +85,11 @@ class AppBootstrap {
   Future<void> refreshReminderSchedule() async {
     if (!isReady) return;
     await _scheduleReminder(services);
+  }
+
+  Future<void> refreshKnowledgeReminderSchedule() async {
+    if (!isReady) return;
+    await services.knowledgeReminders.sync();
   }
 
   /// Payload thông báo chờ xử lý khi app vừa khởi động từ notification.

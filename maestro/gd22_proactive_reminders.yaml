@@ -1,0 +1,62 @@
+# GĐ22.C - Thông báo kiến thức chủ động (tách biệt FSRS).
+# Yêu cầu thiết bị: đã có ít nhất 1 bài học lưu trong SQLite.
+# NOTE (môi trường này): Maestro chưa khớp được chữ để vào "Cài đặt thông báo"
+# và thẻ "Bài học AI", nên flow chưa chạy hết. Spec dưới đây chi tiết các bước.
+# Chạy: maestro test --device NJR8W86LKRVW7DHQ maestro/gd22_proactive_reminders.yaml
+appId: com.mindkeeper.mind_keeper
+name: GD22.C Proactive knowledge reminders
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang chủ"
+    timeout: 20000
+# --- BƯỚC BỊ CHẮN: cần vào Hồ sơ → Cài đặt thông báo, nhưng không thể tap
+# thẻ/tab qua text selector ở môi trường này. ---
+- tapOn: "Hồ sơ"
+- extendedWaitUntil:
+    visible: "Cài đặt thông báo"
+    timeout: 15000
+- tapOn: "Cài đặt thông báo chi tiết"
+- extendedWaitUntil:
+    visible: "Proactive knowledge reminders"
+    timeout: 10000
+- takeScreenshot: "gd22c_01_settings"
+# Bật/tắt nhắc kiến thức
+- tapOn: "Proactive knowledge reminders"   # switch
+- extendedWaitUntil:
+    visible: "Enabled proactive reminders"
+    timeout: 15000
+# Chọn khung giờ bắt đầu và kết thúc
+- tapOn: "Start time"
+- extendedWaitUntil:
+    visible: "9:00"
+    timeout: 10000
+- tapOn: "End time"
+- extendedWaitUntil:
+    visible: "21:00"
+    timeout: 10000
+# Chọn số thông báo mỗi ngày (mặc định 3)
+- tapOn: "Notifications per day"
+- extendedWaitUntil:
+    visible: "3"
+    timeout: 10000
+- tapOn: "2"
+- extendedWaitUntil:
+    visible: "2"
+    timeout: 5000
+# Chọn nguồn kiến thức: tất cả bài đã lưu / chủ đề được chọn
+- tapOn: "Knowledge source"
+- extendedWaitUntil:
+    visible: "All saved lessons"
+    timeout: 10000
+# Xem trước lịch dự kiến trước khi lưu
+- tapOn: "Preview schedule"
+- extendedWaitUntil:
+    visible: "Preview schedule"
+    timeout: 10000
+- assertVisible: "No lessons to schedule"   # nếu kho rỗng
+- tapOn: "Close"
+- takeScreenshot: "gd22c_02_preview"
+# Kiểm tra payload và điều hướng: thông báo phải mở đúng bài (lesson:<id>),
+# không trùng payload card:<id> của FSRS. Kiểm tra tại log/Debug artifacts.

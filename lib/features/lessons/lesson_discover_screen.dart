@@ -4,16 +4,15 @@ import 'package:provider/provider.dart';
 import '../../core/services/app_services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
-import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_feedback.dart';
 import '../../core/widgets/app_icon_badge.dart';
-import '../../core/widgets/app_text_field.dart';
 import '../../data/models/lesson.dart';
 import '../discover/domain_catalog.dart';
 import 'lesson_reader_screen.dart';
 import 'lesson_service.dart';
+import 'topic_picker_sheet.dart';
 import '../../core/theme/app_palette.dart';
 
 /// Khám phá kiến thức bằng bài học AI: chọn lĩnh vực → chủ đề → chế độ,
@@ -61,154 +60,49 @@ class _LessonDiscoverScreenState extends State<LessonDiscoverScreen> {
   }
 
   Future<void> _openDomain(LearningDomain domain) async {
-    final TextEditingController topicCtrl = TextEditingController(
-      text: domain.randomTopic(),
-    );
-    LessonMode mode = _defaultMode;
-
-    final bool? confirmed = await showAppSheet<bool>(
+    final TopicPickerResult? result = await showTopicPickerSheet(
       context: context,
-      builder: (BuildContext sheetCtx) => StatefulBuilder(
-        builder: (BuildContext ctx, StateSetter setSheet) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl,
-              AppSpacing.md,
-              AppSpacing.xl,
-              AppSpacing.lg,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    AppIconBadge(icon: domain.icon, radius: AppRadius.md),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        domain.name,
-                        style: Theme.of(ctx).textTheme.titleLarge,
-                      ),
-                    ),
-                  ],
-                ),
-                if (domain.isHealth) ...<Widget>[
-                  const SizedBox(height: AppSpacing.md),
-                  AppCard(
-                    color: context.appColors.warningSoft,
-                    border: AppColors.warning.withValues(alpha: 0.45),
-                    child: Text(
-                      'Nội dung về sức khỏe chỉ mang tính tham khảo, '
-                      'không thay thế tư vấn y tế chuyên môn.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.4,
-                        color: context.appColors.warningText,
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.lg),
-                AppTextField(
-                  controller: topicCtrl,
-                  label: 'Chủ đề',
-                  required: true,
-                  hint: 'Ví dụ: ${domain.sampleTopics.first}',
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: AppButton(
-                    label: 'Chủ đề ngẫu nhiên',
-                    variant: AppButtonVariant.ghost,
-                    dense: true,
-                    expanded: false,
-                    icon: Icons.shuffle_rounded,
-                    onPressed: () =>
-                        setSheet(() => topicCtrl.text = domain.randomTopic()),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Chế độ bài học',
-                  style: Theme.of(ctx).textTheme.labelMedium,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                ...LessonMode.values.map(
-                  (LessonMode m) => _ModeTile(
-                    mode: m,
-                    selected: mode == m,
-                    onTap: () => setSheet(() => mode = m),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: AppButton(
-                        label: 'Hủy',
-                        variant: AppButtonVariant.tonal,
-                        dense: true,
-                        onPressed: () => Navigator.of(sheetCtx).pop(false),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: AppButton(
-                        label: 'Tạo bài học',
-                        icon: Icons.auto_awesome_rounded,
-                        dense: true,
-                        onPressed: () => Navigator.of(sheetCtx).pop(true),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      domain: domain,
+      initialMode: _defaultMode,
     );
-
-    if (confirmed != true || !mounted) return;
-    final String topic = topicCtrl.text.trim();
-    if (topic.isEmpty) {
-      showAppSnack(
-        context,
-        message: 'Chủ đề không được để trống.',
-        error: true,
-      );
-      return;
-    }
-    await _generate(domain, topic, mode);
+    if (result == null || !mounted) return;
+    await _generateBatch(domain, result);
   }
 
-  Future<void> _generate(
+
+  /// Tạo nhiều bài học cho các chủ đề đã chọn, có báo tiến độ từng bài.
+  Future<void> _generateBatch(
     LearningDomain domain,
-    String topic,
-    LessonMode mode,
+    TopicPickerResult selection,
   ) async {
     final AppServices services = context.read<AppServices>();
+    final List<String> topics = selection.topics;
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) =>
-          const Dialog(child: AppLoading(label: 'Đang sinh bài học...')),
+      builder: (_) => const Dialog(
+        child: AppLoading(label: 'Đang sinh bài học...'),
+      ),
     );
     try {
-      final GeneratedLesson result = await services.lessonService.generate(
-        domain: domain,
-        topic: topic,
-        mode: mode,
-      );
+      final List<BatchLessonResult> results = await services.lessonService
+          .generateBatch(
+            domain: domain,
+            topics: topics,
+            mode: selection.mode,
+          );
       if (!mounted) return;
       Navigator.of(context).pop();
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => LessonReaderScreen(lessonId: result.lesson.id),
-        ),
+      final int ok = results.where((BatchLessonResult r) => r.success).length;
+      final int failed = results.length - ok;
+      showAppSnack(
+        context,
+        message: failed == 0
+            ? 'Đã tạo $ok bài học.'
+            : 'Đã tạo $ok bài học, $failed chủ đề lỗi.',
+        success: failed == 0,
       );
-      if (mounted) await _load();
+      await _load();
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -408,65 +302,6 @@ class _LessonTile extends StatelessWidget {
                 : context.appColors.primary,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ModeTile extends StatelessWidget {
-  const _ModeTile({
-    required this.mode,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final LessonMode mode;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard(
-        color: selected
-            ? context.appColors.primarySoft
-            : context.appColors.surface,
-        border: selected ? context.appColors.primary : context.appColors.border,
-        radius: AppRadius.lg,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: <Widget>[
-              Icon(
-                selected
-                    ? Icons.radio_button_checked_rounded
-                    : Icons.radio_button_off_rounded,
-                size: 20,
-                color: selected
-                    ? context.appColors.primary
-                    : context.appColors.textTertiary,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      mode.label,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    Text(
-                      mode.description,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

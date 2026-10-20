@@ -37,6 +37,20 @@ class GeneratedLesson {
 }
 
 /// Kết quả hoàn tất quiz: bài đã vào bộ nhớ dài hạn + lịch ôn + thông báo.
+class BatchLessonResult {
+  const BatchLessonResult({
+    required this.topic,
+    this.lesson,
+    this.error,
+  });
+
+  final String topic;
+  final Lesson? lesson;
+  final Object? error;
+
+  bool get success => lesson != null && error == null;
+}
+
 class LessonQuizOutcome {
   const LessonQuizOutcome({
     required this.lesson,
@@ -172,6 +186,61 @@ class LessonService {
   /// cho TỪNG câu hỏi, rồi lập lịch thông báo mở đúng câu đến giờ.
   ///
   /// [markRead] = false khi quiz chặn (chặng giữa của lộ trình).
+  /// Gợi ý danh sách chủ đề cho một lĩnh vực.
+  Future<List<AiTopicSuggestion>> suggestTopics({
+    required LearningDomain domain,
+    int count = 20,
+  }) async {
+    final List<AiTopicSuggestion> topics = await ai.suggestTopics(
+      domain: domain.name,
+      count: count,
+    );
+    final List<AiTopicSuggestion> unique = <AiTopicSuggestion>[];
+    final Set<String> seen = <String>{};
+    for (final AiTopicSuggestion topic in topics) {
+      if (seen.add(topic.title.trim().toLowerCase())) {
+        unique.add(topic);
+      }
+    }
+    return unique;
+  }
+
+  /// Tạo nhiều bài học cho danh sách chủ đề đã chọn.
+  Future<List<BatchLessonResult>> generateBatch({
+    required LearningDomain domain,
+    required List<String> topics,
+    LessonMode? mode,
+    void Function(int index, BatchLessonResult result)? onProgress,
+  }) async {
+    final LessonMode effectiveMode = mode ?? defaultMode;
+    final List<BatchLessonResult> results = <BatchLessonResult>[];
+    for (int i = 0; i < topics.length; i++) {
+      final String topic = topics[i].trim();
+      if (topic.isEmpty) continue;
+      try {
+        final GeneratedLesson generated = await generate(
+          domain: domain,
+          topic: topic,
+          mode: effectiveMode,
+        );
+        final BatchLessonResult result = BatchLessonResult(
+          topic: topic,
+          lesson: generated.lesson,
+        );
+        results.add(result);
+        onProgress?.call(i, result);
+      } catch (e) {
+        final BatchLessonResult result = BatchLessonResult(
+          topic: topic,
+          error: e,
+        );
+        results.add(result);
+        onProgress?.call(i, result);
+      }
+    }
+    return results;
+  }
+
   Future<LessonQuizOutcome> completeQuiz({
     required Lesson lesson,
     required List<QuizAnswer> answers,

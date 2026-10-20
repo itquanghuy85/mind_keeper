@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mind_keeper/core/services/preferences_service.dart';
 import 'package:mind_keeper/features/ai/ai_service.dart';
 import 'package:mind_keeper/features/ai/http_ai_provider.dart';
 import 'package:mind_keeper/features/ai/mock_ai_provider.dart';
@@ -163,5 +165,63 @@ void main() {
         expect(service.isRealProvider, isFalse);
       },
     );
+  });
+
+  group('PreferencesService — mặc định cấu hình AI', () {
+    test('aiBaseUrl trả về mặc định OpenAI-compatible khi chưa lưu', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final prefs = await SharedPreferences.getInstance();
+      final service = PreferencesService(prefs);
+      expect(service.aiBaseUrl, 'https://api.openai.com/v1');
+    });
+
+    test('aiBaseUrl giữ nguyên giá trị đã lưu, không bị ghi đè', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'ai_base_url': 'https://custom.example.com/v1',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final service = PreferencesService(prefs);
+      expect(service.aiBaseUrl, 'https://custom.example.com/v1');
+    });
+
+    test('aiModel trả về mặc định gpt-4o-mini khi chưa lưu', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final prefs = await SharedPreferences.getInstance();
+      final service = PreferencesService(prefs);
+      expect(service.aiModel, 'gpt-4o-mini');
+    });
+
+    test('aiModel giữ nguyên giá trị đã lưu', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'ai_model': 'gpt-4',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final service = PreferencesService(prefs);
+      expect(service.aiModel, 'gpt-4');
+    });
+
+    test('proxy mode không vô tình gửi API key bí mật xuống thiết bị', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'ai_proxy_mode': true,
+        'ai_base_url': 'https://example.functions.net/ai',
+        'ai_api_key': '',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final service = PreferencesService(prefs);
+
+      expect(service.aiProxyMode, isTrue);
+      expect(service.aiBaseUrl, 'https://example.functions.net/ai');
+      expect(service.aiApiKey, isEmpty);
+
+      // Client không giữ key DeepSeek khi dùng proxy — key nằm ở server
+      final provider = HttpAIProvider(
+        baseUrl: service.aiBaseUrl,
+        apiKey: service.aiApiKey,
+        model: service.aiModel,
+        proxyMode: service.aiProxyMode,
+      );
+      expect(provider.isConfigured, isTrue);
+      expect(provider.name, 'deepseek-proxy');
+    });
   });
 }

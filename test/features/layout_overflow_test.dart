@@ -7,8 +7,11 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:mind_keeper/core/di/app_providers.dart';
 import 'package:mind_keeper/core/services/app_services.dart';
 import 'package:mind_keeper/core/services/notification_service.dart';
+import 'package:mind_keeper/core/widgets/app_card.dart';
+import 'package:mind_keeper/core/widgets/app_text_field.dart';
 import 'package:mind_keeper/data/db/app_database.dart';
 import 'package:mind_keeper/features/home/today_screen.dart';
+import 'package:mind_keeper/features/lessons/lesson_discover_screen.dart';
 import 'package:mind_keeper/features/topics/topic_detail_screen.dart';
 
 /// Xây dựng dịch vụ test trên DB in-memory (giống widget_test.dart).
@@ -403,5 +406,91 @@ void main() {
 
       await _dispose(tester, services);
     });
+  });
+
+  group('LessonDiscoverScreen — overflow responsive', () {
+    testWidgets(
+      'màn hình nhỏ, mở chọn nhiều chủ đề không overflow, đủ chế độ + nút tạo',
+      (WidgetTester tester) async {
+        final services = await _buildServices(tester);
+        _smallScreen(tester);
+
+        await _pump(
+          tester,
+          _wrap(services, const LessonDiscoverScreen()),
+        );
+
+        expect(_exception(tester), isNull);
+
+        // Chạm vào thẻ lĩnh vực đầu tiên (Khoa học) để mở bottom sheet
+        await tester.tap(find.byType(AppCard).first);
+        // Bottom sheet là modal route — cần nhiều frame để render xong
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(_exception(tester), isNull);
+
+        // Tên lĩnh vực hiển thị (trong bottom sheet, có thể trùng background)
+        expect(find.text('Khoa học'), findsWidgets);
+
+        // Ô nhập chủ đề tùy chỉnh (AppTextField dùng RichText nên tìm bằng type)
+        expect(find.byType(AppTextField), findsOneWidget);
+
+        // Chức năng chọn chủ đề ngẫu nhiên
+        expect(find.text('Chủ đề ngẫu nhiên'), findsOneWidget);
+
+        // Nút chọn nhiều: Tất cả / Bỏ chọn tất cả
+        expect(find.text('Tất cả'), findsOneWidget);
+        expect(find.text('Bỏ chọn tất cả'), findsOneWidget);
+
+        // Ô nhập chủ đề tùy chỉnh + nút Thêm
+        expect(find.text('Thêm chủ đề riêng'), findsOneWidget);
+        expect(find.text('Chủ đề tùy chỉnh'), findsOneWidget);
+        expect(find.text('Thêm'), findsOneWidget);
+
+        // Bốn chế độ bài học
+        expect(find.text('Tổng quan'), findsOneWidget);
+        expect(find.text('Tiêu chuẩn'), findsOneWidget);
+        expect(find.text('Chuyên sâu'), findsOneWidget);
+
+        // Nút tạo bài học
+        expect(find.text('Tạo bài học'), findsOneWidget);
+
+        await _dispose(tester, services);
+      },
+    );
+
+    testWidgets(
+      'màn hình nhỏ, bàn phím mở không overflow, nút tạo vẫn accessible',
+      (WidgetTester tester) async {
+        final services = await _buildServices(tester);
+        _smallScreen(tester);
+
+        await _pump(
+          tester,
+          _wrap(services, const LessonDiscoverScreen()),
+        );
+
+        expect(_exception(tester), isNull);
+
+        // Mở bottom sheet
+        await tester.tap(find.byType(AppCard).first);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(_exception(tester), isNull);
+
+        // Bật bàn phím bằng cách chạm vào ô nhập chủ đề
+        await tester.tap(find.byType(TextField).first, warnIfMissed: false);
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(_exception(tester), isNull);
+
+        // Nút tạo vẫn hiển thị sau khi bàn phím mở
+        expect(find.text('Tạo bài học'), findsOneWidget);
+
+        await _dispose(tester, services);
+      },
+    );
   });
 }

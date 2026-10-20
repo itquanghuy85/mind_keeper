@@ -14,7 +14,7 @@ class SchemaMigration {
 
 abstract final class DbSchema {
   /// Phiên bản schema hiện tại của ứng dụng.
-  static const int currentVersion = 6;
+  static const int currentVersion = 7;
 
   static const String topics = '''
 CREATE TABLE topics (
@@ -139,6 +139,16 @@ CREATE TABLE knowledge_generation_tasks (
   completed_at INTEGER
 )''';
 
+  static const String knowledgeReminderHistory = '''
+CREATE TABLE knowledge_reminder_history (
+  id TEXT PRIMARY KEY,
+  lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  snippet_key TEXT NOT NULL,
+  snippet TEXT NOT NULL,
+  sent_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+)''';
+
   static const List<String> lessonIndexes = <String>[
     'CREATE UNIQUE INDEX idx_lessons_dedup ON lessons(dedup_key)',
     'CREATE INDEX idx_lessons_domain ON lessons(domain_id)',
@@ -166,6 +176,7 @@ CREATE TABLE knowledge_generation_tasks (
     reviewLogs,
     lessons,
     knowledgeGenerationTasks,
+    knowledgeReminderHistory,
   ];
 
   /// Dãy migration chính thức của ứng dụng.
@@ -175,6 +186,7 @@ CREATE TABLE knowledge_generation_tasks (
     SchemaMigration(fromVersion: 3, toVersion: 4, upgrade: _upgradeToV4),
     SchemaMigration(fromVersion: 4, toVersion: 5, upgrade: _upgradeToV5),
     SchemaMigration(fromVersion: 5, toVersion: 6, upgrade: _upgradeToV6),
+    SchemaMigration(fromVersion: 6, toVersion: 7, upgrade: _upgradeToV7),
   ];
 
   static Future<void> _upgradeToV2(DatabaseExecutor db) async {
@@ -216,10 +228,14 @@ CREATE TABLE knowledge_generation_tasks (
   }
 
   static Future<void> _upgradeToV6(DatabaseExecutor db) async {
-    // Thêm last_read_at để sort "Lần đọc gần nhất" đúng nghĩa,
-    // không dùng updated_at (bị thay đổi bởi mọi thao tác sửa/chỉnh).
+    // Thêm last_read_at để sort "lần đọc gần nhất" đúng nghĩa,
+    // không dùng updated_at (bị thay đổi bởi mọi thao tác sửa/chỉnh sửa).
     await db.execute(
       'ALTER TABLE knowledge_items ADD COLUMN last_read_at INTEGER',
     );
+  }
+
+  static Future<void> _upgradeToV7(DatabaseExecutor db) async {
+    await db.execute(knowledgeReminderHistory);
   }
 }

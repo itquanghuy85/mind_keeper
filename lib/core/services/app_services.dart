@@ -14,6 +14,7 @@ import '../../features/ai/ai_service.dart';
 import '../../features/discover/discovery_service.dart';
 import '../../features/knowledge/knowledge_generation_service.dart';
 import '../../features/lessons/lesson_service.dart';
+import 'knowledge_reminder_scheduler.dart';
 import 'notification_service.dart';
 import 'preferences_service.dart';
 import 'review_scheduler_service.dart';
@@ -36,6 +37,7 @@ class AppServices {
     required this.discovery,
     required this.lessonService,
     required this.knowledgeGeneration,
+    required this.knowledgeReminders,
   });
 
   final AppDatabase database;
@@ -53,6 +55,7 @@ class AppServices {
   final DiscoveryService discovery;
   final LessonService lessonService;
   final KnowledgeGenerationService knowledgeGeneration;
+  final KnowledgeReminderScheduler knowledgeReminders;
 
   static AppServices build({
     required AppDatabase database,
@@ -128,6 +131,12 @@ class AppServices {
         lessons: lessons,
         generationRepo: knowledgeGenerationRepo,
         ai: aiService,
+      ),
+      knowledgeReminders: KnowledgeReminderScheduler(
+        lessons: lessons,
+        prefs: preferences,
+        notifications: notificationService,
+        database: database,
       ),
     );
   }

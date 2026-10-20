@@ -231,5 +231,15 @@ class AiService {
     );
   }
 
+  Future<List<AiTopicSuggestion>> suggestTopics({
+    required String domain,
+    int count = 20,
+  }) {
+    return _cached(
+      _key('topics', <String, Object?>{'d': domain, 'c': count}),
+      () => _provider.suggestTopics(domain: domain, count: count),
+    );
+  }
+
   void clearCache() => _cache.clear();
 }

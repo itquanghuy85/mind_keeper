@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/app_bootstrap.dart';
+import '../../core/services/knowledge_reminder_scheduler.dart';
 import '../../core/services/app_services.dart';
 import '../../core/services/preferences_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -140,7 +141,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         ),
       );
     } else {
-      await services.notifications.cancelAll();
+      await services.notifications.cancelDailyReminder();
       if (!mounted) return;
       final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
@@ -311,6 +312,194 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           content: Text('Đã tắt nhắc đọc kiến thức và hủy lịch đã lên.'),
         ),
       );
+    }
+  }
+
+  Future<void> _toggleKnowledgeReminder(bool value) async {
+    final PreferencesService prefs = context.read<PreferencesService>();
+    final AppServices services = context.read<AppServices>();
+    await prefs.setKnowledgeReminderEnabled(value);
+    if (!mounted) return;
+    if (value) {
+      if (await services.lessons.countAll() == 0) {
+        await prefs.setKnowledgeReminderEnabled(false);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Create lessons first before enabling reminders.'),
+          ),
+        );
+        return;
+      }
+      final bool granted = await services.notifications.requestPermissions();
+      if (!mounted) return;
+      setState(() => _notificationsAllowed = granted);
+      if (granted) {
+        await AppBootstrap.instance.refreshKnowledgeReminderSchedule();
+      } else {
+        await prefs.setKnowledgeReminderEnabled(false);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            granted ? 'Enabled proactive reminders.' : 'Notification permission denied.',
+          ),
+        ),
+      );
+    } else {
+      await services.knowledgeReminders.cancel();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Disabled proactive reminders.')),
+      );
+    }
+  }
+
+  Future<void> _pickKnowledgeReminderTime({required bool start}) async {
+    final PreferencesService prefs = context.read<PreferencesService>();
+    final TimeOfDay initial = TimeOfDay(
+      hour: start ? prefs.knowledgeReminderStartHour : prefs.knowledgeReminderEndHour,
+      minute: start
+          ? prefs.knowledgeReminderStartMinute
+          : prefs.knowledgeReminderEndMinute,
+    );
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked == null || !mounted) return;
+    if (start) {
+      await prefs.setKnowledgeReminderWindow(
+        startHour: picked.hour,
+        startMinute: picked.minute,
+        endHour: prefs.knowledgeReminderEndHour,
+        endMinute: prefs.knowledgeReminderEndMinute,
+      );
+    } else {
+      await prefs.setKnowledgeReminderWindow(
+        startHour: prefs.knowledgeReminderStartHour,
+        startMinute: prefs.knowledgeReminderStartMinute,
+        endHour: picked.hour,
+        endMinute: picked.minute,
+      );
+    }
+    await AppBootstrap.instance.refreshKnowledgeReminderSchedule();
+  }
+
+  Future<void> _previewKnowledgeReminder() async {
+    final AppServices services = context.read<AppServices>();
+    final List<KnowledgeReminderPreviewItem> items =
+        await services.knowledgeReminders.buildSchedule();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Preview schedule'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: items.isEmpty
+              ? const Text('No lessons to schedule.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final KnowledgeReminderPreviewItem item = items[index];
+                    return ListTile(
+                      title: Text(item.lessonTitle),
+                      subtitle: Text(
+                        '${item.at.day}/${item.at.month} ${item.at.hour.toString().padLeft(2, '0')}:${item.at.minute.toString().padLeft(2, '0')}\n${item.snippet}',
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickKnowledgeReminderSource() async {
+    final PreferencesService prefs = context.read<PreferencesService>();
+    final AppServices services = context.read<AppServices>();
+    final List<Topic> topics = await services.topics.list();
+    if (!mounted) return;
+    final List<String> current = List<String>.from(
+      prefs.knowledgeReminderSelectedTopics,
+    );
+    final List<String>? selected = await showDialog<List<String>>(
+      context: context,
+      builder: (BuildContext context) {
+        final List<String> temp = List<String>.from(current);
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text('Select knowledge source'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: <Widget>[
+                    RadioListTile<String>(
+                      title: const Text('All saved lessons'),
+                      value: 'all',
+                      groupValue: prefs.knowledgeReminderSource,
+                      onChanged: (String? value) async {
+                        await prefs.setKnowledgeReminderSource('all');
+                        if (context.mounted) Navigator.of(context).pop();
+                      },
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Selected topics'),
+                      value: 'selected',
+                      groupValue: prefs.knowledgeReminderSource,
+                      onChanged: (String? value) async {
+                        await prefs.setKnowledgeReminderSource('selected');
+                        setState(() {});
+                      },
+                    ),
+                    if (prefs.knowledgeReminderSource == 'selected') ...<Widget>[
+                      for (final Topic topic in topics)
+                        CheckboxListTile(
+                          title: Text(topic.name),
+                          value: temp.contains(topic.id),
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value == true) {
+                                temp.add(topic.id);
+                              } else {
+                                temp.remove(topic.id);
+                              }
+                            });
+                          },
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(temp),
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (selected != null && mounted) {
+      await prefs.setKnowledgeReminderSelectedTopics(selected);
+      await AppBootstrap.instance.refreshKnowledgeReminderSchedule();
     }
   }
 
@@ -623,6 +812,83 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     ),
                     trailing: const Icon(Icons.repeat_rounded),
                     onTap: _pickFrequency,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: <Widget>[
+                  SwitchListTile(
+                    title: const Text('Proactive knowledge reminders'),
+                    subtitle: const Text(
+                      'Receive multiple knowledge snippets per day.',
+                    ),
+                    value: prefs.knowledgeReminderEnabled,
+                    onChanged: _toggleKnowledgeReminder,
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('Start time'),
+                    subtitle: Text(
+                      '${prefs.knowledgeReminderStartHour.toString().padLeft(2, '0')}:${prefs.knowledgeReminderStartMinute.toString().padLeft(2, '0')}',
+                    ),
+                    trailing: const Icon(Icons.schedule_rounded),
+                    onTap: () => _pickKnowledgeReminderTime(start: true),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('End time'),
+                    subtitle: Text(
+                      '${prefs.knowledgeReminderEndHour.toString().padLeft(2, '0')}:${prefs.knowledgeReminderEndMinute.toString().padLeft(2, '0')}',
+                    ),
+                    trailing: const Icon(Icons.schedule_rounded),
+                    onTap: () => _pickKnowledgeReminderTime(start: false),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('Notifications per day'),
+                    subtitle: Text('${prefs.knowledgeReminderCountPerDay}'),
+                    trailing: const Icon(Icons.repeat_rounded),
+                    onTap: () async {
+                      final int? value = await showDialog<int>(
+                        context: context,
+                        builder: (BuildContext context) => SimpleDialog(
+                          title: const Text('Notifications per day'),
+                          children: <Widget>[
+                            for (int i = 1; i <= 10; i++)
+                              SimpleDialogOption(
+                                onPressed: () => Navigator.of(context).pop(i),
+                                child: Text('$i'),
+                              ),
+                          ],
+                        ),
+                      );
+                      if (value != null) {
+                        await prefs.setKnowledgeReminderCountPerDay(value);
+                        await AppBootstrap.instance
+                            .refreshKnowledgeReminderSchedule();
+                      }
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('Knowledge source'),
+                    subtitle: Text(
+                      prefs.knowledgeReminderSource == 'all'
+                          ? 'All saved lessons'
+                          : 'Selected topics',
+                    ),
+                    trailing: const Icon(Icons.source_rounded),
+                    onTap: _pickKnowledgeReminderSource,
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('Preview schedule'),
+                    trailing: const Icon(Icons.preview_rounded),
+                    onTap: _previewKnowledgeReminder,
                   ),
                 ],
               ),

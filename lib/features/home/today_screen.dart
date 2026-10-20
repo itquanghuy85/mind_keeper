@@ -14,6 +14,7 @@ import '../../data/models/topic.dart';
 import '../../data/repositories/topic_repository.dart';
 import '../../features/discover/discover_screen.dart';
 import '../../features/lessons/lesson_discover_screen.dart';
+import '../../features/lessons/lesson_reader_screen.dart';
 import '../../features/review/review_screen.dart';
 import '../../features/topics/topic_detail_screen.dart';
 import '../../core/theme/app_palette.dart';
@@ -100,6 +101,12 @@ class _TodayScreenState extends State<TodayScreen> {
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => ReviewScreen(targetCardId: payload.cardId),
+        ),
+      );
+    } else if (payload.kind == 'lesson' && payload.lessonId != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => LessonReaderScreen(lessonId: payload.lessonId!),
         ),
       );
     } else {

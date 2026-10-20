@@ -15,8 +15,8 @@ import 'ai_provider.dart';
 ///   (vd Cloud Functions). Client KHÔNG cần và KHÔNG gửi key DeepSeek;
 ///   backend giữ key trong secret và tự thêm header khi gọi DeepSeek.
 class HttpAIProvider implements AIProvider {
-  static const String defaultBaseUrl = 'https://api.deepseek.com';
-  static const String defaultModel = 'deepseek-chat';
+  static const String defaultBaseUrl = 'https://api.openai.com/v1';
+  static const String defaultModel = 'gpt-4o-mini';
 
   HttpAIProvider({
     String? baseUrl,
@@ -65,6 +65,33 @@ class HttpAIProvider implements AIProvider {
     if (proxyMode && _clientToken.isNotEmpty) 'X-Client-Token': _clientToken,
   };
 
+  /// Giải mã body HTTP thành chuỗi, tôn trọng charset do server khai báo.
+  ///
+  /// Hợp đồng API hiện tại: OpenAI-compatible trả `application/json; charset=utf-8`.
+  /// Nếu server khai báo charset khác (ví dụ `iso-8859-1`) thì decode theo charset
+  /// đó; nếu **thiếu** charset thì mặc định UTF-8 (JSON theo RFC 8259 là UTF-8).
+  /// Không dùng `response.body` vì package:http tự ý decode theo charset mặc
+  /// định của locale (Latin-1 trên một số nền tảng) → tiếng Việt bị hỏng.
+  static String decodeBody(http.Response response) {
+    final String? contentType = response.headers['content-type'];
+    final RegExpMatch? charsetMatch = contentType == null
+        ? null
+        : RegExp(
+            r'charset\s*=\s*"?\s*([A-Za-z0-9_\-]+)\s*"?',
+            caseSensitive: false,
+          ).firstMatch(contentType);
+    final String? charset = charsetMatch?.group(1)?.toLowerCase();
+    if (charset != null && charset != 'utf-8' && charset != 'utf8') {
+      // dart:convert chỉ có sẵn latin1; các charset khác cần thư viện ngoài.
+      // Hợp đồng API hiện tại dùng UTF-8 → mọi charset lạ đều rơi về UTF-8.
+      if (charset == 'iso-8859-1' || charset == 'latin1' || charset == 'latin-1') {
+        return latin1.decode(response.bodyBytes);
+      }
+      return utf8.decode(response.bodyBytes);
+    }
+    return utf8.decode(response.bodyBytes);
+  }
+
   Future<String> _chat(String systemPrompt, String userPrompt) async {
     final Uri uri = Uri.parse('$_baseUrl/chat/completions');
     final http.Response response = await _client
@@ -97,8 +124,9 @@ class HttpAIProvider implements AIProvider {
         'Lỗi AI HTTP ${response.statusCode}: ${response.body.length > 200 ? response.body.substring(0, 200) : response.body}',
       );
     }
+    final String rawBody = decodeBody(response);
     final Map<String, Object?> body =
-        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, Object?>;
+        jsonDecode(rawBody) as Map<String, Object?>;
     final Object? choices = body['choices'];
     String content = '';
     if (choices is List && choices.isNotEmpty) {
@@ -266,6 +294,35 @@ NGUYÊN TẮC:
       _decodeObject(raw),
       maxQuestions: maxQuestions,
     );
+  }
+
+  @override
+  Future<List<AiTopicSuggestion>> suggestTopics({
+    required String domain,
+    int count = 20,
+  }) async {
+    final String raw = await _chat(
+      'Generate a JSON object {"topics":[{"title":"","description":""}]} with distinct learning topics. '
+          'Each title short, description one sentence.',
+      'Domain: $domain\nCount: $count',
+    );
+    final Map<String, Object?> obj = _decodeObject(raw);
+    final List<Object?> items =
+        (obj['topics'] as List<Object?>?) ?? const <Object?>[];
+    final List<AiTopicSuggestion> result = <AiTopicSuggestion>[];
+    final Set<String> seen = <String>{};
+    for (final Object? item in items) {
+      if (item is! Map<String, Object?>) continue;
+      try {
+        final AiTopicSuggestion t = AiTopicSuggestion.fromMap(item);
+        if (!seen.add(t.title.toLowerCase())) continue;
+        result.add(t);
+        if (result.length >= count) break;
+      } on FormatException {
+        continue;
+      }
+    }
+    return result;
   }
 }
 

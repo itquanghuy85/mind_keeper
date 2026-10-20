@@ -1,0 +1,2 @@
+      // Payload thiếu cardId (vd. 'card:') là không hợp lệ — bỏ qua review
+      // thay vì mở màn hình sai.

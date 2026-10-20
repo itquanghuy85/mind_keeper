@@ -1,0 +1,2 @@
+  /// Gợi ý danh sách chủ đề cho một lĩnh vực.
+  Future<List<AiTopicSuggestion>> suggestTopics({

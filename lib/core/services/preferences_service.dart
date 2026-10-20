@@ -19,6 +19,12 @@ class PreferencesService extends ChangeNotifier {
   static const String _keyAiApiKey = 'ai_api_key';
   static const String _keyAiModel = 'ai_model';
   static const String _keyAiProxyMode = 'ai_proxy_mode';
+
+  /// Mặc định Base URL cho provider OpenAI-compatible khi chưa có giá trị lưu.
+  static const String _defaultAiBaseUrl = 'https://api.openai.com/v1';
+
+  /// Mặc định model khi chưa có giá trị lưu.
+  static const String _defaultAiModel = 'gpt-4o-mini';
   static const String _keyLessonDefaultMode = 'lesson_default_mode';
   static const String _keyFavoriteDomains = 'favorite_domains';
   static const String _keyHiddenDomains = 'hidden_domains';
@@ -29,6 +35,17 @@ class PreferencesService extends ChangeNotifier {
   static const String _keyKnowledgeReadingDays = 'knowledge_reading_days';
   static const String _keyKnowledgeReadingFrequency =
       'knowledge_reading_frequency';
+
+  // Proactive knowledge reminders
+  static const String _keyKnowledgeReminderEnabled = 'knowledge_reminder_enabled';
+  static const String _keyKnowledgeReminderStartHour = 'knowledge_reminder_start_hour';
+  static const String _keyKnowledgeReminderStartMinute = 'knowledge_reminder_start_minute';
+  static const String _keyKnowledgeReminderEndHour = 'knowledge_reminder_end_hour';
+  static const String _keyKnowledgeReminderEndMinute = 'knowledge_reminder_end_minute';
+  static const String _keyKnowledgeReminderCount = 'knowledge_reminder_count';
+  static const String _keyKnowledgeReminderSource = 'knowledge_reminder_source';
+  static const String _keyKnowledgeReminderSelectedTopics = 'knowledge_reminder_selected_topics';
+  static const String _keyKnowledgeReminderScheduledIds = 'knowledge_reminder_scheduled_ids';
 
   // Fallback khi prefs chưa cấu hình — inject lúc build, không nhúng trong source.
   // DeepSeek defaults
@@ -62,12 +79,23 @@ class PreferencesService extends ChangeNotifier {
   List<String> get favoriteCategories =>
       _prefs.getStringList(_keyFavoriteCategories) ?? const <String>[];
 
-  String get aiBaseUrl =>
-      _prefs.getString(_keyAiBaseUrl) ?? _envDeepSeekBaseUrl;
+  String get aiBaseUrl {
+    final saved = _prefs.getString(_keyAiBaseUrl);
+    if (saved != null && saved.isNotEmpty) return saved;
+    final env = _envDeepSeekBaseUrl;
+    if (env.isNotEmpty) return env;
+    return _defaultAiBaseUrl;
+  }
 
   String get aiApiKey => _prefs.getString(_keyAiApiKey) ?? _envDeepSeekApiKey;
 
-  String get aiModel => _prefs.getString(_keyAiModel) ?? _envDeepSeekModel;
+  String get aiModel {
+    final saved = _prefs.getString(_keyAiModel);
+    if (saved != null && saved.isNotEmpty) return saved;
+    final env = _envDeepSeekModel;
+    if (env.isNotEmpty) return env;
+    return _defaultAiModel;
+  }
 
   /// True khi gọi AI qua proxy backend: client không giữ key DeepSeek.
   bool get aiProxyMode =>
@@ -209,6 +237,78 @@ class PreferencesService extends ChangeNotifier {
 
   Future<void> setKnowledgeReadingFrequency(int frequency) async {
     await _prefs.setInt(_keyKnowledgeReadingFrequency, frequency.clamp(1, 7));
+    notifyListeners();
+  }
+
+  bool get knowledgeReminderEnabled =>
+      _prefs.getBool(_keyKnowledgeReminderEnabled) ?? false;
+
+  int get knowledgeReminderStartHour =>
+      _prefs.getInt(_keyKnowledgeReminderStartHour) ?? 9;
+
+  int get knowledgeReminderStartMinute =>
+      _prefs.getInt(_keyKnowledgeReminderStartMinute) ?? 0;
+
+  int get knowledgeReminderEndHour =>
+      _prefs.getInt(_keyKnowledgeReminderEndHour) ?? 21;
+
+  int get knowledgeReminderEndMinute =>
+      _prefs.getInt(_keyKnowledgeReminderEndMinute) ?? 0;
+
+  int get knowledgeReminderCountPerDay =>
+      _prefs.getInt(_keyKnowledgeReminderCount) ?? 3;
+
+  /// 'all' or 'selected'
+  String get knowledgeReminderSource =>
+      _prefs.getString(_keyKnowledgeReminderSource) ?? 'all';
+
+  List<String> get knowledgeReminderSelectedTopics =>
+      _prefs.getStringList(_keyKnowledgeReminderSelectedTopics) ?? const <String>[];
+
+  List<int> get knowledgeReminderScheduledIds =>
+      (_prefs.getStringList(_keyKnowledgeReminderScheduledIds) ?? const <String>[])
+          .map((String e) => int.tryParse(e))
+          .whereType<int>()
+          .toList();
+
+  Future<void> setKnowledgeReminderEnabled(bool value) async {
+    await _prefs.setBool(_keyKnowledgeReminderEnabled, value);
+    notifyListeners();
+  }
+
+  Future<void> setKnowledgeReminderWindow({
+    required int startHour,
+    required int startMinute,
+    required int endHour,
+    required int endMinute,
+  }) async {
+    await _prefs.setInt(_keyKnowledgeReminderStartHour, startHour.clamp(0, 23));
+    await _prefs.setInt(_keyKnowledgeReminderStartMinute, startMinute.clamp(0, 59));
+    await _prefs.setInt(_keyKnowledgeReminderEndHour, endHour.clamp(0, 23));
+    await _prefs.setInt(_keyKnowledgeReminderEndMinute, endMinute.clamp(0, 59));
+    notifyListeners();
+  }
+
+  Future<void> setKnowledgeReminderCountPerDay(int value) async {
+    await _prefs.setInt(_keyKnowledgeReminderCount, value.clamp(1, 10));
+    notifyListeners();
+  }
+
+  Future<void> setKnowledgeReminderSource(String value) async {
+    await _prefs.setString(_keyKnowledgeReminderSource, value);
+    notifyListeners();
+  }
+
+  Future<void> setKnowledgeReminderSelectedTopics(List<String> value) async {
+    await _prefs.setStringList(_keyKnowledgeReminderSelectedTopics, value);
+    notifyListeners();
+  }
+
+  Future<void> setKnowledgeReminderScheduledIds(List<int> value) async {
+    await _prefs.setStringList(
+      _keyKnowledgeReminderScheduledIds,
+      value.map((int e) => e.toString()).toList(),
+    );
     notifyListeners();
   }
 

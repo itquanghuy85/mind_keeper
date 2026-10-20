@@ -161,6 +161,28 @@ class AiLessonSource {
 }
 
 /// Bài học AI: cấu trúc đầy đủ cho một buổi khám phá kiến thức.
+class AiTopicSuggestion {
+  const AiTopicSuggestion({
+    required this.title,
+    required this.description,
+  });
+
+  final String title;
+  final String description;
+
+  factory AiTopicSuggestion.fromMap(Map<String, Object?> map) {
+    final String title = (map['title'] ?? '').toString().trim();
+    final String description = (map['description'] ?? '').toString().trim();
+    if (title.isEmpty) {
+      throw const FormatException('Thiếu title chủ đề.');
+    }
+    return AiTopicSuggestion(
+      title: title,
+      description: description.isEmpty ? title : description,
+    );
+  }
+}
+
 class AiLessonDraft {
   const AiLessonDraft({
     required this.title,
@@ -340,5 +362,11 @@ abstract class AIProvider {
     required int wordMin,
     required int wordMax,
     required int questionCount,
+  });
+
+  /// Gợi ý danh sách chủ đề liên quan để người dùng chọn.
+  Future<List<AiTopicSuggestion>> suggestTopics({
+    required String domain,
+    int count = 20,
   });
 }
