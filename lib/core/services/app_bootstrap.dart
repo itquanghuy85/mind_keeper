@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'app_services.dart';
@@ -49,11 +51,30 @@ class AppBootstrap {
         pendingNotificationPayload = payload;
         onNotificationOpened?.call(payload);
       });
+      // Đối soát kế hoạch học ở NỀN (không chặn khởi động UI): tạo đủ
+      // nội dung còn thiếu, lên lịch bài mới. Idempotent nên chạy lại an toàn.
+      unawaited(_syncStudyPlan(services));
     } catch (e, s) {
       if (kDebugMode) {
         debugPrint('Khởi tạo thông báo thất bại: $e\n$s');
       }
     }
+  }
+
+  Future<void> _syncStudyPlan(AppServices services) async {
+    try {
+      await services.studyPlan.sync();
+    } catch (e, s) {
+      if (kDebugMode) {
+        debugPrint('Đối soát kế hoạch học thất bại: $e\n$s');
+      }
+    }
+  }
+
+  /// Đồng bộ lại kế hoạch học khi mở app / resume / đổi cài đặt.
+  Future<void> refreshStudyPlan() async {
+    if (!isReady) return;
+    await _syncStudyPlan(services);
   }
 
   Future<void> _scheduleReminder(AppServices services) async {

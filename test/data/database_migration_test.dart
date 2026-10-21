@@ -186,13 +186,13 @@ CREATE TABLE topics (
   });
 
   test('DbSchema sinh cÃ¢u lá»‡nh SQL há»£p lá»‡', () {
-    expect(DbSchema.tables, hasLength(8));
+    expect(DbSchema.tables, hasLength(9));
     expect(DbSchema.indexes, isNotEmpty);
     int withReferences = 0;
     for (final String sql in DbSchema.tables) {
       if (sql.contains('REFERENCES')) withReferences += 1;
     }
-    expect(withReferences, 7);
+    expect(withReferences, 8);
   });
 
   test('migration 1â†’2 táº¡o báº£ng lessons vÃ  giá»¯ dá»¯ liá»‡u cÅ©', () async {

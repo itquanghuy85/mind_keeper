@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/services/app_bootstrap.dart';
@@ -23,11 +25,33 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _index = 0;
 
   /// Dữ liệu đổi từ bên ngoài tab (tạo chủ đề, lưu import...) — dùng chung singleton.
   ValueNotifier<int> get _dataVersion => AppBootstrap.instance.dataVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    // Mở lại app → đối soát kế hoạch học: sinh nốt nội dung còn thiếu và
+    // lên lịch bài mới (idempotent, chạy nền không chặn UI).
+    if (AppBootstrap.instance.isReady) {
+      unawaited(AppBootstrap.instance.refreshStudyPlan());
+    }
+  }
 
   void _select(int index) {
     if (index == _index) return;

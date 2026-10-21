@@ -11,6 +11,7 @@ import 'package:mind_keeper/data/db/app_database.dart';
 import 'package:mind_keeper/features/knowledge/knowledge_library_screen.dart';
 import 'package:mind_keeper/features/knowledge/learned_library_screen.dart';
 import 'package:mind_keeper/features/profile/profile_screen.dart';
+import 'package:mind_keeper/features/profile/study_plan_screen.dart';
 import 'package:mind_keeper/features/topics/topic_detail_screen.dart';
 
 /// Harness giống layout_overflow_test.dart: DB FFI phải chạy trong runAsync.
@@ -119,7 +120,32 @@ void main() {
       await tester.tap(entry.first);
       await _settleReal(tester);
 
-      expect(find.byType(LearnedLibraryScreen), findsOneWidget);
+      expect(find.byType(KnowledgeLibraryScreen), findsOneWidget);
+
+      await _dispose(tester, services);
+    });
+
+    testWidgets('Profile → Kế hoạch học (StudyPlanScreen)', (
+      WidgetTester tester,
+    ) async {
+      final AppServices services = await _buildServices(tester);
+
+      await _pump(tester, _wrap(services, const ProfileScreen()));
+
+      final Finder entry = find.text('Kế hoạch học');
+      expect(entry, findsOneWidget);
+
+      // Tile may be outside the viewport, scroll into view before tapping (GD20 entry point).
+      await tester.scrollUntilVisible(
+        entry.first,
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(entry.first);
+      await _settleReal(tester);
+
+      expect(find.byType(StudyPlanScreen), findsOneWidget);
 
       await _dispose(tester, services);
     });

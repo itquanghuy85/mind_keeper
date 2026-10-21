@@ -9,11 +9,13 @@ import '../../data/repositories/knowledge_repository.dart';
 import '../../data/repositories/lesson_repository.dart';
 import '../../data/repositories/review_repository.dart';
 import '../../data/repositories/stats_repository.dart';
+import '../../data/repositories/study_feed_repository.dart';
 import '../../data/repositories/topic_repository.dart';
 import '../../features/ai/ai_service.dart';
 import '../../features/discover/discovery_service.dart';
 import '../../features/knowledge/knowledge_generation_service.dart';
 import '../../features/lessons/lesson_service.dart';
+import '../../features/study/study_plan_service.dart';
 import 'knowledge_reminder_scheduler.dart';
 import 'notification_service.dart';
 import 'preferences_service.dart';
@@ -38,6 +40,7 @@ class AppServices {
     required this.lessonService,
     required this.knowledgeGeneration,
     required this.knowledgeReminders,
+    required this.studyPlan,
   });
 
   final AppDatabase database;
@@ -56,6 +59,7 @@ class AppServices {
   final LessonService lessonService;
   final KnowledgeGenerationService knowledgeGeneration;
   final KnowledgeReminderScheduler knowledgeReminders;
+  final StudyPlanService studyPlan;
 
   static AppServices build({
     required AppDatabase database,
@@ -72,6 +76,7 @@ class AppServices {
     final ReviewLogRepository logs = ReviewLogRepository(database);
     final StatsRepository stats = StatsRepository(database);
     final LessonRepository lessons = LessonRepository(database);
+    final StudyFeedRepository studyFeed = StudyFeedRepository(database);
     final KnowledgeGenerationRepository knowledgeGenerationRepo =
         KnowledgeGenerationRepository(database);
     final AiService aiService = ai ?? AiService();
@@ -137,6 +142,15 @@ class AppServices {
         prefs: preferences,
         notifications: notificationService,
         database: database,
+      ),
+      studyPlan: StudyPlanService(
+        prefs: preferences,
+        feed: studyFeed,
+        topics: topics,
+        knowledge: knowledge,
+        lessons: lessons,
+        ai: aiService,
+        notifications: notificationService,
       ),
     );
   }

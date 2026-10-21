@@ -1,8 +1,12 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/app_bootstrap.dart';
 import '../../core/services/app_services.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -10,12 +14,15 @@ import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_feedback.dart';
 import '../../core/widgets/app_icon_badge.dart';
+import '../../data/models/study_feed_item.dart';
 import '../../data/models/topic.dart';
 import '../../data/repositories/topic_repository.dart';
 import '../../features/discover/discover_screen.dart';
+import '../../features/knowledge/knowledge_detail_screen.dart';
 import '../../features/lessons/lesson_discover_screen.dart';
 import '../../features/lessons/lesson_reader_screen.dart';
 import '../../features/review/review_screen.dart';
+import '../../features/study/study_plan_service.dart';
 import '../../features/topics/topic_detail_screen.dart';
 import '../../core/theme/app_palette.dart';
 
@@ -40,6 +47,11 @@ class _TodayScreenState extends State<TodayScreen> {
   int _dailyGoal = 10;
   List<Topic> _recentTopics = const <Topic>[];
   Map<String, TopicStats> _topicStats = <String, TopicStats>{};
+
+  /// Nội dung hôm nay từ kế hoạch học (chỉ phần đã lưu xong) + tiêu đề đã
+  /// phân giải sẵn.
+  List<StudyFeedItem> _feedItems = const <StudyFeedItem>[];
+  List<String> _feedTitles = const <String>[];
   DateTime? _loadedAt;
   bool _handledNotification = false;
 
@@ -81,6 +93,9 @@ class _TodayScreenState extends State<TodayScreen> {
         _loadedAt = now;
         _loading = false;
       });
+      // Tải nội dung kế hoạch học RIÊNG bước sau: không giữ spinner chính
+      // chờ thêm truy vấn (màn hình hiện ra trước, phần này tự điền sau).
+      unawaited(_loadFeed(now));
       await _handlePendingNotification();
     } catch (e) {
       if (!mounted) return;
@@ -91,22 +106,87 @@ class _TodayScreenState extends State<TodayScreen> {
     }
   }
 
+  Future<String> _resolveFeedTitle(
+    AppServices services,
+    StudyFeedItem row,
+  ) async {
+    try {
+      if (row.kind == StudyFeedKind.quick) {
+        final item = await services.knowledge.getById(row.refId!);
+        return item == null ? row.topicName : item.title;
+      }
+      final lesson = await services.lessons.getById(row.refId!);
+      return lesson == null ? row.topicName : lesson.title;
+    } catch (_) {
+      return row.topicName;
+    }
+  }
+
+  /// Tải nội dung hôm nay từ kế hoạch học (chỉ phần đã lưu xong — đọc được
+  /// offline). Lỗi giữ nguyên danh sách cũ, không phá màn hình chính.
+  Future<void> _loadFeed(DateTime now) async {
+    try {
+      final AppServices services = context.read<AppServices>();
+      final List<StudyFeedItem> rows = (await services.studyPlan.listDay(now))
+          .where((StudyFeedItem r) => r.status.hasContent && r.refId != null)
+          .toList(growable: false);
+      final List<String> titles = <String>[];
+      for (final StudyFeedItem row in rows) {
+        titles.add(await _resolveFeedTitle(services, row));
+      }
+      if (!mounted) return;
+      setState(() {
+        _feedItems = rows;
+        _feedTitles = titles;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('Tải nội dung hôm nay lỗi: $e');
+    }
+  }
+
+  /// Kéo để làm mới: tải lại ngay + chạy đối soát kế hoạch học ở nền
+  /// (khi đối soát xong tự tải lại lần nữa để hiện nội dung mới).
+  Future<void> _refresh() async {
+    final StudyPlanService plan = context.read<AppServices>().studyPlan;
+    if (!plan.isSyncing) {
+      plan.sync().then((_) {
+        if (mounted) _load();
+      }, onError: (_) {});
+    }
+    await _load();
+  }
+
   Future<void> _handlePendingNotification() async {
     if (_handledNotification || !mounted) return;
     final payload = AppBootstrap.instance.pendingNotificationPayload;
     if (payload == null) return;
     AppBootstrap.instance.pendingNotificationPayload = null;
     _handledNotification = true;
-    if (payload.kind == 'card' && payload.cardId != null) {
+    final AppServices services = context.read<AppServices>();
+    if (payload.kind == NotificationPayload.kindCard &&
+        payload.cardId != null) {
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => ReviewScreen(targetCardId: payload.cardId),
         ),
       );
-    } else if (payload.kind == 'lesson' && payload.lessonId != null) {
+    } else if (payload.kind == NotificationPayload.kindLesson &&
+        payload.lessonId != null) {
+      await services.studyPlan.markOpened(payload.lessonId!);
+      if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => LessonReaderScreen(lessonId: payload.lessonId!),
+        ),
+      );
+    } else if (payload.kind == NotificationPayload.kindQuick &&
+        payload.knowledgeItemId != null) {
+      await services.studyPlan.markOpened(payload.knowledgeItemId!);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              KnowledgeDetailScreen(itemId: payload.knowledgeItemId!),
         ),
       );
     } else {
@@ -141,9 +221,9 @@ class _TodayScreenState extends State<TodayScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(onRefresh: _load, child: _buildBody(context)),
-      ),
+        body: SafeArea(
+          child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context)),
+        ),
     );
   }
 
@@ -293,7 +373,70 @@ class _TodayScreenState extends State<TodayScreen> {
 
         const SizedBox(height: AppSpacing.xxl),
 
-        // 3. Nhanh tập trung — 3 hành động chính
+        // 3. Nội dung hôm nay (kế hoạch học — bài đã lưu sẵn, đọc offline)
+        if (_feedItems.isNotEmpty) ...<Widget>[
+          AppSectionHeader(
+            title: 'Nội dung hôm nay',
+            actionLabel: '${_feedItems.length} mục',
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ..._feedItems.asMap().entries.map(
+            (MapEntry<int, StudyFeedItem> entry) {
+              final StudyFeedItem row = entry.value;
+              final String title = _feedTitles[entry.key];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: AppCard(
+                  semanticsLabel: title,
+                  onTap: () => _openFeedItem(row),
+                  child: Row(
+                    children: <Widget>[
+                      AppIconBadge(
+                        icon: row.kind == StudyFeedKind.quick
+                            ? Icons.bolt_rounded
+                            : Icons.article_rounded,
+                        tone: row.kind == StudyFeedKind.quick
+                            ? AppIconTone.warning
+                            : AppIconTone.primary,
+                        size: AppSizes.badgeSm,
+                        radius: AppRadius.md,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              title,
+                              style: Theme.of(context).textTheme.titleSmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              '${row.kind == StudyFeedKind.quick ? 'Thông tin nhanh' : 'Bài viết'} · ${_feedStatusText(row)}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: context.appColors.textTertiary,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+        ],
+
+        // 4. Nhanh tập trung — 3 hành động chính
         AppSectionHeader(title: 'Nhanh tập trung', padding: EdgeInsets.zero),
         const SizedBox(height: AppSpacing.sm),
         // IntrinsicHeight + stretch: ba thẻ luôn cao bằng nhau dù mô tả dài
@@ -357,7 +500,7 @@ class _TodayScreenState extends State<TodayScreen> {
 
         const SizedBox(height: AppSpacing.xxl),
 
-        // 4. Chủ đề gần đây
+        // 5. Chủ đề gần đây
         AppSectionHeader(title: 'Chủ đề gần đây', padding: EdgeInsets.zero),
         const SizedBox(height: AppSpacing.sm),
         if (_recentTopics.isEmpty)
@@ -436,6 +579,36 @@ class _TodayScreenState extends State<TodayScreen> {
           ),
       ],
     );
+  }
+
+  String _feedStatusText(StudyFeedItem row) {
+    if (row.status == StudyFeedStatus.delivered ||
+        row.status == StudyFeedStatus.opened) {
+      return 'Đã phát hành';
+    }
+    final DateTime at = context.read<AppServices>().studyPlan.slotTimeFor(row);
+    final DateTime local = at.toLocal();
+    return 'Dự kiến ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _openFeedItem(StudyFeedItem row) async {
+    final AppServices services = context.read<AppServices>();
+    final String? refId = row.refId;
+    if (refId == null) return;
+    await services.studyPlan.markOpened(refId);
+    if (!mounted) return;
+    if (row.kind == StudyFeedKind.quick) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => KnowledgeDetailScreen(itemId: refId),
+        ),
+      );
+    } else {
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => LessonReaderScreen(lessonId: refId)));
+    }
+    if (mounted) await _load();
   }
 
   String _statsForTopic(String topicId) {

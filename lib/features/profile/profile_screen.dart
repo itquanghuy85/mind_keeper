@@ -18,6 +18,7 @@ import '../import/media_import_flow.dart';
 import '../import/text_import_screen.dart';
 import '../import/voice_import_screen.dart';
 import 'notification_settings_screen.dart';
+import 'study_plan_screen.dart';
 import '../../core/theme/app_palette.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -117,6 +118,21 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                     onTap: () => _editCategories(context, prefs),
+                  ),
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
+                    leading: const Icon(Icons.calendar_month_outlined),
+                    title: 'Kế hoạch học',
+                    subtitle: 'Bài mới mỗi ngày, khung giờ, chủ đề theo dõi',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const StudyPlanScreen(),
+                      ),
+                    ),
                   ),
                 ],
               ),

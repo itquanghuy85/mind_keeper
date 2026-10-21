@@ -7,17 +7,26 @@ import 'package:timezone/timezone.dart' as tz;
 
 /// Payload mở khi người dùng chạm thông báo.
 /// - `card:<cardId>` → mở đúng ReviewCard
+/// - `lesson:<lessonId>` → mở đúng bài học
+/// - `quick:<knowledgeItemId>` → mở đúng thông tin nhanh (GĐ17)
 /// - `review` → mở phiên ôn tập chung
 class NotificationPayload {
-  const NotificationPayload._({this.cardId, this.lessonId, this.kind = kindReview});
+  const NotificationPayload._({
+    this.cardId,
+    this.lessonId,
+    this.knowledgeItemId,
+    this.kind = kindReview,
+  });
 
   final String? cardId;
   final String? lessonId;
+  final String? knowledgeItemId;
   final String kind;
 
   static const String kindCard = 'card';
   static const String kindReview = 'review';
   static const String kindLesson = 'lesson';
+  static const String kindQuick = 'quick';
 
   static NotificationPayload parse(String? raw) {
     if (raw == null || raw.isEmpty) {
@@ -35,6 +44,12 @@ class NotificationPayload {
       final String id = raw.substring(kindLesson.length + 1);
       if (id.isNotEmpty) {
         return NotificationPayload._(kind: kindLesson, lessonId: id);
+      }
+    }
+    if (raw.startsWith('$kindQuick:')) {
+      final String id = raw.substring(kindQuick.length + 1);
+      if (id.isNotEmpty) {
+        return NotificationPayload._(kind: kindQuick, knowledgeItemId: id);
       }
     }
     return const NotificationPayload._(kind: kindReview);
@@ -100,6 +115,22 @@ abstract class NotificationService {
 
   /// Hủy một thông báo kiến thức theo id.
   Future<void> cancelKnowledgeReminder(int id);
+
+  /// Lập lịch thông báo NỘI DUNG MỚI (GĐ17 — bài viết `lesson:<id>` /
+  /// thông tin nhanh `quick:<id>`) vào thời điểm [at] với ID do caller chọn.
+  ///
+  /// KHÁC [scheduleKnowledgeReminder]: không ép prefix `lesson:` nên payload
+  /// `quick:<id>` giữ nguyên để mở đúng mục kiến thức.
+  Future<void> scheduleContentNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    required String payload,
+  });
+
+  /// Hủy một thông báo nội dung mới theo id (idempotent).
+  Future<void> cancelContentNotification(int id);
 
   /// Lập lịch nhắc đọc kiến thức theo ngày/lịch tuần.
   /// [days] là danh sách ngày trong tuần (1=Thứ 2, ..., 7=Chủ Nhật).
@@ -244,6 +275,33 @@ class FakeNotificationService implements NotificationService {
   Future<void> cancelKnowledgeReminder(int id) async {
     scheduledKnowledgeReminders.remove(id);
     calls.add('cancelKnowledgeReminder:$id');
+  }
+
+  /// Lịch thông báo nội dung mới (GĐ17): id → thời điểm + payload đã dùng.
+  final Map<int, DateTime> scheduledContent = <int, DateTime>{};
+  final Map<int, String> contentPayloads = <int, String>{};
+  final List<int> cancelledContent = <int>[];
+
+  @override
+  Future<void> scheduleContentNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    required String payload,
+  }) async {
+    if (!at.toUtc().isAfter(DateTime.now().toUtc())) return;
+    scheduledContent[id] = at.toUtc();
+    contentPayloads[id] = payload;
+    calls.add('scheduleContentNotification:$id:$payload');
+  }
+
+  @override
+  Future<void> cancelContentNotification(int id) async {
+    scheduledContent.remove(id);
+    contentPayloads.remove(id);
+    cancelledContent.add(id);
+    calls.add('cancelContentNotification:$id');
   }
 
   @override
@@ -538,6 +596,47 @@ class LocalNotificationService implements NotificationService {
 
   @override
   Future<void> cancelKnowledgeReminder(int id) async {
+    await _plugin.cancel(id: id);
+  }
+
+  /// Channel riêng cho thông báo bài mới — tách biệt với "Nhắc ôn tập" để
+  /// người dùng phân biệt bài mới / ôn tập ở cài đặt hệ thống.
+  static const AndroidNotificationDetails _contentDetails =
+      AndroidNotificationDetails(
+        'mind_keeper_new_content',
+        'Bài học mới',
+        channelDescription: 'Thông báo nội dung mới theo kế hoạch học hằng ngày',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+
+  @override
+  Future<void> scheduleContentNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    required String payload,
+  }) async {
+    final DateTime utc = at.toUtc();
+    // Không lên lịch trong quá khứ — không bao giờ bịa thông báo giả.
+    if (!utc.isAfter(DateTime.now().toUtc())) return;
+    await _plugin.zonedSchedule(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(utc, tz.local),
+      notificationDetails: const NotificationDetails(
+        android: _contentDetails,
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: payload,
+    );
+  }
+
+  @override
+  Future<void> cancelContentNotification(int id) async {
     await _plugin.cancel(id: id);
   }
 

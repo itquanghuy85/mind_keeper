@@ -589,3 +589,110 @@ Các bước đã verify pass trên thiết bị (log maestro.log toàn bộ COM
 - Maestro flow GD22.A + GD22.B **PASS toàn bộ bước trên thiết bị thật**.
 - Không commit/push. iOS target giữ nguyên 15.5.
 
+
+## GĐ17 — Audit source trước khi sửa (2026-10-20)
+
+Trạng thái nền trước khi sửa: `git status --short` chỉ có file untracked (`ui_dump*.xml`, `commit_msg.txt`) — KHÔNG có thay đổi tracked nào đang pending. Giữ nguyên toàn bộ.
+
+### Thành phần ĐÃ CÓ, tái sử dụng được
+- **Bài viết (article)**: bảng `lessons` (dedup_key UNIQUE, migration v1→v7), `LessonRepository.create` chống sinh lại, `LessonService.generate` (AI + dedup + cache), `KnowledgeGenerationService` (sinh nhiều bài nền, infer domain từ tên/chủ đề).
+- **Thông tin nhanh (quick)**: `knowledge_items` + `KnowledgeRepository.create/findSimilar` (chống trùng theo nội dung trong topic) + `ai.draftKnowledge(sourceText, maxItems)` (AI tách đơn vị kiến thức).
+- **Thông báo cục bộ**: `NotificationService` abstraction + `LocalNotificationService` (flutter_local_notifications 22.3.2, `zonedSchedule`) + `FakeNotificationService` cho test. Payload hiện có `card:<id>` và `lesson:<id>`; xử lý mở app bằng `AppBootstrap.pendingNotificationPayload` → `TodayScreen._handlePendingNotification`.
+- **Vùng ID thông báo hiện tại**: 1001 (nhắc ôn hằng ngày), 1002–1009 (nhắc đọc kiến thức theo thứ), 700000+ (knowledge reminder), `cardId.hashCode & 0x7fffffff` (thẻ FSRS). Tránh đụng range này.
+- **Khoảng khung giờ + số lượng thông báo/ngày**: `PreferencesService.knowledgeReminder*` (start/end hour/minute, count/day, selected topics) + `KnowledgeReminderScheduler` (chia slot đều trong khoảng giờ, persist `knowledge_reminder_scheduled_ids`) — mẫu để tái dùng cho kế hoạch học.
+- **FSRS độc lập**: `ReviewSchedulerService` (fsrs 2.0.1), `review_cards`/`review_logs`, `ReviewController.rate` hủy + schedule lại theo `dueAt` mới (GĐ16, `review_notification_sync_test.dart`).
+- **Test nền**: `flutter test` 156/156 PASS; `flutter analyze` 7 info/warning pre-existing (4 deprecation `RadioListTile.groupValue` trong `notification_settings_screen.dart`, 3 trong `tool/generate_app_icon.dart`). Helpers: `test/helpers/test_db.dart` (FFI in-memory/file), `FakeNotificationService`.
+
+### Khoảng trống cần sửa (GĐ17)
+1. Chưa có cài đặt "số thông tin nhanh / bài viết mới mỗi ngày", khung giờ nhận nội dung riêng, tạm dừng kế hoạch (mới chỉ có `dailyGoal` cho ôn tập và `knowledgeReminderCount` cho snippet nhắc đọc).
+2. Chưa có bộ lập lịch nội dung mới: chọn chủ đề → luân phiên → phát hành theo ngày/khung giờ → chống trùng khi sync lại.
+3. Chưa có hàng đợi tạo trước (pre-generation) + trạng thái retryable/permanent theo loại lỗi AI.
+4. Payload `quick:<id>` chưa tồn tại (thông tin nhanh chưa mở đúng mục từ thông báo).
+5. Chưa có trạng thái hàng đợi/queue trong UI, chưa tách "nội dung mới hôm nay" với "thẻ ôn tập đến hạn" trên Today.
+
+### Rủi ro & kế hoạch kiểm thử
+- Rủi ro: migration schema (chỉ được thêm bảng, không đụng bảng cũ); trùng notification ID; AI gọi lặp tốn chi phí; đụng lịch FSRS.
+- Giảm thiểu: migration v8 chỉ `CREATE TABLE study_feed_items` + index (không ALTER bảng cũ, không DROP); ID thông báo feed dùng số **âm** (toàn bộ ID hiện có đều ≥ 0 → không thể trùng `cardId.hashCode & 0x7fffffff`); retry có backoff + phân loại lỗi; sinh nội dung CHỈ khi `ai.isRealProvider` (hoặc fake trong test); không chạm `review_cards`/`review_logs`/`ReviewSchedulerService`.
+- Kiểm thử: unit test planner (quota 0/1/nhiều, luân phiên, idempotent, đổi ngày), migration v8 (dữ liệu v7 còn nguyên), regression toàn bộ suite + `layout_overflow_test.dart`.
+
+## GĐ17 (prompt gọi là GĐ23) — HỆ THỐNG HỌC CHỦ ĐỘNG: TRIỂN KHAI + KIỂM THỬ (2026-10-20)
+
+> Tên trong code/DOCS là **GĐ17**; prompt giao việc tiêu đề GĐ23 — cùng một tính năng.
+> Phần audit ở ngay trên. Mục này: kết quả triển khai + test THẬT.
+
+### File thay đổi
+**Mới (untracked):**
+- `lib/data/models/study_feed_item.dart` — `StudyFeedKind(quick|lesson)`, `StudyFeedStatus` (queued→ready→scheduled→delivered→opened, error, cancelled), `StudyFeedItem`, `studyDayKey()`.
+- `lib/data/repositories/study_feed_repository.dart` — CRUD + chống trùng (UNIQUE `dedup_key`, UNIQUE `(day_key,kind,slot_index)`), `countActive/listActiveRange/markOpened`.
+- `lib/features/study/study_plan_service.dart` — service chính (~1050 dòng): `sync()` single-flight idempotent, `_planDays` (quota/ngày × prefetch 3 ngày), luân phiên chủ đề (con trỏ persist), sinh nội dung AI (chỉ khi `isRealProvider` hoặc `allowMockContent` test), retryable/permanent + backoff 5'→6' (lỗi quota ≥1h), lịch thông báo theo khung giờ, `_markDelivered`, `_unscheduleEverything`.
+- `lib/features/profile/study_plan_screen.dart` — UI cài đặt: quota 0–20 nhanh / 0–10 bài, khung giờ, slot tùy chỉnh, toggle thông báo bài mới, trạng thái hàng đợi (sẵn sàng/đang chuẩn bị/lỗi thử lại), tạm dừng, nút Thử lại/Đối soát.
+- Test mới: `test/data/study_feed_repository_test.dart` (15), `test/features/study_plan_service_test.dart` (8), `test/data/migration_v8_test.dart` (2).
+
+**Sửa (tracked — thay đổi sẵn từ phiên trước, được giữ nguyên + hoàn tất):**
+- `lib/data/db/schema.dart` — `currentVersion = 8`; bảng `study_feed_items` + 4 index; `_upgradeToV8` **CHỈ CREATE TABLE/INDEX** (không ALTER/DROP bảng cũ).
+- `lib/core/services/preferences_service.dart` — key `studyPlan*`: quick 5/ngày, lesson 2/ngày, cửa sổ 08:00–20:00, slots, paused, thông báo bài mới, excludedTopics, rotation, prefetchDays 3.
+- `lib/core/services/notification_service.dart` — `scheduleContentNotification(id,title,body,at,payload)` + `cancelContentNotification(id)`; kênh riêng `mind_keeper_new_content` ("Bài học mới"); `NotificationPayload` nhận `quick:<id>`.
+- `lib/core/services/app_services.dart` + `lib/core/di/app_providers.dart` — đăng ký `StudyPlanService`.
+- `lib/core/services/app_bootstrap.dart` — `unawaited(_syncStudyPlan(...))` khi mở app (đối soát) + `refreshStudyPlan()`.
+- `lib/app.dart` — route `/settings/study-plan` → `StudyPlanScreen`.
+- `lib/features/profile/profile_screen.dart` — entry "Kế hoạch học".
+- `lib/features/home/today_screen.dart` — mục "Nội dung hôm nay" tách riêng khỏi thẻ ôn tập; `_handlePendingNotification` mở `lesson:<id>`/`quick:<id>` (deep link từ notification, có `markOpened`); `card:<id>` giữ nguyên ReviewScreen.
+- `lib/features/knowledge/knowledge_generation_service.dart` — `inferDomainForTopic` tái dùng cho dedup lesson.
+- `lib/features/shell/app_shell.dart` — reload tab khi kế hoạch đổi.
+
+### Migration/schema
+- v7→v8: chỉ `CREATE TABLE study_feed_items` + `idx_feed_dedup` (UNIQUE), `idx_feed_slot` (UNIQUE), `idx_feed_day`, `idx_feed_status`. Không đụng bảng cũ → dữ liệu `lessons/knowledge_items/review_cards/review_logs` giữ nguyên.
+- Test `migration_v8_test.dart`: dựng DB v7 thủ công (topics + lessons có dữ liệu, CHƯA có bảng feed) → mở `AppDatabase` → version=8, data v7 còn nguyên, feed insert OK, UNIQUE dedup chặn trùng, FK `topic_id` còn hiệu lực.
+
+### Logic lập lịch bài mới
+1. Quota/ngày: `studyPlanQuickPerDay` (mặc định 5, cho phép 0), `studyPlanLessonPerDay` (mặc định 2); áp cho hôm nay + `prefetchDays` (3) ngày tới.
+2. Idempotent: UNIQUE `(day,kind,slot)` → chạy lại không tạo trùng; giảm quota → chuyển dòng thành `cancelled` (GIỮ làm lịch sử, hủy lịch), tăng quota → sống lại dòng cũ (dùng lại refId nếu còn).
+3. Luân phiên chủ đề: `_nextTopic` = `pool[prefs.studyPlanRotation % len]` rồi +1 — lưu trong SharedPreferences → sống sót restart; pool = topic active không bị loại.
+4. Chống trùng nội dung: quick = slot UNIQUE + `knowledge.findSimilar` (so sánh chuẩn hóa exact trong topic); lesson = dedup_key Lesson (domain|biến thể|mode|prompt v2) kiểm tra cả feed lẫn bảng `lessons` → không sinh lại bài đã có (8 biến thể tên cho mỗi chủ đề).
+5. Trạng thái: `queued` → AI lưu xong SQLite (`refId`) → `ready` → lên lịch → `scheduled` → tới giờ → `delivered` → mở → `opened`; `error` (retryable + backoff; `AiConfigurationException` = permanent; quota/backoff ≥1h, tối đa 6h; permanent chỉ chạy lại khi bấm "Thử lại"); `cancelled` khi thu hẹp kế hoạch.
+6. Sinh nội dung: CHỈ khi `ai.isRealProvider || allowMockContent` (test); ≤12 lần AI/`sync`; bỏ qua khung giờ đã qua; KHÔNG đánh dấu quota hoàn thành khi chưa lưu (countActive tính cả `error`); AI lỗi → thử tối đa 3 chủ đề/8 biến thể rồi ghi lỗi, không bịa nội dung rỗng.
+7. Tạm dừng: `sync()` thấy `paused` → `_unscheduleEverything()` (hủy lịch, dữ liệu `ready` vẫn ở SQLite).
+
+### Logic thông báo + payload
+- **ID số âm**: `-8000000 - (dayOfYear*64 + slotIndex + kindOffset)` — mọi ID hiện có ≥ 0 (`cardId.hashCode & 0x7fffffff`, 1001/1002, 700000+) nên không thể trùng; 64 mã/ngày (32 khung × 2 loại).
+- Kênh Android riêng `mind_keeper_new_content` tách khỏi "Nhắc ôn tập".
+- Payload `quick:<knowledgeItemId>` / `lesson:<lessonId>` — đúng format `NotificationPayload.parse` có sẵn; TodayScreen mở `KnowledgeDetailScreen`/`LessonReaderScreen` + `markOpened`. FSRS vẫn `card:<id>`.
+- Khung giờ: slot tùy chỉnh `HH:mm` (trùng khung → cộng dồn +10'/vòng) HOẶC chia đều start→end theo quota → mỗi dòng 1 notification, khác ID, không gửi dồn một lúc.
+- Tắt toggle / tạm dừng / quyền hệ thống tắt → hủy lịch bài mới, GIỮ dữ liệu; `areNotificationsEnabled` = false/null → không crash.
+- Đổi giờ/quota → `sync()` lại chỉ đụng lịch bài mới; **không đọc/ghi `dueAt` FSRS**.
+
+### FSRS độc lập — XÁC NHẬN
+- `StudyPlanService` không import `ReviewSchedulerService`, không chạm `review_cards`/`review_logs`. Test hồi quy GĐ16 (`review_notification_sync_test`), `review_scheduler_test`, lesson/quiz đều pass trong 181/181.
+
+### Test đã chạy (kết quả THẬT — phân loại)
+- **PASS** `flutter test` → **181/181 ALL TESTS PASSED** (156 nền + 25 mới):
+  - `study_feed_repository_test.dart` (15): insert/getById/update, dedup theo `dedup_key` + `(day,kind,slot)`, `existsDedupKey`, `listByDayKind`/`listActiveRange` (loại cancelled)/`countActive`/`listByStatus`, `markOpened`, `isActive`/`hasContent`, `studyDayKey`.
+  - `study_plan_service_test.dart` (8): quota 2+1 sinh xong (base 05:00, mọi slot tương lai), quota 0 không tạo gì, **con trỏ luân phiên persist qua restart** (4 → tăng quota → 8), idempotent chạy lại không trùng, **ID thông báo âm + không trùng + không nhân bản khi sync lại**, **tắt thông báo hủy lịch nhưng GIỮ dữ liệu (refId còn nguyên)**, AI chưa cấu hình (`allowMockContent=false`) không sinh/`generated=0`, payload luôn `quick:`/`lesson:` kèm id. Dùng `_FakeAiProvider` (5 draft nội dung khác nhau, lesson ≥80 từ) — không phụ thuộc giờ thật nhờ `sync(now: 05:00)`.
+  - `migration_v8_test.dart` (2): bảng + index feed ở DB mới; v7→v8 giữ dữ liệu + UNIQUE/FK hoạt động.
+  - `layout_overflow_test.dart`: GIỮ NGUYÊN → vẫn PASS toàn bộ (không xóa để làm xanh suite).
+- **PASS** `flutter analyze` → 7 issues, **0 issue mới** (4 deprecation `RadioListTile.groupValue` + 3 `tool/generate_app_icon.dart` — đều pre-existing).
+- **PASS** `flutter build apk --debug` → `build\app\outputs\flutter-apk\app-debug.apk` (233.670.631 bytes, 20:40 20/10/2026). Cảnh báo AGP/KGP/Kotlin "sắp bị bỏ" là pre-existing, không chặn build.
+- **NOT TESTED** — cài APK lên thiết bị + thao tác tay màn "Kế hoạch học" (chưa chạy phiên này).
+- **BLOCKED** — iOS build cần macOS/Xcode. Giữ nguyên Deployment Target 15.5; không sửa `GeneratedPluginRegistrant.m`. Hướng dẫn khi có Mac: `flutter build ios --no-codesign` sau `pod install`.
+
+### Rủi ro / giới hạn còn lại
+1. Nền (background/terminated): nội dung chỉ sinh khi app đang mở hoặc nền được OS cấp (đặc biệt iOS) — nếu app đóng + hết dự phòng → không có bài mới đúng giờ; **không gửi notification giả** (đã thiết kế: chỉ schedule nội dung `ready` có `refId`). Android dùng `inexactAllowWhileIdle` → OS có thể trì hoãn, KHÔNG khẳng định hiển thị tuyệt đối.
+2. Giới hạn pending notification: Android ~500 OK (≤192 lịch với prefetch 3); **iOS giới hạn 64/cứng** — quota lớn × prefetch 3 ngày có thể vượt → cần kiểm chứng trên Mac (chưa làm).
+3. `ui_dump*.xml`, `commit_msg.txt` là artifact debug — để nguyên untracked, không commit.
+
+### Việc chưa làm
+- Chưa viết flow Maestro cho GĐ17; chưa nghiệm thu tay trên CPH2203 với APK mới.
+- Chưa có widget test cho `StudyPlanScreen` (mới unit test repository/service/migration).
+- **Không commit/push** (đúng ràng buộc prompt).
+
+### Đối chiếu 10 điều kiện hoàn thành
+1. ✅ Đặt số thông tin nhanh/ngày (0–20) + bài viết/ngày (0–10) — StudyPlanScreen.
+2. ✅ Nhiều chủ đề theo dõi + luân phiên persist (test 4→8).
+3. ✅ Tạo trước + lưu SQLite trước khi tới giờ (test `refId != null`).
+4. ✅ Thông báo chia khung giờ (slot tùy chỉnh hoặc chia đều; test ID + payload).
+5. ✅ Payload mở đúng nội dung (unit test prefix + handler thật `quick:`/`lesson:`).
+6. ✅ FSRS độc lập + regression 181/181.
+7. ✅ Migration chỉ thêm bảng, dữ liệu nguyên (test v7→v8).
+8. ✅ Analyze 0 issue mới + build APK OK + test trung thực 181/181.
+9. ✅ DOCS cập nhật (mục này).
+10. ✅ Không commit/push; không đụng iOS 15.5, FSRS, cấu hình AI/API key.

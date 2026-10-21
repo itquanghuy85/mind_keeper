@@ -32,6 +32,114 @@ Future<AppServices> buildServices() async {
 }
 
 void main() {
+  group('AiLessonDraft.fromMap — contract JSON (GĐ17)', () {
+    test('đọc được camelCase (đúng contract prompt của HttpAIProvider)', () {
+      final AiLessonDraft draft = AiLessonDraft.fromMap(<String, Object?>{
+        'title': 'Bài học về Vũ trụ',
+        'learningObjectives': <String>['Mục tiêu 1', 'Mục tiêu 2'],
+        'introduction': 'Mở đầu bài học.',
+        'concepts': <Map<String, Object?>>[
+          <String, Object?>{'name': 'Khái niệm', 'explanation': 'Giải thích'},
+        ],
+        'sections': <Map<String, Object?>>[
+          <String, Object?>{
+            'heading': 'Phần 1',
+            'body': 'Nội dung phần 1.',
+          },
+        ],
+        'keyPoints': <String>['Ý chính 1', 'Ý chính 2'],
+        'examples': <String>['Ví dụ 1'],
+        'commonMistakes': <String>['Sai lầm 1'],
+        'summary': 'Tóm tắt bài học.',
+        'questions': <Map<String, Object?>>[
+          <String, Object?>{'question': 'Câu hỏi?', 'answer': 'Đáp án.'},
+        ],
+        'sources': <Map<String, Object?>>[
+          <String, Object?>{'title': 'Nguồn', 'url': 'https://example.com'},
+        ],
+        'medical': false,
+      });
+
+      expect(draft.title, 'Bài học về Vũ trụ');
+      expect(draft.learningObjectives, <String>['Mục tiêu 1', 'Mục tiêu 2']);
+      expect(draft.keyPoints, <String>['Ý chính 1', 'Ý chính 2']);
+      expect(draft.commonMistakes, <String>['Sai lầm 1']);
+      expect(draft.examples, <String>['Ví dụ 1']);
+      expect(draft.concepts, hasLength(1));
+      expect(draft.sections, hasLength(1));
+      expect(draft.questions, hasLength(1));
+      expect(draft.sources, hasLength(1));
+    });
+
+    test('đọc được snake_case (provider trả về kiểu cũ)', () {
+      final AiLessonDraft draft = AiLessonDraft.fromMap(<String, Object?>{
+        'title': 'Bài học về Vũ trụ',
+        'learning_objectives': <String>['Mục tiêu 1'],
+        'introduction': 'Mở đầu bài học.',
+        'sections': <Map<String, Object?>>[
+          <String, Object?>{
+            'heading': 'Phần 1',
+            'body': 'Nội dung phần 1.',
+          },
+        ],
+        'key_points': <String>['Ý chính 1'],
+        'common_mistakes': <String>['Sai lầm 1'],
+        'summary': 'Tóm tắt.',
+      });
+
+      expect(draft.learningObjectives, <String>['Mục tiêu 1']);
+      expect(draft.keyPoints, <String>['Ý chính 1']);
+      expect(draft.commonMistakes, <String>['Sai lầm 1']);
+    });
+
+    test('camelCase được ưu tiên khi có cả hai kiểu', () {
+      final AiLessonDraft draft = AiLessonDraft.fromMap(<String, Object?>{
+        'title': 'T',
+        'introduction': 'Mở đầu.',
+        'sections': <Map<String, Object?>>[
+          <String, Object?>{'heading': 'H', 'body': 'B'},
+        ],
+        'learningObjectives': <String>['camel'],
+        'learning_objectives': <String>['snake'],
+        'keyPoints': <String>['camel'],
+        'key_points': <String>['snake'],
+      });
+      expect(draft.learningObjectives, <String>['camel']);
+      expect(draft.keyPoints, <String>['camel']);
+    });
+
+    test('thiếu title/introduction → FormatException', () {
+      expect(
+        () => AiLessonDraft.fromMap(<String, Object?>{
+          'introduction': 'Mở đầu.',
+          'sections': <Map<String, Object?>>[
+            <String, Object?>{'heading': 'H', 'body': 'B'},
+          ],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => AiLessonDraft.fromMap(<String, Object?>{
+          'title': 'T',
+          'sections': <Map<String, Object?>>[
+            <String, Object?>{'heading': 'H', 'body': 'B'},
+          ],
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('không có sections → FormatException (bài học rỗng)', () {
+      expect(
+        () => AiLessonDraft.fromMap(<String, Object?>{
+          'title': 'T',
+          'introduction': 'Mở đầu.',
+        }),
+        throwsFormatException,
+      );
+    });
+  });
+
   group('AiService sinh bài học (GĐ13)', () {
     test('generateLesson theo schema, cache giảm call thứ hai', () async {
       final AiService ai = AiService(

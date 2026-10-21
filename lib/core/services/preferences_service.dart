@@ -47,6 +47,22 @@ class PreferencesService extends ChangeNotifier {
   static const String _keyKnowledgeReminderSelectedTopics = 'knowledge_reminder_selected_topics';
   static const String _keyKnowledgeReminderScheduledIds = 'knowledge_reminder_scheduled_ids';
 
+  // GĐ17 — Kế hoạch học chủ động (hàng ngày)
+  static const String _keyStudyPlanPaused = 'study_plan_paused';
+  static const String _keyStudyPlanQuickPerDay = 'study_plan_quick_per_day';
+  static const String _keyStudyPlanLessonPerDay = 'study_plan_lesson_per_day';
+  static const String _keyStudyPlanStartHour = 'study_plan_start_hour';
+  static const String _keyStudyPlanStartMinute = 'study_plan_start_minute';
+  static const String _keyStudyPlanEndHour = 'study_plan_end_hour';
+  static const String _keyStudyPlanEndMinute = 'study_plan_end_minute';
+  static const String _keyStudyPlanSlots = 'study_plan_slots';
+  static const String _keyStudyPlanNewContentNotifications =
+      'study_plan_new_content_notifications';
+  static const String _keyStudyPlanExcludedTopics =
+      'study_plan_excluded_topics';
+  static const String _keyStudyPlanRotation = 'study_plan_rotation';
+  static const String _keyStudyPlanPrefetchDays = 'study_plan_prefetch_days';
+
   // Fallback khi prefs chưa cấu hình — inject lúc build, không nhúng trong source.
   // DeepSeek defaults
   static const String _envDeepSeekApiKey = String.fromEnvironment(
@@ -309,6 +325,102 @@ class PreferencesService extends ChangeNotifier {
       _keyKnowledgeReminderScheduledIds,
       value.map((int e) => e.toString()).toList(),
     );
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------
+  // GĐ17 — Kế hoạch học chủ động
+  // ---------------------------------------------------------------------
+
+  /// Tạm dừng kế hoạch (giữ nguyên lịch sử + hàng đợi, chỉ ngừng phát hành).
+  bool get studyPlanPaused => _prefs.getBool(_keyStudyPlanPaused) ?? false;
+
+  /// Số thông tin nhanh mới mỗi ngày (0 = không phát hành loại này).
+  int get studyPlanQuickPerDay =>
+      _prefs.getInt(_keyStudyPlanQuickPerDay) ?? 5;
+
+  /// Số bài viết mới mỗi ngày (0 = không phát hành loại này).
+  int get studyPlanLessonPerDay =>
+      _prefs.getInt(_keyStudyPlanLessonPerDay) ?? 2;
+
+  int get studyPlanStartHour => _prefs.getInt(_keyStudyPlanStartHour) ?? 8;
+
+  int get studyPlanStartMinute => _prefs.getInt(_keyStudyPlanStartMinute) ?? 0;
+
+  int get studyPlanEndHour => _prefs.getInt(_keyStudyPlanEndHour) ?? 20;
+
+  int get studyPlanEndMinute => _prefs.getInt(_keyStudyPlanEndMinute) ?? 0;
+
+  /// Khung giờ tùy chỉnh `HH:mm`. Rỗng = chia đều trong khoảng bắt đầu–kết thúc.
+  List<String> get studyPlanSlots =>
+      _prefs.getStringList(_keyStudyPlanSlots) ?? const <String>[];
+
+  /// Thông báo bài mới — độc lập với thông báo ôn tập.
+  bool get studyPlanNewContentNotifications =>
+      _prefs.getBool(_keyStudyPlanNewContentNotifications) ?? true;
+
+  /// Chủ đề bị LOẠI khỏi kế hoạch (rỗng = theo dõi tất cả chủ đề đang bật).
+  /// Tách riêng list "loại" để người dùng bật/tắt từng chủ đề và vẫn theo
+  /// dõi được chủ đề tạo sau.
+  List<String> get studyPlanExcludedTopics =>
+      _prefs.getStringList(_keyStudyPlanExcludedTopics) ?? const <String>[];
+
+  /// Con trỏ luân phiên giữa các chủ đề — persist qua restart.
+  int get studyPlanRotation => _prefs.getInt(_keyStudyPlanRotation) ?? 0;
+
+  /// Số ngày tạo trước nội dung (mục tiêu ban đầu 3).
+  int get studyPlanPrefetchDays => _prefs.getInt(_keyStudyPlanPrefetchDays) ?? 3;
+
+  Future<void> setStudyPlanPaused(bool value) async {
+    await _prefs.setBool(_keyStudyPlanPaused, value);
+    notifyListeners();
+  }
+
+  Future<void> setStudyPlanQuickPerDay(int value) async {
+    await _prefs.setInt(_keyStudyPlanQuickPerDay, value.clamp(0, 20));
+    notifyListeners();
+  }
+
+  Future<void> setStudyPlanLessonPerDay(int value) async {
+    await _prefs.setInt(_keyStudyPlanLessonPerDay, value.clamp(0, 10));
+    notifyListeners();
+  }
+
+  Future<void> setStudyPlanWindow({
+    required int startHour,
+    required int startMinute,
+    required int endHour,
+    required int endMinute,
+  }) async {
+    await _prefs.setInt(_keyStudyPlanStartHour, startHour.clamp(0, 23));
+    await _prefs.setInt(_keyStudyPlanStartMinute, startMinute.clamp(0, 59));
+    await _prefs.setInt(_keyStudyPlanEndHour, endHour.clamp(0, 23));
+    await _prefs.setInt(_keyStudyPlanEndMinute, endMinute.clamp(0, 59));
+    notifyListeners();
+  }
+
+  Future<void> setStudyPlanSlots(List<String> value) async {
+    await _prefs.setStringList(_keyStudyPlanSlots, value);
+    notifyListeners();
+  }
+
+  Future<void> setStudyPlanNewContentNotifications(bool value) async {
+    await _prefs.setBool(_keyStudyPlanNewContentNotifications, value);
+    notifyListeners();
+  }
+
+  Future<void> setStudyPlanExcludedTopics(List<String> value) async {
+    await _prefs.setStringList(_keyStudyPlanExcludedTopics, value);
+    notifyListeners();
+  }
+
+  Future<void> setStudyPlanRotation(int value) async {
+    await _prefs.setInt(_keyStudyPlanRotation, value < 0 ? 0 : value);
+    notifyListeners();
+  }
+
+  Future<void> setStudyPlanPrefetchDays(int value) async {
+    await _prefs.setInt(_keyStudyPlanPrefetchDays, value.clamp(1, 14));
     notifyListeners();
   }
 

@@ -11,6 +11,7 @@ import '../../features/ai/ai_service.dart';
 import '../../features/discover/discovery_service.dart';
 import '../../features/knowledge/knowledge_generation_service.dart';
 import '../../features/lessons/lesson_service.dart';
+import '../../features/study/study_plan_service.dart';
 import '../services/app_services.dart';
 import '../services/preferences_service.dart';
 import '../services/review_scheduler_service.dart';
@@ -36,5 +37,6 @@ List<SingleChildWidget> buildAppProviders(AppServices services) {
     Provider<KnowledgeGenerationService>.value(
       value: services.knowledgeGeneration,
     ),
+    Provider<StudyPlanService>.value(value: services.studyPlan),
   ];
 }

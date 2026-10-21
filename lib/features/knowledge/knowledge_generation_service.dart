@@ -111,7 +111,7 @@ class KnowledgeGenerationService {
   }) async {
     try {
       // Phân tích chủ đề để xác định lĩnh vực
-      final String domainId = _inferDomain(topic.category, topic.name);
+      final String domainId = inferDomainForTopic(topic.category, topic.name);
       final LearningDomain? domain = LearningDomains.byId(domainId);
       final LearningDomain effectiveDomain =
           domain ?? LearningDomains.all.first;
@@ -271,7 +271,7 @@ class KnowledgeGenerationService {
   }
 
   /// Suy ra domain từ category và tên chủ đề.
-  String _inferDomain(String? category, String name) {
+  static String inferDomainForTopic(String? category, String name) {
     final String searchText = '${category ?? ''} $name'.toLowerCase();
 
     // Map từ khóa sang domain ID

@@ -14,7 +14,7 @@ class SchemaMigration {
 
 abstract final class DbSchema {
   /// Phiên bản schema hiện tại của ứng dụng.
-  static const int currentVersion = 7;
+  static const int currentVersion = 8;
 
   static const String topics = '''
 CREATE TABLE topics (
@@ -149,6 +149,38 @@ CREATE TABLE knowledge_reminder_history (
   created_at INTEGER NOT NULL
 )''';
 
+  /// Hàng đợi kế hoạch học chủ động (GĐ17): một dòng = một nội dung mới
+  /// dự kiến phát hành trong một khung giờ của một ngày địa phương.
+  /// KHÔNG chứa nội dung bài — nội dung thật vẫn nằm trong `lessons` /
+  /// `knowledge_items` (qua `ref_id`), nên xóa/khôi phục hàng đợi không mất
+  /// dữ liệu đã học.
+  static const String studyFeedItems = '''
+CREATE TABLE study_feed_items (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  topic_id TEXT REFERENCES topics(id) ON DELETE SET NULL,
+  topic_name TEXT NOT NULL DEFAULT '',
+  day_key TEXT NOT NULL,
+  slot_index INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'queued',
+  ref_id TEXT,
+  dedup_key TEXT NOT NULL,
+  scheduled_at INTEGER,
+  error TEXT,
+  retryable INTEGER NOT NULL DEFAULT 0,
+  next_retry_at INTEGER,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)''';
+
+  static const List<String> studyFeedIndexes = <String>[
+    'CREATE UNIQUE INDEX idx_feed_dedup ON study_feed_items(dedup_key)',
+    'CREATE UNIQUE INDEX idx_feed_slot ON study_feed_items(day_key, kind, slot_index)',
+    'CREATE INDEX idx_feed_day ON study_feed_items(day_key)',
+    'CREATE INDEX idx_feed_status ON study_feed_items(status)',
+  ];
+
   static const List<String> lessonIndexes = <String>[
     'CREATE UNIQUE INDEX idx_lessons_dedup ON lessons(dedup_key)',
     'CREATE INDEX idx_lessons_domain ON lessons(domain_id)',
@@ -166,6 +198,7 @@ CREATE TABLE knowledge_reminder_history (
     'CREATE INDEX idx_logs_time ON review_logs(reviewed_at)',
     'CREATE INDEX idx_topics_name ON topics(name)',
     ...lessonIndexes,
+    ...studyFeedIndexes,
   ];
 
   static const List<String> tables = <String>[
@@ -177,6 +210,7 @@ CREATE TABLE knowledge_reminder_history (
     lessons,
     knowledgeGenerationTasks,
     knowledgeReminderHistory,
+    studyFeedItems,
   ];
 
   /// Dãy migration chính thức của ứng dụng.
@@ -187,6 +221,7 @@ CREATE TABLE knowledge_reminder_history (
     SchemaMigration(fromVersion: 4, toVersion: 5, upgrade: _upgradeToV5),
     SchemaMigration(fromVersion: 5, toVersion: 6, upgrade: _upgradeToV6),
     SchemaMigration(fromVersion: 6, toVersion: 7, upgrade: _upgradeToV7),
+    SchemaMigration(fromVersion: 7, toVersion: 8, upgrade: _upgradeToV8),
   ];
 
   static Future<void> _upgradeToV2(DatabaseExecutor db) async {
@@ -237,5 +272,15 @@ CREATE TABLE knowledge_reminder_history (
 
   static Future<void> _upgradeToV7(DatabaseExecutor db) async {
     await db.execute(knowledgeReminderHistory);
+  }
+
+  /// GĐ17: chỉ THÊM bảng hàng đợi kế hoạch học + index.
+  /// Không ALTER/DROP bảng cũ, không sửa migration đã phát hành — dữ liệu
+  /// lessons/knowledge_items/review_cards/review_logs giữ nguyên.
+  static Future<void> _upgradeToV8(DatabaseExecutor db) async {
+    await db.execute(studyFeedItems);
+    for (final String statement in studyFeedIndexes) {
+      await db.execute(statement);
+    }
   }
 }

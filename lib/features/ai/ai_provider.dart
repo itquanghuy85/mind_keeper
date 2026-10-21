@@ -244,17 +244,53 @@ class AiLessonDraft {
     return total;
   }
 
+  /// Đọc một trường văn bản, chấp nhận CẢ camelCase lẫn snake_case.
+  ///
+  /// Lý do: prompt sinh bài học trong `HttpAIProvider` yêu cầu AI trả về
+  /// **camelCase** (`learningObjectives`, `keyPoints`, `commonMistakes`) nhưng
+  /// các provider/model khác hoặc bản cache cũ có thể trả **snake_case**
+  /// (`learning_objectives`, `key_points`, `common_mistakes`). Nếu chỉ đọc một
+  /// kiểu, nội dung sẽ bị mất âm thầm (mục tiêu học/ý chính/sai lầm rỗng).
+  /// Ưu tiên camelCase (đúng contract prompt), fallback snake_case.
+  static String _pick(
+    Map<String, Object?> map,
+    List<String> keys, {
+    String fallback = '',
+  }) {
+    for (final String key in keys) {
+      final Object? value = map[key];
+      if (value == null) continue;
+      final String text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return fallback;
+  }
+
+  /// Đọc một danh sách văn bản, chấp nhận cả camelCase lẫn snake_case.
+  static List<String> _pickTextList(
+    Map<String, Object?> map,
+    List<String> keys,
+  ) {
+    for (final String key in keys) {
+      if (!map.containsKey(key)) continue;
+      final List<String> list = _textList(map[key]);
+      if (list.isNotEmpty) return list;
+    }
+    return const <String>[];
+  }
+
   factory AiLessonDraft.fromMap(
     Map<String, Object?> map, {
     int maxQuestions = 5,
   }) {
-    final String title = (map['title'] ?? '').toString().trim();
-    final String introduction = (map['introduction'] ?? '').toString().trim();
+    final String title = _pick(map, <String>['title']);
+    final String introduction = _pick(map, <String>['introduction']);
     if (title.isEmpty || introduction.isEmpty) {
       throw const FormatException('Thiếu title hoặc introduction');
     }
-    final List<String> learningObjectives = _textList(
-      map['learning_objectives'],
+    final List<String> learningObjectives = _pickTextList(
+      map,
+      <String>['learningObjectives', 'learning_objectives'],
     );
     final List<AiLessonConcept> concepts = <AiLessonConcept>[];
     for (final Object? item
@@ -306,13 +342,16 @@ class AiLessonDraft {
       introduction: introduction,
       concepts: concepts,
       sections: sections,
-      keyPoints: _textList(map['key_points']),
-      examples: _textList(map['examples']),
-      commonMistakes: _textList(map['common_mistakes']),
-      summary: (map['summary'] ?? '').toString().trim(),
+      keyPoints: _pickTextList(map, <String>['keyPoints', 'key_points']),
+      examples: _pickTextList(map, <String>['examples']),
+      commonMistakes: _pickTextList(
+        map,
+        <String>['commonMistakes', 'common_mistakes'],
+      ),
+      summary: _pick(map, <String>['summary']),
       questions: questions,
       sources: sources,
-      medical: map['medical'] == true,
+      medical: map['medical'] == true || map['is_medical'] == true,
     );
   }
 
