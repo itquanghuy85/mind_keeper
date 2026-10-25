@@ -55,6 +55,9 @@ abstract final class AppRoutes {
   static const String home = '/';
   static const String discover = '/discover';
   static const String review = '/review';
+  static const String reviewSession = '/review/session';
+  static const String articleDetail = '/article/detail';
+  static const String quickInfoDetail = '/quick-info/detail';
   static const String createTopic = '/topics/create';
   static const String topicDetail = '/topics/detail';
   static const String knowledgeEditor = '/knowledge/editor';
@@ -83,6 +86,18 @@ Route<dynamic>? buildAppRoute(RouteSettings settings) {
     AppRoutes.review => MaterialPageRoute<void>(
       settings: settings,
       builder: (_) => ReviewScreen(targetCardId: args is String ? args : null),
+    ),
+    AppRoutes.reviewSession => MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => const ReviewScreen(),
+    ),
+    AppRoutes.articleDetail => MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => KnowledgeDetailScreen(itemId: args is String ? args : ''),
+    ),
+    AppRoutes.quickInfoDetail => MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => KnowledgeDetailScreen(itemId: args is String ? args : ''),
     ),
     AppRoutes.createTopic => MaterialPageRoute<void>(
       settings: settings,

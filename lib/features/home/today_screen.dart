@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/services/app_bootstrap.dart';
 import '../../core/services/app_services.dart';
-import '../../core/services/notification_service.dart';
+import '../../core/services/notification_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -163,37 +163,12 @@ class _TodayScreenState extends State<TodayScreen> {
     AppBootstrap.instance.pendingNotificationPayload = null;
     _handledNotification = true;
     final AppServices services = context.read<AppServices>();
-    if (payload.kind == NotificationPayload.kindCard &&
-        payload.cardId != null) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ReviewScreen(targetCardId: payload.cardId),
-        ),
-      );
-    } else if (payload.kind == NotificationPayload.kindLesson &&
-        payload.lessonId != null) {
-      await services.studyPlan.markOpened(payload.lessonId!);
-      if (!mounted) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => LessonReaderScreen(lessonId: payload.lessonId!),
-        ),
-      );
-    } else if (payload.kind == NotificationPayload.kindQuick &&
-        payload.knowledgeItemId != null) {
-      await services.studyPlan.markOpened(payload.knowledgeItemId!);
-      if (!mounted) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) =>
-              KnowledgeDetailScreen(itemId: payload.knowledgeItemId!),
-        ),
-      );
-    } else {
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const ReviewScreen()));
-    }
+    await NotificationRouter.handle(
+      context: context,
+      services: services,
+      payload: payload,
+      isColdStart: true,
+    );
     if (mounted) await _load();
   }
 

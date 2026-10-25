@@ -120,7 +120,7 @@ void main() {
       await tester.tap(entry.first);
       await _settleReal(tester);
 
-      expect(find.byType(KnowledgeLibraryScreen), findsOneWidget);
+      expect(find.byType(LearnedLibraryScreen), findsOneWidget);
 
       await _dispose(tester, services);
     });

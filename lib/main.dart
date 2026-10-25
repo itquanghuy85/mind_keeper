@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'app.dart';
 import 'core/services/app_bootstrap.dart';
 import 'core/services/app_services.dart';
+import 'core/services/firebase_messaging_service.dart';
+import 'core/services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,5 +14,12 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
   final AppServices services = await AppBootstrap.instance.initialize();
+  await FirebaseMessagingService.instance.initialize(
+    services: services,
+    onNotificationOpened: (NotificationPayload payload) {
+      AppBootstrap.instance.pendingNotificationPayload = payload;
+      AppBootstrap.instance.onNotificationOpened?.call(payload);
+    },
+  );
   runApp(MindKeeperApp(services: services));
 }

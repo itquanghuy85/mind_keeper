@@ -139,21 +139,21 @@ void main() {
   group('Notification payload (GĐ7)', () {
     test('parse card payload → đúng cardId', () {
       final NotificationPayload p = NotificationPayload.parse('card:rc_123');
-      expect(p.kind, NotificationPayload.kindCard);
+      expect(p.type, NotificationPayload.kindCard);
       expect(p.cardId, 'rc_123');
     });
 
     test('parse review payload / null / lạ', () {
       expect(
-        NotificationPayload.parse('review').kind,
+        NotificationPayload.parse('review').type,
         NotificationPayload.kindReview,
       );
       expect(
-        NotificationPayload.parse(null).kind,
+        NotificationPayload.parse(null).type,
         NotificationPayload.kindReview,
       );
       expect(
-        NotificationPayload.parse('something_else').kind,
+        NotificationPayload.parse('something_else').type,
         NotificationPayload.kindReview,
       );
     });

@@ -71,7 +71,7 @@ void main() {
       for (final String? raw in inputs) {
         final NotificationPayload p = NotificationPayload.parse(raw);
         expect(
-          p.kind,
+          p.type,
           anyOf(NotificationPayload.kindCard, NotificationPayload.kindReview),
         );
       }
@@ -80,13 +80,13 @@ void main() {
     test("card: (thiếu id) → review; card:: → id ':' — không crash", () {
       // Payload thiếu cardId rơi về review thay vì mở thẻ rỗng.
       final NotificationPayload empty = NotificationPayload.parse('card:');
-      expect(empty.kind, NotificationPayload.kindReview);
+      expect(empty.type, NotificationPayload.kindReview);
       expect(empty.cardId, isNull);
 
       // 'card::' → cardId ':' — hợp lệ theo format, TodayScreen chỉ cần
       // id khác null; ReviewScreen hiển thị "không tồn tại" nếu id lạ.
       final NotificationPayload doubled = NotificationPayload.parse('card::');
-      expect(doubled.kind, NotificationPayload.kindCard);
+      expect(doubled.type, NotificationPayload.kindCard);
       expect(doubled.cardId, ':');
     });
   });

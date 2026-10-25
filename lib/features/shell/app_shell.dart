@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/services/app_bootstrap.dart';
+import '../../core/services/notification_router.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/widgets/app_icon_badge.dart';
 import '../../features/home/today_screen.dart';
@@ -35,22 +37,60 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Đăng ký handler điều hướng trực tiếp khi người dùng chạm thông báo
+    // (foreground / warm start) — không chờ resume hay TodayScreen.
+    AppBootstrap.instance.onNotificationOpened = _handleNotificationOpened;
+    // Xử lý payload cold-start sau frame đầu tiên (navigator đã sẵn sàng).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handlePendingPayload());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (AppBootstrap.instance.onNotificationOpened == _handleNotificationOpened) {
+      AppBootstrap.instance.onNotificationOpened = null;
+    }
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
-    // Mở lại app → đối soát kế hoạch học: sinh nốt nội dung còn thiếu và
-    // lên lịch bài mới (idempotent, chạy nền không chặn UI).
+    // Mở lại app → đối soát kế hoạch học và xử lý payload thông báo nếu có.
     if (AppBootstrap.instance.isReady) {
       unawaited(AppBootstrap.instance.refreshStudyPlan());
     }
+    _handlePendingPayload();
+  }
+
+  /// Xử lý payload thông báo chờ (cold start hoặc warm start resume).
+  /// Đảm bảo chỉ xử lý một lần cho mỗi payload.
+  Future<void> _handlePendingPayload() async {
+    final payload = AppBootstrap.instance.pendingNotificationPayload;
+    if (payload == null || !mounted) return;
+    AppBootstrap.instance.pendingNotificationPayload = null;
+    final services = AppBootstrap.instance.services;
+    await NotificationRouter.handle(
+      context: context,
+      services: services,
+      payload: payload,
+      isColdStart: false,
+    );
+  }
+
+  /// Handler trực tiếp cho chạm thông báo khi app đang foreground/warm.
+  void _handleNotificationOpened(NotificationPayload payload) {
+    if (!mounted) return;
+    AppBootstrap.instance.pendingNotificationPayload = null;
+    final services = AppBootstrap.instance.services;
+    unawaited(
+      NotificationRouter.handle(
+        context: context,
+        services: services,
+        payload: payload,
+        isColdStart: false,
+      ),
+    );
   }
 
   void _select(int index) {

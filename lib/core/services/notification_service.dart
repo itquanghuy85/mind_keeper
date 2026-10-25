@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -6,54 +7,169 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 /// Payload mở khi người dùng chạm thông báo.
-/// - `card:<cardId>` → mở đúng ReviewCard
-/// - `lesson:<lessonId>` → mở đúng bài học
-/// - `quick:<knowledgeItemId>` → mở đúng thông tin nhanh (GĐ17)
-/// - `review` → mở phiên ôn tập chung
+///
+/// Định dạng mới (JSON, từ FCM / payload mới):
+///   {"type":"article","id":"<knowledge_item_id>"}
+///   {"type":"quick_info","id":"<knowledge_item_id>"}
+///   {"type":"review_due"}
+///   {"type":"card","id":"<card_id>"}
+///   {"type":"lesson","id":"<lesson_id>"}
+///   {"type":"review"}
+///
+/// Định dạng legacy (chuỗi, tương thích ngược):
+///   card:<cardId> → mở đúng ReviewCard
+///   lesson:<lessonId> → mở đúng bài học
+///   quick:<knowledgeItemId> → mở đúng thông tin nhanh (GĐ17)
+///   review → mở phiên ôn tập chung
 class NotificationPayload {
-  const NotificationPayload._({
+  const NotificationPayload({
+    this.type = kindReview,
+    this.id,
     this.cardId,
     this.lessonId,
     this.knowledgeItemId,
-    this.kind = kindReview,
   });
 
+  /// Loại nội dung: article | quick_info | review_due | card | lesson | quick | review
+  final String type;
+
+  /// ID đối tượng (bài viết / thẻ / bài học) khi type có id kèm theo.
+  final String? id;
+
+  /// Trường tương thích ngược với định dạng legacy.
   final String? cardId;
+
+  /// Trường tương thích ngược với định dạng legacy.
   final String? lessonId;
+
+  /// Trường tương thích ngược với định dạng legacy.
   final String? knowledgeItemId;
-  final String kind;
 
   static const String kindCard = 'card';
   static const String kindReview = 'review';
   static const String kindLesson = 'lesson';
   static const String kindQuick = 'quick';
+  static const String kindArticle = 'article';
+  static const String kindQuickInfo = 'quick_info';
+  static const String kindReviewDue = 'review_due';
 
+  /// Parse payload từ chuỗi. Thử JSON trước (định dạng mới), rồi legacy.
   static NotificationPayload parse(String? raw) {
     if (raw == null || raw.isEmpty) {
-      return const NotificationPayload._(kind: kindReview);
+      return const NotificationPayload(type: kindReview);
     }
+
+    // Thử parse JSON (định dạng mới từ FCM).
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return fromJson(decoded);
+      }
+    } catch (_) {
+      // Không phải JSON — tiếp tục định dạng legacy.
+    }
+
+    // Legacy: card:<id>, lesson:<id>, quick:<id>, review
     if (raw.startsWith('$kindCard:')) {
       final String id = raw.substring(kindCard.length + 1);
-      // Payload thiếu cardId (vd. 'card:') là không hợp lệ — bỏ qua review
-      // thay vì mở màn hình sai.
       if (id.isNotEmpty) {
-        return NotificationPayload._(kind: kindCard, cardId: id);
+        return NotificationPayload(type: kindCard, id: id, cardId: id);
       }
     }
     if (raw.startsWith('$kindLesson:')) {
       final String id = raw.substring(kindLesson.length + 1);
       if (id.isNotEmpty) {
-        return NotificationPayload._(kind: kindLesson, lessonId: id);
+        return NotificationPayload(type: kindLesson, id: id, lessonId: id);
       }
     }
     if (raw.startsWith('$kindQuick:')) {
       final String id = raw.substring(kindQuick.length + 1);
       if (id.isNotEmpty) {
-        return NotificationPayload._(kind: kindQuick, knowledgeItemId: id);
+        return NotificationPayload(
+          type: kindQuick,
+          id: id,
+          knowledgeItemId: id,
+        );
       }
     }
-    return const NotificationPayload._(kind: kindReview);
+    return const NotificationPayload(type: kindReview);
   }
+
+  /// Parse từ Map JSON (vd. {"type":"article","id":"abc"}).
+  static NotificationPayload fromJson(Map<String, dynamic> json) {
+    final String type = (json['type'] ?? kindReview).toString();
+    final String? id = json['id']?.toString();
+    switch (type) {
+      case kindArticle:
+        return NotificationPayload(
+          type: type,
+          id: id,
+          knowledgeItemId: id,
+        );
+      case kindQuickInfo:
+        return NotificationPayload(
+          type: type,
+          id: id,
+          knowledgeItemId: id,
+        );
+      case kindReviewDue:
+        return const NotificationPayload(type: kindReviewDue);
+      case kindCard:
+        return NotificationPayload(type: type, id: id, cardId: id);
+      case kindLesson:
+        return NotificationPayload(type: type, id: id, lessonId: id);
+      case kindQuick:
+        return NotificationPayload(
+          type: type,
+          id: id,
+          knowledgeItemId: id,
+        );
+      default:
+        return NotificationPayload(type: type, id: id);
+    }
+  }
+
+  /// Chuển payload sang chuỗi legacy (để lưu vào flutter_local_notifications).
+  String toLegacyString() {
+    switch (type) {
+      case kindCard:
+        return 'card:${id ?? ''}';
+      case kindLesson:
+        return 'lesson:${id ?? ''}';
+      case kindQuick:
+        return 'quick:${id ?? ''}';
+      case kindArticle:
+        return 'quick:${id ?? ''}';
+      case kindQuickInfo:
+        return 'quick:${id ?? ''}';
+      case kindReviewDue:
+      case kindReview:
+        return 'review';
+      default:
+        return 'review';
+    }
+  }
+
+  /// Chuển payload sang chuỗi JSON (định dạng mới).
+  String toJsonString() {
+    return jsonEncode(<String, dynamic>{
+      'type': type,
+      if (id != null) 'id': id,
+    });
+  }
+
+  /// Có phải payload hướng đến review session (ôn tập chung) không.
+  bool get isReview => type == kindReview || type == kindReviewDue;
+
+  /// Có phải payload hướng đến một thẻ ôn cụ thể không.
+  bool get isCard => type == kindCard;
+
+  /// Có phải payload hướng đến kiến thức/bài viết không.
+  bool get isKnowledge =>
+      type == kindArticle ||
+      type == kindQuickInfo ||
+      type == kindLesson ||
+      type == kindQuick;
 }
 
 /// Interface để test không cần plugin thật.
@@ -368,7 +484,7 @@ class LocalNotificationService implements NotificationService {
       requestSoundPermission: false,
     );
     const AndroidInitializationSettings android = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+      '@mipmap/launcher_icon',
     );
     const InitializationSettings settings = InitializationSettings(
       android: android,
