@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'app_services.dart';
 import 'notification_service.dart';
+import 'review_due_reminder.dart';
 
 /// Bootstrap toàn cục: khởi tạo DB, prefs, services trước khi runApp.
 class AppBootstrap {
@@ -39,25 +40,38 @@ class AppBootstrap {
     try {
       final bool ok = await services.notifications.initialize();
       if (!ok) return;
-      if (services.prefs.notificationsEnabled) {
-        await _scheduleReminder(services);
-      }
-      if (services.prefs.knowledgeReminderEnabled) {
-        await services.knowledgeReminders.sync();
-      }
+      // Đăng ký handler chạm thông báo TRƯỚC các bước lập lịch: lỗi lập lịch
+      // không được làm mất điều hướng (cold start replay payload ở đây).
       services.notifications.setOnNotificationOpened((
         NotificationPayload payload,
       ) {
         pendingNotificationPayload = payload;
         onNotificationOpened?.call(payload);
       });
+      if (services.prefs.notificationsEnabled) {
+        await _guard('lập lịch nhắc ôn', () => _scheduleReminder(services));
+      }
+      if (services.prefs.knowledgeReminderEnabled) {
+        await _guard(
+          'lập lịch nhắc kiến thức',
+          () => services.knowledgeReminders.sync(),
+        );
+      }
       // Đối soát kế hoạch học ở NỀN (không chặn khởi động UI): tạo đủ
       // nội dung còn thiếu, lên lịch bài mới. Idempotent nên chạy lại an toàn.
       unawaited(_syncStudyPlan(services));
-    } catch (e, s) {
+    } catch (e, st) {
       if (kDebugMode) {
-        debugPrint('Khởi tạo thông báo thất bại: $e\n$s');
+        debugPrint('Khởi tạo thông báo thất bại: $e\n$st');
       }
+    }
+  }
+
+  Future<void> _guard(String what, Future<void> Function() body) async {
+    try {
+      await body();
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('$what thất bại: $e\n$st');
     }
   }
 
@@ -91,15 +105,10 @@ class AppBootstrap {
       }
       return;
     }
-    final String body = services.prefs.dailyGoal > 0
-        ? 'Còn ${services.prefs.dailyGoal} mục tiêu học hôm nay. Chạm để kiểm tra kiến thức.'
-        : 'Chạm để kiểm tra kiến thức bạn cần ôn.';
-    await services.notifications.scheduleDailyReminder(
-      title: 'Đến giờ ôn tập',
-      body: body,
-      hour: services.prefs.reminderHour,
-      minute: services.prefs.reminderMinute,
-    );
+    // Nhắc ôn hằng ngày thay bằng thông báo gộp "Ôn kiến thức đến hạn" kèm
+    // số lượng (xem ReviewDueReminder) — tránh hai thông báo trùng giờ.
+    await services.notifications.cancelDailyReminder();
+    await _guard('lập lịch ôn đến hạn', () => ReviewDueReminder.sync(services));
   }
 
   /// Đồng bộ lại lịch nhắc sau khi đổi giờ/tắt-bật trong cài đặt.

@@ -1,0 +1,14 @@
+# Flow 4: chạm thông báo "Thông tin nhanh mới" → mở đúng chi tiết.
+# Maestro KHÔNG chạm được thông báo trong khay hệ thống, nên run_all.sh dùng adb
+# gửi đúng intent mà thông báo gắn vào (action SELECT_NOTIFICATION, payload
+# "quick:<id>") TRƯỚC khi chạy flow này; flow chỉ kiểm tra màn hình kết quả.
+# Biến: NOTIF_TITLE = tiêu đề kiến thức đích (mặc định theo máy test).
+appId: com.mindkeeper.mind_keeper
+name: 04 Thong bao Thong tin nhanh mo dung chi tiet
+env:
+  NOTIF_TITLE: "Cơ bản về Lich Su Va.*"
+---
+- extendedWaitUntil:
+    visible: "Chi tiết kiến thức"
+    timeout: 60000
+- assertVisible: "${NOTIF_TITLE}"

@@ -264,6 +264,20 @@ abstract class NotificationService {
   /// Hủy lịch nhắc đọc kiến thức.
   Future<void> cancelKnowledgeReadingReminder();
 
+  /// Lập lịch MỘT lần thông báo "Ôn kiến thức đến hạn" (gộp, kèm số lượng).
+  /// [payload]: `card:<id>` khi chỉ có 1 mục, `review_due` khi nhiều mục.
+  /// Dùng chung nhóm Android với thông báo từng thẻ để hệ thống gom lại.
+  Future<void> scheduleReviewDue({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    required String payload,
+  });
+
+  /// Hủy các thông báo "Ôn kiến thức đến hạn" đã lập/đang hiển thị (idempotent).
+  Future<void> cancelReviewDue();
+
   void setOnNotificationOpened(void Function(NotificationPayload payload) cb);
 }
 
@@ -440,6 +454,34 @@ class FakeNotificationService implements NotificationService {
     calls.add('cancelKnowledgeReadingReminder');
   }
 
+  /// Lịch "Ôn kiến thức đến hạn": id → (thời điểm, nội dung, payload).
+  final Map<int, DateTime> scheduledReviewDue = <int, DateTime>{};
+  final Map<int, String> reviewDuePayloads = <int, String>{};
+  final Map<int, String> reviewDueBodies = <int, String>{};
+
+  @override
+  Future<void> scheduleReviewDue({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    required String payload,
+  }) async {
+    if (!at.toUtc().isAfter(DateTime.now().toUtc())) return;
+    scheduledReviewDue[id] = at.toUtc();
+    reviewDuePayloads[id] = payload;
+    reviewDueBodies[id] = body;
+    calls.add('scheduleReviewDue:$id:$payload');
+  }
+
+  @override
+  Future<void> cancelReviewDue() async {
+    scheduledReviewDue.clear();
+    reviewDuePayloads.clear();
+    reviewDueBodies.clear();
+    calls.add('cancelReviewDue');
+  }
+
   @override
   void setOnNotificationOpened(void Function(NotificationPayload payload) cb) {
     onOpened = cb;
@@ -474,6 +516,20 @@ class LocalNotificationService implements NotificationService {
         priority: Priority.high,
       );
 
+  /// Nhóm Android cho thông báo ôn tập (từng thẻ + gộp theo ngày) để hệ thống
+  /// gom lại thay vì xếp chồng.
+  static const String _reviewGroup = 'mind_keeper_review_due';
+
+  static const AndroidNotificationDetails _reviewGroupDetails =
+      AndroidNotificationDetails(
+        'mind_keeper_review',
+        'Nhắc ôn tập',
+        channelDescription: 'Thông báo nhắc đến giờ ôn kiến thức',
+        importance: Importance.high,
+        priority: Priority.high,
+        groupKey: _reviewGroup,
+      );
+
   @override
   Future<bool> initialize() async {
     if (_initialized) return true;
@@ -493,7 +549,13 @@ class LocalNotificationService implements NotificationService {
     await _plugin.initialize(
       settings: settings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        _onOpened?.call(NotificationPayload.parse(response.payload));
+        final void Function(NotificationPayload payload)? cb = _onOpened;
+        if (cb == null) {
+          // Handler chưa đăng ký (đang khởi động) → giữ lại, replay sau.
+          _launchPayload = response.payload ?? 'review';
+          return;
+        }
+        cb(NotificationPayload.parse(response.payload));
       },
     );
     _initialized = true;
@@ -673,7 +735,7 @@ class LocalNotificationService implements NotificationService {
       body: body,
       scheduledDate: tz.TZDateTime.from(utc, tz.local),
       notificationDetails: const NotificationDetails(
-        android: _androidDetails,
+        android: _reviewGroupDetails,
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
@@ -717,13 +779,24 @@ class LocalNotificationService implements NotificationService {
 
   /// Channel riêng cho thông báo bài mới — tách biệt với "Nhắc ôn tập" để
   /// người dùng phân biệt bài mới / ôn tập ở cài đặt hệ thống.
-  static const AndroidNotificationDetails _contentDetails =
+  static const AndroidNotificationDetails _articleDetails =
       AndroidNotificationDetails(
         'mind_keeper_new_content',
         'Bài học mới',
         channelDescription: 'Thông báo nội dung mới theo kế hoạch học hằng ngày',
         importance: Importance.high,
         priority: Priority.high,
+        groupKey: 'mind_keeper_group_article',
+      );
+
+  static const AndroidNotificationDetails _quickDetails =
+      AndroidNotificationDetails(
+        'mind_keeper_new_content',
+        'Bài học mới',
+        channelDescription: 'Thông báo nội dung mới theo kế hoạch học hằng ngày',
+        importance: Importance.high,
+        priority: Priority.high,
+        groupKey: 'mind_keeper_group_quick',
       );
 
   @override
@@ -742,9 +815,12 @@ class LocalNotificationService implements NotificationService {
       title: title,
       body: body,
       scheduledDate: tz.TZDateTime.from(utc, tz.local),
-      notificationDetails: const NotificationDetails(
-        android: _contentDetails,
-        iOS: DarwinNotificationDetails(),
+      notificationDetails: NotificationDetails(
+        // Gom theo loại: bài viết với bài viết, thông tin nhanh với nhau.
+        android: payload.startsWith('${NotificationPayload.kindQuick}:')
+            ? _quickDetails
+            : _articleDetails,
+        iOS: const DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       payload: payload,
@@ -798,6 +874,37 @@ class LocalNotificationService implements NotificationService {
     await _plugin.cancel(id: _knowledgeReadingReminderId);
   }
 
+  @override
+  Future<void> scheduleReviewDue({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    required String payload,
+  }) async {
+    final DateTime utc = at.toUtc();
+    if (!utc.isAfter(DateTime.now().toUtc())) return;
+    await _plugin.zonedSchedule(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(utc, tz.local),
+      notificationDetails: const NotificationDetails(
+        android: _reviewGroupDetails,
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: payload,
+    );
+  }
+
+  @override
+  Future<void> cancelReviewDue() async {
+    for (int i = 0; i < reviewDueSlots; i++) {
+      await _plugin.cancel(id: reviewDueBaseId + i);
+    }
+  }
+
   static const int _knowledgeReadingReminderId = 1002;
 
   tz.TZDateTime _nextInstanceOfWeekday(int weekday, int hour, int minute) {
@@ -838,6 +945,11 @@ class LocalNotificationService implements NotificationService {
     }
   }
 }
+
+/// ID thông báo "Ôn kiến thức đến hạn": [reviewDueBaseId] … +[reviewDueSlots]-1
+/// (một ID mỗi ngày, lập trước vài ngày).
+const int reviewDueBaseId = 1101;
+const int reviewDueSlots = 3;
 
 @visibleForTesting
 int cardNotificationId(String cardId) => cardId.hashCode & 0x7fffffff;

@@ -190,6 +190,10 @@ class _TodayScreenState extends State<TodayScreen> {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const ReviewScreen()));
+    if (AppBootstrap.instance.isReady &&
+        AppBootstrap.instance.services.prefs.notificationsEnabled) {
+      unawaited(AppBootstrap.instance.refreshReminderSchedule());
+    }
     if (mounted) await _load();
   }
 

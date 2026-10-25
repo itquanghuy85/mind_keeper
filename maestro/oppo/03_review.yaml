@@ -1,0 +1,16 @@
+# Flow 3: bấm "Bắt đầu ôn tập" → màn ôn tập mở.
+# Nhãn nút là "Ôn lại ngẫu nhiên" khi không có thẻ đến hạn → nhận cả hai.
+appId: com.mindkeeper.mind_keeper
+name: 03 Bat dau on tap mo man on tap
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Ôn kiến thức đến hạn"
+    timeout: 40000
+- tapOn: "(Bắt đầu ôn tập|Ôn lại ngẫu nhiên).*"
+- extendedWaitUntil:
+    visible: "Ôn tập"
+    timeout: 15000
+- assertVisible: "Ôn tập"

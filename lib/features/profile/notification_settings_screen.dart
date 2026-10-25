@@ -142,6 +142,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       );
     } else {
       await services.notifications.cancelDailyReminder();
+      await services.notifications.cancelReviewDue();
       if (!mounted) return;
       final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();

@@ -59,6 +59,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     // Mở lại app → đối soát kế hoạch học và xử lý payload thông báo nếu có.
     if (AppBootstrap.instance.isReady) {
       unawaited(AppBootstrap.instance.refreshStudyPlan());
+      if (AppBootstrap.instance.services.prefs.notificationsEnabled) {
+        unawaited(AppBootstrap.instance.refreshReminderSchedule());
+      }
     }
     _handlePendingPayload();
   }

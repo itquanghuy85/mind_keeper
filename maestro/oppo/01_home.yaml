@@ -1,0 +1,15 @@
+# Flow 1: mở app, thấy "Nội dung hôm nay" và "Ôn kiến thức đến hạn".
+# Dùng \u escapes để không phụ thuộc encoding khi Maestro đọc selector.
+appId: com.mindkeeper.mind_keeper
+name: 01 Trang chu hien thi Noi dung hom nay + On kien thuc den han
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Ôn kiến thức đến hạn"
+    timeout: 40000
+- scrollUntilVisible:
+    element: "Nội dung hôm nay"
+    timeout: 20000
+- assertVisible: "Nội dung hôm nay"

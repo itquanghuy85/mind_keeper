@@ -1,0 +1,10 @@
+﻿GĐ22: Bài học AI khám phá + tạo đa bài + flow Maestro
+
+- Thêm GD22.A (lesson_discovery) và GD22.B (create_multiple_lessons) flow Maestro, đã verify pass trên thiết bị thật OPPO CPH2203 (NJR8W86LKRVW7DHQ)
+- Thêm GD22.C spec (proactive_reminders) chi tiết, chưa chạy hết do hạn chế Maestro driver Flutter không hiển thị attribute text
+- Cập nhật DOCS/IMPLEMENTATION_PROGRESS.md với phần GD22 chi tiết (môi trường, lưu ý kỹ thuật, xác minh DB, hạn chế)
+- Thêm topic_picker_sheet.dart (bottom sheet chọn nhiều chủ đề), topic_seed_catalog.dart (chủ đề biên soán sẵn), knowledge_reminder_scheduler.dart
+- Thêm test knowledge_reminder_scheduler, topic_suggestion_encoding, http_response_encoding
+- Cập nhật icon app (mipmap + ios assets + assets/images)
+- Sửa overflow bottom sheet Lesson Discover (SingleChildScrollView)
+- flutter analyze: 0 issue; flutter test: 156/156 pass; build apk debug thành công

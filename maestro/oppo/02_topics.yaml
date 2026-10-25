@@ -1,0 +1,22 @@
+# Flow 2: tab "Chủ đề" → mở một chủ đề → thấy danh sách kiến thức.
+# Dữ liệu máy test: chủ đề "Lich Su Va" (có 8 kiến thức).
+# Tab bấm theo toạ độ thanh điều hướng (vì chữ "Chủ đề" trùng với thẻ "Tạo chủ đề").
+appId: com.mindkeeper.mind_keeper
+name: 02 Tab Chu de - mo chu de - thay danh sach
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "\u00d4n ki\u1ebfn th\u1ee9c \u0111\u1ebfn h\u1ea1n"
+    timeout: 40000
+- tapOn:
+    point: "37%,92%"
+- extendedWaitUntil:
+    visible: ".*Lich Su Va.*"
+    timeout: 15000
+- tapOn: ".*Lich Su Va.*"
+- extendedWaitUntil:
+    visible: ".*kh\u00e1m ph\u00e1 trong.*"
+    timeout: 20000
+- assertVisible: ".*kh\u00e1m ph\u00e1 trong.*"

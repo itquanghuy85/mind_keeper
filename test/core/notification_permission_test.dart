@@ -111,7 +111,7 @@ void main() {
       fake.notificationsEnabledStatus = false;
       await AppBootstrap.instance.refreshReminderSchedule();
       expect(
-        fake.calls.where((String c) => c.startsWith('scheduleDailyReminder')),
+        fake.calls.where((String c) => c == 'cancelReviewDue'),
         isEmpty,
       );
     });
@@ -120,7 +120,7 @@ void main() {
       fake.notificationsEnabledStatus = true;
       await AppBootstrap.instance.refreshReminderSchedule();
       expect(
-        fake.calls.where((String c) => c.startsWith('scheduleDailyReminder')),
+        fake.calls.where((String c) => c == 'cancelReviewDue'),
         isNotEmpty,
       );
     });
@@ -129,7 +129,7 @@ void main() {
       fake.notificationsEnabledStatus = null;
       await AppBootstrap.instance.refreshReminderSchedule();
       expect(
-        fake.calls.where((String c) => c.startsWith('scheduleDailyReminder')),
+        fake.calls.where((String c) => c == 'cancelReviewDue'),
         isNotEmpty,
       );
     });
@@ -191,7 +191,7 @@ void main() {
 
         expect(fake.calls, contains('requestPermissions'));
         expect(
-          fake.calls.where((String c) => c.startsWith('scheduleDailyReminder')),
+          fake.calls.where((String c) => c == 'cancelReviewDue'),
           isEmpty,
           reason: 'Không được lên lịch khi quyền bị từ chối',
         );
@@ -227,7 +227,7 @@ void main() {
 
         expect(fake.calls, contains('requestPermissions'));
         expect(
-          fake.calls.where((String c) => c.startsWith('scheduleDailyReminder')),
+          fake.calls.where((String c) => c == 'cancelReviewDue'),
           isNotEmpty,
           reason: 'Được cấp quyền → lịch nhắc hằng ngày được lập',
         );

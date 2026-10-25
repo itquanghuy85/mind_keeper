@@ -1,0 +1,87 @@
+# GD17.3 - Nghiệm thu Kế hoạch học chủ động trên OPPO CPH2237 (Android 13).
+# Chạy: maestro test --device VCZX4LGQIVVSJNBE maestro/gd17_study_plan.yaml
+# Lưu ý: phải set JAVA_OPTS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
+# để Maestro đọc được tiếng Việt trong selector.
+appId: com.mindkeeper.mind_keeper
+name: GD17.3 Study Plan E2E Acceptance
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang chủ"
+    timeout: 20000
+- takeScreenshot: "gd17_01_home"
+# Dien huong toi man Ke hoach hoc tu tab Ho so
+- tapOn: textStartsWith: "Ho so"
+- extendedWaitUntil:
+    visible: "Cai dat thong bao chi tiet"
+    timeout: 15000
+- takeScreenshot: "gd17_02_profile"
+# Cuon toi muc Ke hoach hoc / off man hinh
+- scrollUntilVisible:
+    element: "Ke hoach hoc"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 15000
+- tapOn: "Ke hoach hoc"
+- extendedWaitUntil:
+    visible: "Ke hoach hoc"
+    timeout: 15000
+- takeScreenshot: "gd17_03_study_plan_opened"
+# Xac nhan man hinh hien thi cac thanh phan chinh
+- assertVisible: "Thong tin nhanh moi ngay"
+- assertVisible: "Bai viet moi ngay"
+- assertVisible: "Tao truoc"
+- assertVisible: "Bat dau khung gio"
+- assertVisible: "Thong bao bai moi"
+- assertVisible: " Chu the the doi"
+- takeScreenshot: "gd17_04_components"
+# Thay doi quota thong tin nhanh moi ngay
+- tapOn: "Thong tin nhanh moi ngay"
+- extendedWaitUntil:
+    visible: "3"
+    timeout: 10000
+- tapOn: "3"
+- extendedWaitUntil:
+    visible: "3 muc"
+    timeout: 10000
+- takeScreenshot: "gd17_05_quota_changed"
+# Bat thong bao bai moi
+- tapOn: "Thong bao bai moi"
+- extendedWaitUntil:
+    visible: "3 muc"
+    timeout: 10000
+    # Buoc quan trọng tren Android 13: xac nhan quyen notification da duoc cap
+- tapOn:
+    text: ".*(Cho phep|Allow).*
+"
+    optional: true
+- takeScreenshot: "gd17_06_notifications_enabled"
+# Dongngay su dung ten button dung: Dong tai ngay
+- tapOn: "Dong tai ngay"
+- extendedWaitUntil:
+    visible: "Dong tai ngay"
+    timeout: 30000
+- takeScreenshot: "gd17_07_after_sync"
+# Quay lai man hinh truoc va mo lai Ke hoach hoc de xac nhan cai dat duoc giu
+- tapOn:
+    description: "Ho so"
+- extendedWaitUntil:
+    visible: "Cai dat thong bao chi tiet"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Ke hoach hoc"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 15000
+- tapOn: "Ke hoach hoc"
+- extendedWaitUntil:
+    visible: "Ke hoach hoc"
+    timeout: 15000
+- assertVisible: "3 muc"
+- assertVisible: "Thong bao bai moi"
+- takeScreenshot: "gd17_08_settings_persisted"
+# Ket thuc: xac minh cac thanh phan UI bang accessibility label on hien
+- takeScreenshot: "gd17_09_final"

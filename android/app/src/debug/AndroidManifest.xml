@@ -4,4 +4,9 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Chỉ bản DEBUG: cho phép HTTP cleartext để test với mock AI server
+         chạy trên máy host qua `adb reverse` (127.0.0.1). Bản release KHÔNG
+         có cờ này (network_security_config chỉ cho phép HTTPS). -->
+    <application
+        android:usesCleartextTraffic="true" />
 </manifest>

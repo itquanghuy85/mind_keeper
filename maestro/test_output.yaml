@@ -1,0 +1,82 @@
+﻿# GÄ17.1 - Nghiá»‡m thu Káº¿ hoáº¡ch há»c chá»§ Ä‘á»™ng trÃªn thiáº¿t bá»‹ tháº­t.
+# Cháº¡y: maestro test --device NJR8W86LKRVW7DHQ maestro/gd17_study_plan.yaml
+# LÆ°u Ã½ Windows: pháº£i Ä‘áº·t JAVA_OPTS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
+# Ä‘á»ƒ Maestro Ä‘á»c Ä‘Æ°á»£c tiáº¿ng Viá»‡t trong selector.
+appId: com.mindkeeper.mind_keeper
+name: GD17.1 Study Plan Acceptance
+---
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Trang chá»§"
+    timeout: 20000
+- takeScreenshot: "gd17_01_home"
+# Äiá»u hÆ°á»›ng tá»›i mÃ n Káº¿ hoáº¡ch há»c tá»« tab Há»“ sÆ¡
+- tapOn: "Há»“ sÆ¡"
+- extendedWaitUntil:
+    visible: "CÃ i Ä‘áº·t thÃ´ng bÃ¡o chi tiáº¿t"
+    timeout: 15000
+- takeScreenshot: "gd17_02_profile"
+# Cuá»™n tá»›i má»¥c Káº¿ hoáº¡ch há»c / Ã¶ff mÃ n hÃ¬nh
+- scrollUntilVisible:
+    element: "Káº¿ hoáº¡ch há»c"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 15000
+- tapOn: "Káº¿ hoáº¡ch há»c"
+- extendedWaitUntil:
+    visible: "Káº¿ hoáº¡ch há»c"
+    timeout: 15000
+- takeScreenshot: "gd17_03_study_plan_opened"
+# XÃ¡c nháº­n mÃ n hÃ¬nh hiá»ƒn thá»‹ cÃ¡c thÃ nh pháº§n chÃ­nh
+- assertVisible: "ThÃ´ng tin nhanh má»—i ngÃ y"
+- assertVisible: "BÃ i viáº¿t má»—i ngÃ y"
+- assertVisible: "Táº¡o trÆ°á»›c"
+- assertVisible: "Báº¯t Ä‘áº§u khung giá»"
+- assertVisible: "ThÃ´ng bÃ¡o bÃ i má»›i"
+- assertVisible: "Chá»§ Ä‘á» theo dÃµi"
+- takeScreenshot: "gd17_04_components"
+# Thay Ä‘á»•i quota thÃ´ng tin nhanh má»—i ngÃ y
+- tapOn: "ThÃ´ng tin nhanh má»—i ngÃ y"
+- extendedWaitUntil:
+    visible: "3"
+    timeout: 10000
+- tapOn: "3"
+- extendedWaitUntil:
+    visible: "3 items"
+    timeout: 10000
+- takeScreenshot: "gd17_05_quota_changed"
+# Báº­t thÃ´ng bÃ¡o bÃ i má»›i
+- tapOn: "ThÃ´ng bÃ¡o bÃ i má»›i"
+- extendedWaitUntil:
+    visible: "3 items"
+    timeout: 10000
+- takeScreenshot: "gd17_06_notifications_enabled"
+# Äá»“ng bá»™ ngay
+- tapOn: "Äá»“ng bá»™ ngay"
+- extendedWaitUntil:
+    visible: "Äá»“ng bá»™ ngay"
+    timeout: 30000
+- takeScreenshot: "gd17_07_after_sync"
+# Quay láº¡i mÃ n hÃ¬nh trÆ°á»›c vÃ  má»Ÿ láº¡i Káº¿ hoáº¡ch há»c Ä‘á»ƒ xÃ¡c nháº­n cÃ i Ä‘áº·t Ä‘Æ°á»£c giá»¯
+- tapOn: "Há»“ sÆ¡"
+- extendedWaitUntil:
+    visible: "CÃ i Ä‘áº·t thÃ´ng bÃ¡o chi tiáº¿t"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Káº¿ hoáº¡ch há»c"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 15000
+- tapOn: "Káº¿ hoáº¡ch há»c"
+- extendedWaitUntil:
+    visible: "Káº¿ hoáº¡ch há»c"
+    timeout: 15000
+- assertVisible: "3 items"
+- assertVisible: "ThÃ´ng bÃ¡o bÃ i má»›i"
+- takeScreenshot: "gd17_08_settings_persisted"
+# Káº¿t thÃºc: xÃ¡c minh cÃ¡c thÃ nh pháº§n UI báº±ng accessibility label á»•n Ä‘á»‹nh
+- assertVisible: "Káº¿ hoáº¡ch há»c"
+- takeScreenshot: "gd17_09_final"
