@@ -43,3 +43,20 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Khóa ký Android (tuyệt đối không commit)
+android/key.properties
+*.jks
+*.keystore
+
+# Sản phẩm sinh ra / tạm
+build_site/
+store/raw_screenshots/run/
+nghiemthu.db
+build_old_*/
+
+# fastlane: metadata/ảnh được sinh bởi tool/store/prepare_fastlane.sh
+fastlane/metadata/
+fastlane/screenshots/
+fastlane/app_store_icon_1024.png
+fastlane/report.xml

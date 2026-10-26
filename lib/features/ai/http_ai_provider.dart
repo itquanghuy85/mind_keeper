@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../../data/models/course.dart';
 import 'ai_provider.dart';
+import 'course_ai.dart';
 
 /// Provider HTTP thật (OpenAI-compatible).
 /// Cấu hình baseUrl/apiKey/model từ cài đặt — KHÔNG nhúng key trong mã nguồn.
@@ -14,7 +16,7 @@ import 'ai_provider.dart';
 /// - Proxy (`proxyMode = true`): `baseUrl` là endpoint proxy của backend
 ///   (vd Cloud Functions). Client KHÔNG cần và KHÔNG gửi key DeepSeek;
 ///   backend giữ key trong secret và tự thêm header khi gọi DeepSeek.
-class HttpAIProvider implements AIProvider {
+class HttpAIProvider implements AIProvider, CourseAiProvider {
   static const String defaultBaseUrl = 'https://api.openai.com/v1';
   static const String defaultModel = 'gpt-4o-mini';
 
@@ -323,6 +325,60 @@ NGUYÊN TẮC:
       }
     }
     return result;
+  }
+
+  @override
+  Future<List<String>> generateOutline({
+    required String topic,
+    required CourseLevel level,
+    required int count,
+  }) async {
+    final String raw = await _chat(
+      'Bạn là người thiết kế lộ trình học. Hãy lập đề cương gồm ĐÚNG $count mẩu '
+          'kiến thức ngắn (mỗi mẩu đọc 1-3 phút) cho chủ đề được yêu cầu, sắp xếp '
+          'từ dễ đến khó, mỗi mẩu một ý riêng biệt, không trùng lặp. '
+          'Tiêu đề là một câu hỏi hoặc mệnh đề rõ ràng, dưới 90 ký tự. '
+          'Độ khó: ${level.promptGuide} '
+          'Trả về JSON: {"titles":["...","..."]}',
+      'Chủ đề: $topic\nSố mẩu: $count',
+    );
+    final Map<String, Object?> obj = _decodeObject(raw);
+    final Object? list = obj['titles'] ?? obj['items'] ?? obj['outline'];
+    if (list is! List<Object?>) {
+      throw const FormatException('Đề cương không đúng định dạng.');
+    }
+    final List<String> titles = cleanOutline(list, count);
+    if (titles.isEmpty) {
+      throw const FormatException('AI không trả về đề cương.');
+    }
+    return titles;
+  }
+
+  @override
+  Future<AiBiteDraft> generateBite({
+    required String topic,
+    required CourseLevel level,
+    required String title,
+    required int index,
+    required int total,
+    List<String> previousTitles = const <String>[],
+  }) async {
+    final String previous = previousTitles.isEmpty
+        ? 'Chưa có.'
+        : previousTitles.take(40).join('; ');
+    final String raw = await _chat(
+      'Bạn là giáo viên soạn một mẩu kiến thức ngắn cho ứng dụng học mỗi ngày. '
+          'Độ khó: ${level.promptGuide} '
+          'Viết tiếng Việt tự nhiên, chính xác, KHÔNG lặp lại các mẩu đã học, '
+          'không bịa số liệu. '
+          'JSON: {"title":"","content":"150-250 từ, chia đoạn ngắn","summary":'
+          '"2-3 câu nêu ý chính để đọc nhanh trong thông báo, dưới 280 ký tự",'
+          '"example":"một ví dụ cụ thể","sources":["tên giáo trình hoặc từ khóa '
+          'nên tra cứu, KHÔNG ghi đường link, để mảng rỗng nếu không chắc"],'
+          '"question":"một câu hỏi tự kiểm tra","answer":"đáp án ngắn"}',
+      'Chủ đề: $topic\nMẩu $index/$total: $title\nCác mẩu đã có: $previous',
+    );
+    return AiBiteDraft.fromMap(_decodeObject(raw));
   }
 }
 

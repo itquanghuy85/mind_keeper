@@ -39,7 +39,7 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 300)),
     );
     await tester.pump();
-    expect(find.text('Mỗi ngày nhớ thêm một chút'), findsOneWidget);
+    expect(find.text('Học một chủ đề mới'), findsOneWidget);
     await tester.runAsync(services.dispose);
   });
 }

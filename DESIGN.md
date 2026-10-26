@@ -2,8 +2,9 @@
 
 ## Design tokens
 
-- Font: Inter (đã bundle trong `assets/fonts`).
-- Màu chủ đạo: indigo `#6355E7` (AppColors.primary), nền sáng trung tính `#F5F6FA`.
+- Font: Inter (bundle trong `assets/fonts`, khai báo dưới `flutter:` → `fonts:` trong `pubspec.yaml`; trước GĐ23 khối này bị đặt nhầm dưới `flutter_launcher_icons` nên app thực tế dùng font hệ thống).
+- Màu giao diện: `AppColors.primary` = `#0068FF` (xem `lib/core/theme/app_colors.dart`), nền sáng xanh nhạt.
+- Màu **thương hiệu** (icon, splash, tài liệu cửa hàng): gradient `#6D5DF6` → `#2F6FED`, điểm nhấn `#FFC857` — `BrandColors` trong `lib/core/widgets/brand_mark.dart`.
 - Semantic: success `#22B573`, warning `#F0A02A`, danger `#E5484D`, info `#3B82F6`.
 - Spacing: 4/8/12/16/20/24/32 (AppSpacing).
 - Radius: 8/12/16/20/28/pill (AppRadius).
@@ -21,3 +22,14 @@
 - Shell 4 tab (IndexedStack).
 - Route đặt tên cho: chủ đề, chi tiết chủ đề, kiến thức, ôn tập, khám phá, import, cài đặt.
 - Notification payload `card:<id>` mở thẳng thẻ cần ôn.
+
+## Trang chủ (GĐ23) — một việc chính mỗi lần mở
+
+- Đầu trang: ngày + nút `[+]` (menu: Thêm khóa học, Bài học AI, Tạo chủ đề, Khám phá). Không lời chào/khẩu hiệu.
+- **Thẻ chính** gộp việc hôm nay: "HÔM NAY BẠN CÒN · N mẩu mới · M thẻ ôn · ≈ X phút" + một nút **Bắt đầu** đi lần lượt (mẩu mới trước, hết thì sang ôn tập).
+  Hết việc → "Xong cho hôm nay" + "Đọc trước mẩu kế tiếp". Chưa có khóa học → "Học một chủ đề mới" + "Thêm khóa học".
+- **Chưa đọc**: tối đa 3 mục (có "Xem tất cả"), mỗi mục: `Chủ đề · Cấp độ`, tiêu đề đầy đủ (≤ 3 dòng), thời gian đọc ước tính từ độ dài thật.
+- **Đang theo**: mỗi khóa một dòng (tên, cấp độ, thanh tiến độ `đã đọc/tổng`).
+- Quy tắc: danh sách chỉ chứa việc chưa làm; không con số khó hiểu; không dùng emoji thay icon; tên màn trong nhãn semantics để Maestro bám vào.
+- Màn đọc mẩu: nút **Đã hiểu** luôn ghim ở đáy; nhãn "AI tự soạn · Chưa kiểm chứng"; nút cờ **Báo nội dung** trên AppBar.
+- Màn khởi động: nền gradient thương hiệu + logo M, nối liền với splash native (Android 12+ `values-v31`, iOS `LaunchImage`) rồi mờ dần (`SplashOverlay`, ~1,5 s, không chặn chạm).

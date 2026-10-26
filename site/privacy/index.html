@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chính sách quyền riêng tư – MindKeeper</title>
+<meta name="description" content="Chính sách quyền riêng tư của ứng dụng MindKeeper: dữ liệu nào được lưu, dữ liệu nào được gửi đi và quyền kiểm soát của bạn.">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="hero">
+  <img src="../assets/icon.png" alt="MindKeeper">
+  <h1>Chính sách quyền riêng tư</h1>
+  <p>Cập nhật lần cuối: {{LAST_UPDATED}}</p>
+  <nav class="links"><a href="../">Trang chủ</a><a href="../terms/">Điều khoản</a><a href="../support/">Hỗ trợ</a></nav>
+</header>
+<main>
+<section>
+  <h2>Tóm tắt</h2>
+  <ul>
+    <li>MindKeeper <strong>không yêu cầu tài khoản</strong>, không có quảng cáo và không dùng công cụ theo dõi/phân tích của bên thứ ba.</li>
+    <li>Kiến thức, đề cương khóa học, lịch ôn và cài đặt của bạn được <strong>lưu ngay trên thiết bị</strong>. Chúng tôi không có máy chủ lưu bản sao dữ liệu của bạn.</li>
+    <li>Khi bạn dùng tính năng AI, <strong>nội dung bạn yêu cầu AI xử lý</strong> được gửi tới dịch vụ AI để nhận kết quả (xem mục 2).</li>
+  </ul>
+</section>
+
+<section>
+  <h2>1. Dữ liệu được lưu trên thiết bị của bạn</h2>
+  <ul>
+    <li>Chủ đề, mẩu kiến thức, đề cương khóa học, tiến độ đã đọc.</li>
+    <li>Thẻ ôn tập, lịch ôn và lịch sử ôn (thuật toán lặp lại ngắt quãng FSRS chạy hoàn toàn trên máy).</li>
+    <li>Cài đặt (giờ nhắc, số mẩu mỗi ngày, cấu hình AI). Nếu bạn nhập khóa API AI của riêng mình, khóa này chỉ nằm trong bộ nhớ ứng dụng trên máy bạn.</li>
+  </ul>
+  <p class="muted">Dữ liệu nằm trong bộ nhớ riêng của ứng dụng. Gỡ ứng dụng hoặc xóa dữ liệu ứng dụng sẽ xóa toàn bộ dữ liệu này.</p>
+</section>
+
+<section>
+  <h2>2. Dữ liệu được gửi đi</h2>
+  <table>
+    <tr><th>Tính năng</th><th>Dữ liệu gửi đi</th><th>Gửi tới</th></tr>
+    <tr><td>Soạn đề cương, soạn mẩu kiến thức, bài học AI, giải thích, chấm câu trả lời</td><td>Tên chủ đề, cấp độ, tiêu đề mẩu, nội dung văn bản bạn nhập để AI tóm tắt, câu trả lời bạn nhờ AI chấm</td><td>Dịch vụ AI tương thích OpenAI (mặc định DeepSeek, trực tiếp bằng khóa của bạn hoặc qua máy chủ trung gian do nhà phát triển cấu hình). Nhà cung cấp xử lý theo chính sách riêng của họ.</td></tr>
+    <tr><td>Nhập từ đường dẫn (link)</td><td>Yêu cầu tải trang web tới đúng địa chỉ bạn nhập (địa chỉ IP của bạn hiển thị với trang đó)</td><td>Trang web bạn chọn</td></tr>
+    <tr><td>Nhập bằng giọng nói (tùy chọn)</td><td>Âm thanh được nhận dạng bởi dịch vụ nhận dạng giọng nói của hệ điều hành (Google/Apple)</td><td>Nhà cung cấp hệ điều hành</td></tr>
+    <tr><td>Thông báo đẩy từ xa (nếu được bật trong bản phát hành)</td><td>Mã định danh thông báo (FCM token)</td><td>Google Firebase Cloud Messaging</td></tr>
+  </table>
+  <p>Chúng tôi <strong>không</strong> gửi danh bạ, vị trí, mã quảng cáo hay mã định danh thiết bị. Nhận dạng chữ trong ảnh (OCR) và đọc PDF được thực hiện <strong>trên thiết bị</strong>.</p>
+  <p>Hãy tránh nhập thông tin nhạy cảm (mật khẩu, số thẻ, hồ sơ y tế cá nhân) vào nội dung gửi cho AI.</p>
+</section>
+
+<section>
+  <h2>3. Quyền truy cập thiết bị</h2>
+  <ul>
+    <li><strong>Thông báo</strong>: nhắc đọc mẩu mới và ôn tập. Bạn có thể tắt trong Cài đặt.</li>
+    <li><strong>Báo thức chính xác</strong> (Android): để thông báo đến đúng giờ bạn đặt.</li>
+    <li><strong>Micro</strong> (tùy chọn): nhập kiến thức bằng giọng nói.</li>
+    <li><strong>Camera / thư viện ảnh / tệp</strong> (tùy chọn): chọn ảnh hoặc PDF để trích xuất văn bản.</li>
+    <li><strong>Internet</strong>: gọi AI và tải trang khi bạn dùng các tính năng trên.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. Nội dung do AI tạo</h2>
+  <p>Nội dung AI soạn có thể chưa chính xác hoặc chưa đầy đủ và được gắn nhãn “Chưa kiểm chứng”. Đây là tài liệu học tập tham khảo, <strong>không phải lời khuyên y tế, pháp lý hay tài chính</strong>. Hãy đối chiếu với nguồn đáng tin cậy trước khi áp dụng.</p>
+</section>
+
+<section>
+  <h2>5. Chia sẻ và bán dữ liệu</h2>
+  <p>Chúng tôi không bán hay chia sẻ dữ liệu cá nhân cho mục đích quảng cáo. Dữ liệu chỉ rời thiết bị trong các trường hợp ở mục 2, do chính bạn kích hoạt.</p>
+</section>
+
+<section>
+  <h2>6. Quyền của bạn và xóa dữ liệu</h2>
+  <ul>
+    <li>Sửa hoặc xóa từng mẩu kiến thức, khóa học, chủ đề ngay trong ứng dụng.</li>
+    <li>Xóa toàn bộ: gỡ ứng dụng hoặc chọn “Xóa dữ liệu” trong cài đặt ứng dụng của hệ điều hành.</li>
+    <li>Vì chúng tôi không giữ bản sao trên máy chủ, không có dữ liệu của bạn để xóa thêm phía chúng tôi. Với dữ liệu đã gửi cho nhà cung cấp AI, vui lòng xem chính sách của họ.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Trẻ em</h2>
+  <p>MindKeeper không hướng tới trẻ dưới 13 tuổi và không chủ ý thu thập dữ liệu cá nhân của trẻ em.</p>
+</section>
+
+<section>
+  <h2>8. Thay đổi chính sách</h2>
+  <p>Khi có thay đổi quan trọng, chúng tôi sẽ cập nhật trang này và ngày “Cập nhật lần cuối”.</p>
+</section>
+
+<section>
+  <h2>9. Liên hệ</h2>
+  <p>{{DEVELOPER_NAME}} – <a href="mailto:{{CONTACT_EMAIL}}">{{CONTACT_EMAIL}}</a></p>
+</section>
+
+<section lang="en">
+  <h2>English summary</h2>
+  <p>MindKeeper has no accounts, no ads and no third-party analytics. Your knowledge items, course outlines, review history and settings are stored only on your device. When you use AI features, the text you ask the AI to process (topic names, level, imported text, answers to be graded) is sent to the configured OpenAI-compatible AI provider (DeepSeek by default). Link import fetches the URL you enter; voice input uses your operating system's speech recognition; OCR and PDF parsing run on-device. AI-generated content is labelled “Unverified” and is not professional advice. Uninstalling the app removes all local data. Contact: {{CONTACT_EMAIL}}.</p>
+</section>
+</main>
+<footer>© {{YEAR}} {{DEVELOPER_NAME}}</footer>
+</body>
+</html>

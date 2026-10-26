@@ -1,0 +1,9 @@
+# Định danh ứng dụng cho fastlane. Khóa/bí mật KHÔNG đặt ở đây — dùng biến môi trường.
+for_platform :android do
+  package_name("com.mindkeeper.mind_keeper")
+  json_key_file(ENV["PLAY_JSON_KEY_PATH"]) if ENV["PLAY_JSON_KEY_PATH"]
+end
+
+for_platform :ios do
+  app_identifier("com.mindkeeper.mindKeeper")
+end

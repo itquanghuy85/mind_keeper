@@ -90,6 +90,17 @@ AND c.due_at <= ?''';
     return rows.map(ReviewCard.fromMap).toList(growable: false);
   }
 
+  /// Mọi thẻ của một kiến thức, KỂ CẢ thẻ chưa kích hoạt (is_active = 0).
+  Future<List<ReviewCard>> listAllByKnowledgeItem(String knowledgeItemId) async {
+    final List<Map<String, Object?>> rows = await _db.query(
+      'review_cards',
+      where: 'knowledge_item_id = ?',
+      whereArgs: <Object>[knowledgeItemId],
+      orderBy: 'created_at ASC',
+    );
+    return rows.map(ReviewCard.fromMap).toList(growable: false);
+  }
+
   Future<List<ReviewCard>> listDue({
     required DateTime now,
     int? limit,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/services/app_services.dart';
 import '../../core/services/notification_service.dart';
+import '../../features/courses/course_reader_screen.dart';
 import '../../features/knowledge/knowledge_detail_screen.dart';
 import '../../features/lessons/lesson_reader_screen.dart';
 import '../../features/review/review_screen.dart';
@@ -35,6 +36,8 @@ class NotificationRouter {
         action = () => _openCardReview(context, payload.cardId ?? payload.id!);
       case NotificationPayload.kindLesson:
         action = () => _openLesson(context, services, payload.lessonId ?? payload.id!);
+      case NotificationPayload.kindCourse:
+        action = () => _openCourseItem(context, services, payload.id!);
       case NotificationPayload.kindQuick:
         action = () => _openKnowledge(context, payload.knowledgeItemId ?? payload.id!);
       case NotificationPayload.kindArticle:
@@ -78,6 +81,18 @@ class NotificationRouter {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => LessonReaderScreen(lessonId: lessonId),
+      ),
+    );
+  }
+
+  static Future<void> _openCourseItem(
+    BuildContext context,
+    AppServices services,
+    String itemId,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CourseReaderScreen(itemId: itemId),
       ),
     );
   }

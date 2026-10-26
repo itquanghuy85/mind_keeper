@@ -1,0 +1,49 @@
+# GD23.2 - Thêm khóa học: chọn chủ đề -> cấp độ + số mẩu -> đề cương -> bắt đầu.
+# Cần mock AI: node tool/mock_ai_server.js 8765 + adb reverse tcp:8765 tcp:8765
+# và APK build với --dart-define=DEEPSEEK_BASE_URL=http://127.0.0.1:8765/v1
+# Nhãn Flutter gộp nhiều dòng trong một thẻ nên dùng regex [\\s\\S]*.
+appId: com.mindkeeper.mind_keeper
+name: GD23.2 Them khoa hoc
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Thêm"
+    timeout: 40000
+- tapOn: "Thêm"
+- tapOn: "Thêm khóa học"
+- extendedWaitUntil:
+    visible: "Chọn chủ đề"
+    timeout: 10000
+- assertVisible: "Chọn ít nhất 1 chủ đề"
+- tapOn: "Chủ đề"
+- inputText: "Bep tu"
+- tapOn: "Thêm chủ đề"
+- assertVisible: "Tiếp tục \\(1 chủ đề\\)"
+- takeScreenshot: "gd23_02_topics"
+- tapOn: "Tiếp tục \\(1 chủ đề\\)"
+- extendedWaitUntil:
+    visible: "Cấp độ và số mẩu"
+    timeout: 5000
+- tapOn: "Nâng cao"
+- assertVisible: "[\\s\\S]*Nguyên lý hoạt động[\\s\\S]*"
+- tapOn: "5"
+- takeScreenshot: "gd23_02_config"
+- tapOn: "Soạn đề cương"
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Bep tu - Khái niệm cơ bản[\\s\\S]*"
+    timeout: 30000
+- assertVisible: "Bắt đầu học"
+- takeScreenshot: "gd23_02_outline"
+# Bỏ mục số 5 khỏi đề cương
+- tapOn: "Bỏ mục 5"
+- assertNotVisible: "[\\s\\S]*Bep tu - Lịch sử hình thành[\\s\\S]*"
+- tapOn: "Bắt đầu học"
+- extendedWaitUntil:
+    visible: "Đang theo"
+    timeout: 30000
+# Khóa mới nằm trong "Đang theo" (danh sách dài nên có thể phải cuộn tới).
+- scrollUntilVisible:
+    element: "[\\s\\S]*Bep tu[\\s\\S]*"
+- takeScreenshot: "gd23_02_home_after"

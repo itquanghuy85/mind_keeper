@@ -68,6 +68,39 @@ function buildTopics() {
   };
 }
 
+// GĐ23: đề cương + mẩu khóa học.
+function buildOutline(user) {
+  const t = /Chủ đề: ([^\n]+)/.exec(user);
+  const n = /Số mẩu: (\d+)/.exec(user);
+  const topic = t ? t[1].trim() : 'Chủ đề';
+  const count = n ? Number(n[1]) : 5;
+  const aspects = ['Khái niệm cơ bản', 'Nguyên lý hoạt động', 'Ứng dụng đời sống', 'Hiểu lầm phổ biến', 'Lịch sử hình thành', 'Thành phần chính', 'So sánh giải pháp', 'Mẹo sử dụng', 'Giới hạn và rủi ro', 'Xu hướng'];
+  const titles = [];
+  for (let i = 0; i < count; i++) {
+    titles.push(topic + ' - ' + aspects[i % aspects.length] + (i >= aspects.length ? ' ' + (Math.floor(i / aspects.length) + 1) : ''));
+  }
+  return { titles };
+}
+
+function buildBite(user) {
+  const t = /Chủ đề: ([^\n]+)/.exec(user);
+  const m = /Mẩu (\d+)\/(\d+): ([^\n]+)/.exec(user);
+  const topic = t ? t[1].trim() : 'Chủ đề';
+  const idx = m ? m[1] : '1';
+  const title = m ? m[3].trim() : 'Mẩu';
+  return {
+    title,
+    content: 'Đây là nội dung mẩu ' + idx + ' của chủ đề ' + topic + '. ' +
+      'Phần giải thích chi tiết giúp bạn hiểu rõ vấn đề: ' + title + '. ' +
+      'Nội dung được soạn mẫu cho kiểm thử, dài đủ để đọc như một mẩu kiến thức thật.',
+    summary: 'Ý chính của mẩu ' + idx + ' về ' + topic + ': ' + title + '.',
+    example: 'Ví dụ minh họa cho mẩu ' + idx + '.',
+    sources: ['Giáo trình ' + topic + ' (mẫu kiểm thử)'],
+    question: 'Ý chính của mẩu ' + idx + ' về ' + topic + ' là gì?',
+    answer: 'Ý chính của mẩu ' + idx + '.',
+  };
+}
+
 const server = http.createServer((req, res) => {
   let raw = '';
   req.on('data', (c) => (raw += c));
@@ -83,7 +116,11 @@ const server = http.createServer((req, res) => {
     const user = (messages.find((m) => m.role === 'user') || {}).content || '';
 
     let content;
-    if (/CẤU TRÚC BẮT BUỘC/.test(system)) {
+    if (/lập đề cương gồm ĐÚNG/.test(system)) {
+      content = JSON.stringify(buildOutline(user));
+    } else if (/soạn một mẩu kiến thức ngắn/.test(system)) {
+      content = JSON.stringify(buildBite(user));
+    } else if (/CẤU TRÚC BẮT BUỘC/.test(system)) {
       const m = /Chủ đề: ([^\n]+)/.exec(user);
       content = JSON.stringify(buildLesson(m ? m[1].trim() : 'Chủ đề'));
     } else if (/phân tích văn bản đầu vào/.test(system)) {

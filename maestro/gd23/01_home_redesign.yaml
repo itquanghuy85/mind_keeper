@@ -1,0 +1,23 @@
+# GD23.1 - Trang chủ mới: một thẻ chính, không còn "Nhanh tập trung".
+# Chạy: bash maestro/gd23/run.sh [serial]
+appId: com.mindkeeper.mind_keeper
+name: GD23.1 Trang chu moi
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Thêm"
+    timeout: 40000
+- takeScreenshot: "gd23_01_home"
+- assertNotVisible: "Nhanh tập trung"
+- assertNotVisible: "Tiến độ hôm nay"
+- assertNotVisible: "Chủ đề gần đây"
+# Nút [+] gom các lối tắt vào một menu.
+- tapOn: "Thêm"
+- assertVisible: "Thêm khóa học"
+- assertVisible: "Bài học AI"
+- assertVisible: "Tạo chủ đề"
+- assertVisible: "Khám phá"
+- takeScreenshot: "gd23_01_menu"
+- pressKey: back

@@ -6,6 +6,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'course_background.dart';
+
 /// Payload mở khi người dùng chạm thông báo.
 ///
 /// Định dạng mới (JSON, từ FCM / payload mới):
@@ -51,6 +53,7 @@ class NotificationPayload {
   static const String kindQuick = 'quick';
   static const String kindArticle = 'article';
   static const String kindQuickInfo = 'quick_info';
+  static const String kindCourse = 'course';
   static const String kindReviewDue = 'review_due';
 
   /// Parse payload từ chuỗi. Thử JSON trước (định dạng mới), rồi legacy.
@@ -80,6 +83,12 @@ class NotificationPayload {
       final String id = raw.substring(kindLesson.length + 1);
       if (id.isNotEmpty) {
         return NotificationPayload(type: kindLesson, id: id, lessonId: id);
+      }
+    }
+    if (raw.startsWith('$kindCourse:')) {
+      final String id = raw.substring(kindCourse.length + 1);
+      if (id.isNotEmpty) {
+        return NotificationPayload(type: kindCourse, id: id);
       }
     }
     if (raw.startsWith('$kindQuick:')) {
@@ -114,6 +123,8 @@ class NotificationPayload {
         );
       case kindReviewDue:
         return const NotificationPayload(type: kindReviewDue);
+      case kindCourse:
+        return NotificationPayload(type: type, id: id);
       case kindCard:
         return NotificationPayload(type: type, id: id, cardId: id);
       case kindLesson:
@@ -136,6 +147,8 @@ class NotificationPayload {
         return 'card:${id ?? ''}';
       case kindLesson:
         return 'lesson:${id ?? ''}';
+      case kindCourse:
+        return 'course:${id ?? ''}';
       case kindQuick:
         return 'quick:${id ?? ''}';
       case kindArticle:
@@ -160,6 +173,9 @@ class NotificationPayload {
 
   /// Có phải payload hướng đến review session (ôn tập chung) không.
   bool get isReview => type == kindReview || type == kindReviewDue;
+
+  /// Có phải payload hướng đến một mẩu của khóa học không.
+  bool get isCourse => type == kindCourse;
 
   /// Có phải payload hướng đến một thẻ ôn cụ thể không.
   bool get isCard => type == kindCard;
@@ -279,7 +295,30 @@ abstract class NotificationService {
   Future<void> cancelReviewDue();
 
   void setOnNotificationOpened(void Function(NotificationPayload payload) cb);
+
+  /// Lập lịch thông báo một mẩu khóa học: [bigText] hiển thị khi vuốt mở rộng
+  /// (đọc nhanh không cần vào app), kèm nút "Đã hiểu" / "Đọc đầy đủ".
+  Future<void> scheduleCourseNotification({
+    required int id,
+    required String title,
+    required String body,
+    required String bigText,
+    String footer = '',
+    required DateTime at,
+    required String payload,
+  });
+
+  Future<void> cancelCourseNotification(int id);
+
+  /// Đăng ký xử lý nút hành động trên thông báo (vd. `mark_read`).
+  void setOnNotificationAction(
+    void Function(String actionId, String payload) cb,
+  );
 }
+
+/// ID nút hành động trên thông báo khóa học.
+const String courseActionMarkRead = 'course_mark_read';
+const String courseActionOpen = 'course_open';
 
 /// Fake dùng cho widget/unit test: ghi lại lịch gọi, không gọi plugin.
 class FakeNotificationService implements NotificationService {
@@ -482,6 +521,48 @@ class FakeNotificationService implements NotificationService {
     calls.add('cancelReviewDue');
   }
 
+  /// Thông báo khóa học đã lập: id -> (giờ, payload, bigText).
+  final Map<int, DateTime> scheduledCourse = <int, DateTime>{};
+  final Map<int, String> coursePayloads = <int, String>{};
+  final Map<int, String> courseBigTexts = <int, String>{};
+  final Map<int, String> courseTitles = <int, String>{};
+  final List<int> cancelledCourse = <int>[];
+  void Function(String actionId, String payload)? onAction;
+
+  @override
+  Future<void> scheduleCourseNotification({
+    required int id,
+    required String title,
+    required String body,
+    required String bigText,
+    String footer = '',
+    required DateTime at,
+    required String payload,
+  }) async {
+    if (!at.toUtc().isAfter(DateTime.now().toUtc())) return;
+    scheduledCourse[id] = at.toUtc();
+    coursePayloads[id] = payload;
+    courseBigTexts[id] = bigText;
+    courseTitles[id] = title;
+    calls.add('scheduleCourseNotification:$id:$payload');
+  }
+
+  @override
+  Future<void> cancelCourseNotification(int id) async {
+    scheduledCourse.remove(id);
+    coursePayloads.remove(id);
+    courseBigTexts.remove(id);
+    cancelledCourse.add(id);
+    calls.add('cancelCourseNotification:$id');
+  }
+
+  @override
+  void setOnNotificationAction(
+    void Function(String actionId, String payload) cb,
+  ) {
+    onAction = cb;
+  }
+
   @override
   void setOnNotificationOpened(void Function(NotificationPayload payload) cb) {
     onOpened = cb;
@@ -499,6 +580,7 @@ class LocalNotificationService implements NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin;
   void Function(NotificationPayload payload)? _onOpened;
+  void Function(String actionId, String payload)? _onAction;
   bool _initialized = false;
 
   /// Payload từ lần mở app bằng thông báo (cold start) — replay khi
@@ -534,21 +616,43 @@ class LocalNotificationService implements NotificationService {
   Future<bool> initialize() async {
     if (_initialized) return true;
     tz_data.initializeTimeZones();
-    const DarwinInitializationSettings ios = DarwinInitializationSettings(
+    final DarwinInitializationSettings ios = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
+      notificationCategories: <DarwinNotificationCategory>[
+        DarwinNotificationCategory(
+          _courseCategory,
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain(courseActionMarkRead, 'Đã hiểu'),
+            DarwinNotificationAction.plain(
+              courseActionOpen,
+              'Đọc đầy đủ',
+              options: <DarwinNotificationActionOption>{
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+          ],
+        ),
+      ],
     );
     const AndroidInitializationSettings android = AndroidInitializationSettings(
       '@mipmap/launcher_icon',
     );
-    const InitializationSettings settings = InitializationSettings(
+    final InitializationSettings settings = InitializationSettings(
       android: android,
       iOS: ios,
     );
     await _plugin.initialize(
       settings: settings,
+      onDidReceiveBackgroundNotificationResponse:
+          courseNotificationBackground,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
+        if (response.actionId == courseActionMarkRead) {
+          // Nút "Đã hiểu": ghi nhận, KHÔNG mở màn hình.
+          _onAction?.call(courseActionMarkRead, response.payload ?? '');
+          return;
+        }
         final void Function(NotificationPayload payload)? cb = _onOpened;
         if (cb == null) {
           // Handler chưa đăng ký (đang khởi động) → giữ lại, replay sau.
@@ -933,6 +1037,85 @@ class LocalNotificationService implements NotificationService {
     );
     scheduled = scheduled.add(Duration(days: daysToAdd));
     return scheduled;
+  }
+
+  static const String _courseCategory = 'mind_keeper_course_bite';
+
+  @override
+  Future<void> scheduleCourseNotification({
+    required int id,
+    required String title,
+    required String body,
+    required String bigText,
+    String footer = '',
+    required DateTime at,
+    required String payload,
+  }) async {
+    final DateTime utc = at.toUtc();
+    if (!utc.isAfter(DateTime.now().toUtc())) return;
+    // Báo thức chính xác nếu hệ thống cho phép; không thì báo thức không chính
+    // xác (Android có thể lùi tới ~1 giờ).
+    final bool exact =
+        await _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
+            ?.canScheduleExactNotifications() ??
+        false;
+    await _plugin.zonedSchedule(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(utc, tz.local),
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          'mind_keeper_course',
+          'Khóa học',
+          channelDescription:
+              'Mẩu kiến thức theo khóa học, đọc nhanh ngay trên thông báo',
+          importance: Importance.high,
+          priority: Priority.high,
+          groupKey: 'mind_keeper_group_course',
+          styleInformation: BigTextStyleInformation(
+            bigText,
+            contentTitle: title,
+            summaryText: footer.isEmpty ? null : footer,
+          ),
+          actions: const <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              courseActionMarkRead,
+              'Đã hiểu',
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              courseActionOpen,
+              'Đọc đầy đủ',
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+          ],
+        ),
+        iOS: const DarwinNotificationDetails(
+          categoryIdentifier: _courseCategory,
+        ),
+      ),
+      androidScheduleMode: exact
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: payload,
+    );
+  }
+
+  @override
+  Future<void> cancelCourseNotification(int id) async {
+    await _plugin.cancel(id: id);
+  }
+
+  @override
+  void setOnNotificationAction(
+    void Function(String actionId, String payload) cb,
+  ) {
+    _onAction = cb;
   }
 
   @override

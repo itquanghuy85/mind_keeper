@@ -1,4 +1,6 @@
+import '../../data/models/course.dart';
 import 'ai_provider.dart';
+import 'course_ai.dart';
 import 'http_ai_provider.dart';
 import 'mock_ai_provider.dart';
 
@@ -240,6 +242,44 @@ class AiService {
       () => _provider.suggestTopics(domain: domain, count: count),
     );
   }
+
+  CourseAiProvider get _courseProvider {
+    final AIProvider p = _provider;
+    if (p is CourseAiProvider) return p as CourseAiProvider;
+    throw const AiConfigurationException(
+      code: 'course_unsupported',
+      message: 'Provider AI hiện tại không hỗ trợ khóa học.',
+      userMessage: 'AI hiện tại chưa hỗ trợ tạo khóa học.',
+    );
+  }
+
+  /// Dựng đề cương [count] mẩu cho một chủ đề ở cấp [level].
+  Future<List<String>> generateOutline({
+    required String topic,
+    required CourseLevel level,
+    required int count,
+  }) => _courseProvider.generateOutline(
+    topic: topic,
+    level: level,
+    count: count,
+  );
+
+  /// Soạn một mẩu (không cache: mỗi mẩu chỉ sinh một lần rồi lưu SQLite).
+  Future<AiBiteDraft> generateBite({
+    required String topic,
+    required CourseLevel level,
+    required String title,
+    required int index,
+    required int total,
+    List<String> previousTitles = const <String>[],
+  }) => _courseProvider.generateBite(
+    topic: topic,
+    level: level,
+    title: title,
+    index: index,
+    total: total,
+    previousTitles: previousTitles,
+  );
 
   void clearCache() => _cache.clear();
 }

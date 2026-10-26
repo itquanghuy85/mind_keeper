@@ -18,6 +18,7 @@ import '../import/media_import_flow.dart';
 import '../import/text_import_screen.dart';
 import '../import/voice_import_screen.dart';
 import 'notification_settings_screen.dart';
+import 'privacy_screen.dart';
 import 'study_plan_screen.dart';
 import '../../core/theme/app_palette.dart';
 
@@ -332,6 +333,16 @@ class ProfileScreen extends StatelessWidget {
                   Text(
                     'Phiên bản 1.0.0',
                     style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _SettingsTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: 'Quyền riêng tư & điều khoản',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PrivacyScreen(),
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -1,0 +1,41 @@
+# GD23.3 - Đọc trước mẩu kế tiếp (hoặc mở mẩu chưa đọc) -> "Đã hiểu" -> xác nhận.
+# Điều kiện: có ít nhất một khóa học đang chạy còn mẩu chưa đọc.
+# Cần mock AI: node tool/mock_ai_server.js 8765 + adb reverse tcp:8765 tcp:8765
+appId: com.mindkeeper.mind_keeper
+name: GD23.3 Doc mau khoa hoc
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Thêm"
+    timeout: 40000
+- extendedWaitUntil:
+    visible: "[\\s\\S]*(Bắt đầu|Đọc trước mẩu kế tiếp)[\\s\\S]*"
+    timeout: 20000
+# Nút chính luôn dẫn tới một mẩu để đọc (mẩu chưa đọc hoặc đọc trước).
+- runFlow:
+    when:
+      visible: "Bắt đầu"
+    commands:
+      - tapOn: "Bắt đầu"
+- runFlow:
+    when:
+      visible: "Đọc trước mẩu kế tiếp"
+    commands:
+      - tapOn: "Đọc trước mẩu kế tiếp"
+- extendedWaitUntil:
+    visible: "Đã hiểu"
+    timeout: 30000
+- assertVisible: "Báo nội dung"
+- takeScreenshot: "gd23_03_reader"
+- tapOn: "Đã hiểu"
+- extendedWaitUntil:
+    visible: "Đọc mẩu tiếp theo"
+    timeout: 15000
+- assertVisible: "[\\s\\S]*sẽ quay lại để bạn ôn[\\s\\S]*"
+- takeScreenshot: "gd23_03_done"
+- pressKey: back
+- extendedWaitUntil:
+    visible: "Thêm"
+    timeout: 15000

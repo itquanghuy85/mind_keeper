@@ -696,3 +696,54 @@ Trạng thái nền trước khi sửa: `git status --short` chỉ có file untr
 8. ✅ Analyze 0 issue mới + build APK OK + test trung thực 181/181.
 9. ✅ DOCS cập nhật (mục này).
 10. ✅ Không commit/push; không đụng iOS 15.5, FSRS, cấu hình AI/API key.
+
+## GĐ23 — KHÓA HỌC THEO CẤP ĐỘ + TRANG CHỦ MỚI + THÔNG BÁO ĐỌC NHANH + THƯƠNG HIỆU/CỬA HÀNG (2026-10-27)
+
+Nguồn yêu cầu: thảo luận với chủ app (chọn chủ đề → AI lọc/sắp xếp kiến thức → nhắc đọc chủ động; cấp độ Cơ bản/Nâng cao/Pro/Master;
+số mẩu tùy chọn; thông báo đọc nhanh và mở đúng nơi; trang chủ gọn một việc chính; nguồn AI tự ghi "chưa kiểm chứng").
+Triển khai theo 4 pha, mỗi pha có test + nghiệm thu trước khi sang pha sau.
+
+### Pha 1 — Lõi dữ liệu + AI + service
+- Schema **v9** (chỉ thêm bảng): `courses`, `course_items` (+ index, UNIQUE `(course_id, position)`, FK CASCADE). Migration 8→9 giữ dữ liệu cũ.
+- `lib/data/models/course.dart` (`CourseLevel`, `Course`, `CourseItem`, `CourseProgress`), `course_repository.dart`.
+- AI: interface riêng `CourseAiProvider` (`lib/features/ai/course_ai.dart`) để các provider/fake cũ không phải đổi; `HttpAIProvider` + `MockAIProvider` implement
+  `generateOutline` (đúng N tiêu đề, dễ→khó, không trùng) và `generateBite` (nội dung + **summary cho thông báo** + ví dụ + nguồn dạng tên giáo trình/từ khóa, không link + câu hỏi/đáp án). Prompt có chỉ dẫn độ khó theo cấp.
+- `CourseService`: `draftOutline` → `startCourse` (đề cương đã duyệt) → `sync` (sinh mẩu hôm nay + ngày mai theo `perDay`, giờ theo khung giờ kế hoạch học, xen kẽ nhiều khóa) → `markRead` (thẻ ôn FSRS **kích hoạt khi "Đã hiểu"**, due +1 ngày, vào Kho đã học) → `reconcile` (xử lý nút "Đã hiểu" bấm khi app đóng) → `generateNext` (đọc trước) → `changeLevel` (giữ đề cương + mẩu đã đọc, mẩu sau theo cấp mới) → pause/delete.
+  Chỉ sinh khi `ai.isRealProvider` (hoặc `allowMockContent` trong test) — không coi mock là AI thật.
+- Sửa lỗi phát hiện khi viết test: `ReviewRepository.listByKnowledgeItem` chỉ trả thẻ active → thêm `listAllByKnowledgeItem` (kể cả thẻ chưa kích hoạt).
+
+### Pha 2 — Giao diện
+- **Trang chủ** (`today_screen.dart`) viết lại: thẻ chính "HÔM NAY BẠN CÒN" + nút Bắt đầu (đi lần lượt mẩu mới → ôn tập), **Chưa đọc** (≤3, xem tất cả), **Đang theo** (tiến độ từng khóa), nút `[+]` gom Thêm khóa học/Bài học AI/Tạo chủ đề/Khám phá.
+  Bỏ: lời chào dài, "Tiến độ hôm nay 13/10", "Nhanh tập trung", "Chủ đề gần đây", nhãn "Đã phát hành". Nội dung kế hoạch học cũ (quick/lesson đã phát hành chưa mở) được gộp vào "Chưa đọc" thay vì một danh sách riêng.
+- `AddCourseScreen` (3 bước: chọn chủ đề nhiều lựa chọn → cấp độ + số mẩu → xem/chỉnh đề cương), `CourseReaderScreen` (nút Đã hiểu ghim đáy, nhãn Chưa kiểm chứng, **Báo nội dung**), `CourseDetailScreen` (tiến độ, đề cương, đổi cấp độ, tạm dừng, xóa).
+- Tuân `DESIGN.md`: dùng chung AppCard/AppButton/AppChip, có loading/empty/error, không emoji thay icon; cập nhật DESIGN.md (mục Trang chủ) + PRODUCT.md.
+- Phát hiện & sửa: khối `fonts:` trong `pubspec.yaml` bị đặt dưới `flutter_launcher_icons` nên **Inter chưa từng được bundle** → chuyển về dưới `flutter:`.
+
+### Pha 3 — Thông báo
+- Payload mới `course:<id>` (+ JSON), router mở `CourseReaderScreen` (cold start + warm start).
+- `scheduleCourseNotification`: **BigText** (đọc tóm tắt không cần mở app), footer "Mẩu i/N · Chưa kiểm chứng", nút **Đã hiểu** (không mở UI) + **Đọc đầy đủ**, kênh riêng `mind_keeper_course`, ID âm FNV-1a ổn định (-9.000.000…).
+  Nút "Đã hiểu": app đang chạy → `CourseService.markRead`; app đóng → `courseNotificationBackground` (isolate nền) ghi `status=read`, lần mở app sau `reconcile()` kích hoạt thẻ ôn.
+- Báo thức **chính xác** khi hệ thống cho phép (`SCHEDULE_EXACT_ALARM` + `canScheduleExactNotifications`), không thì lùi về không chính xác (Android có thể lùi tới ~1 giờ).
+- iOS: `DarwinNotificationCategory` với 2 nút (chưa kiểm thử được — cần Mac).
+
+### Pha 4 — Thương hiệu, màn hình khởi động, tài liệu cửa hàng
+- **Icon mới** (chữ M nét tròn + tia sáng, gradient) vẽ bằng `BrandMarkPainter` (`lib/core/widgets/brand_mark.dart`), render bằng `tool/brand/render_brand_test.dart`, áp bằng `flutter_launcher_icons` (Android adaptive + legacy, iOS full-bleed không alpha).
+- **Splash**: native Android (gradient + logo; Android 12+ `values-v31`), iOS `LaunchImage` + nền storyboard, trong app `SplashOverlay` (logo + tia sáng nảy + tên + khẩu hiệu, ~1,5 s, không chặn chạm). Nhãn app: `MindKeeper`.
+- **Trang quyền riêng tư**: `site/` (index, privacy, terms, support) + workflow GitHub Pages `.github/workflows/pages.yml` (email/tên công khai lấy từ Repository variables, KHÔNG commit sẵn) + màn "Quyền riêng tư & điều khoản" trong Hồ sơ.
+- **Hồ sơ đăng cửa hàng** (`store/`): nội dung vi/en (kiểm ký tự), icon 512/1024, ảnh bìa, 5 ảnh chụp thật từ thiết bị đóng khung cho Android/iPhone 6.7/6.5/5.5/iPad 12.9, video giới thiệu 18,6 s (thiết bị chặn `screenrecord` nên dựng từ khung ảnh bằng ffmpeg), Data safety, App Privacy, khai báo Play, checklist; cây **fastlane** (`Fastfile`, `Appfile`, `tool/store/prepare_fastlane.sh`); runbook cho AI Agent `DOCS/STORE_AGENT_GUIDE.md`.
+- Ký bản phát hành: `build.gradle.kts` đọc `android/key.properties` (gitignored); thiếu thì ký debug (không dùng đăng store).
+
+### Test đã chạy (kết quả THẬT)
+- `flutter analyze lib`: 0 error; 2 warning có sẵn ở `firebase_messaging_service.dart`.
+- Unit/widget: **229 test pass** (core+data+features, trừ file bên dưới). Mới: `course_service_test` (12), `migration_v9_test` (4), `course_ui_test` (7), `brand_splash_test` (3); cập nhật `database_migration_test` (11 bảng/10 FK), `layout_overflow_test`, `widget_test` theo giao diện mới.
+- **Lỗi có sẵn, KHÔNG do GĐ23**: `test/features/study_plan_screen_test.dart` treo/"No tests were found" cả ở commit `5b0c28c` (đã kiểm tra bằng git worktree sạch). Chưa sửa.
+- Maestro trên OPPO CPH2203 (Android 13): `maestro/gd23/` — 01 trang chủ mới + menu [+]; 02 thêm khóa học (chọn chủ đề → cấp độ/số mẩu → đề cương → bỏ mục → bắt đầu); 03 đọc mẩu → Đã hiểu; 04 chạm thông báo mở đúng mẩu (intent `SELECT_NOTIFICATION`); 05 chụp ảnh cửa hàng. Kết quả chạy lần cuối: xem `DOCS/QA/GD23_ACCEPTANCE.md`.
+
+### Rủi ro / chưa xác minh (TRUNG THỰC)
+1. **Thông báo hẹn giờ KHÔNG hiện trên OPPO CPH2203 trong thử nghiệm của phiên này.** Đã xác nhận: quyền thông báo + báo thức chính xác đã cấp, báo thức đặt với `exactAllowReason=permission`, hệ thống **đã gửi broadcast** tới `ScheduledNotificationReceiver` đúng giờ (`dumpsys activity broadcasts`), nhưng không có thông báo và kênh `mind_keeper_course` không được tạo; bộ nhớ đệm lịch của plugin còn nguyên mục đã "nổ". Nghi do ColorOS chặn broadcast nền (tối ưu pin/tự khởi chạy). Chưa thử được "Tự khởi chạy"/bỏ tối ưu pin qua adb (không đủ quyền). → Cần chủ máy bật "Tự khởi chạy" + bỏ tối ưu pin rồi thử lại; BigText/nút hành động **chưa được xác nhận bằng mắt** (đã có test fake + code theo API chuẩn của plugin). Deep link khi chạm thông báo thì ĐÃ xác nhận (flow 04).
+2. Nguồn tham khảo là AI tự ghi (chưa kiểm chứng) — đúng quyết định của chủ; chưa có tra cứu web.
+3. Hai hệ thống phát hành song song: kế hoạch học cũ (quick/lesson mặc định 5+2 mẩu/ngày) và khóa học. Chưa gộp; người dùng có thể giảm quota/tạm dừng ở "Kế hoạch học".
+4. iOS (build, thông báo có nút, splash, icon) chưa kiểm chứng — không có Mac.
+5. Firebase chưa cấu hình (`google-services.json` thiếu) → quyết định gỡ hay cấu hình trước khi khai Data safety (xem `store/RELEASE_CHECKLIST.md`).
+6. Chưa quay video màn hình thật (thiết bị chặn `screenrecord`); video giới thiệu dựng từ ảnh chụp.
+7. Flutter test trên Windows có thể bị khóa `sqlite3.dll` bởi `flutter_tester` mồ côi; đã chạy test từ bản sao dự án ở thư mục tạm.

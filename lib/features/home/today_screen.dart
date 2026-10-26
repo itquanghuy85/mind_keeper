@@ -9,22 +9,40 @@ import '../../core/services/app_services.dart';
 import '../../core/services/notification_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_feedback.dart';
-import '../../core/widgets/app_icon_badge.dart';
+import '../../data/models/course.dart';
+import '../../data/models/knowledge_item.dart';
+import '../../data/models/lesson.dart';
 import '../../data/models/study_feed_item.dart';
-import '../../data/models/topic.dart';
-import '../../data/repositories/topic_repository.dart';
+import '../../features/courses/add_course_screen.dart';
+import '../../features/courses/course_detail_screen.dart';
+import '../../features/courses/course_reader_screen.dart';
 import '../../features/discover/discover_screen.dart';
 import '../../features/knowledge/knowledge_detail_screen.dart';
 import '../../features/lessons/lesson_discover_screen.dart';
 import '../../features/lessons/lesson_reader_screen.dart';
 import '../../features/review/review_screen.dart';
-import '../../features/study/study_plan_service.dart';
-import '../../features/topics/topic_detail_screen.dart';
-import '../../core/theme/app_palette.dart';
+
+/// Một mục "chưa đọc" trên trang chủ (mẩu khóa học hoặc nội dung kế hoạch cũ).
+class _UnreadEntry {
+  const _UnreadEntry({
+    required this.topic,
+    required this.title,
+    required this.minutes,
+    required this.open,
+    this.level,
+  });
+
+  final String topic;
+  final String? level;
+  final String title;
+  final int minutes;
+  final Future<void> Function() open;
+}
 
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key, this.onCreateTopic, this.reloadListenable});
@@ -40,18 +58,15 @@ class TodayScreen extends StatefulWidget {
 }
 
 class _TodayScreenState extends State<TodayScreen> {
+  static const int _collapsedUnread = 3;
+
   bool _loading = true;
   String? _error;
   int _dueCount = 0;
-  int _reviewsToday = 0;
-  int _dailyGoal = 10;
-  List<Topic> _recentTopics = const <Topic>[];
-  Map<String, TopicStats> _topicStats = <String, TopicStats>{};
-
-  /// Nội dung hôm nay từ kế hoạch học (chỉ phần đã lưu xong) + tiêu đề đã
-  /// phân giải sẵn.
-  List<StudyFeedItem> _feedItems = const <StudyFeedItem>[];
-  List<String> _feedTitles = const <String>[];
+  List<_UnreadEntry> _unread = const <_UnreadEntry>[];
+  List<CourseProgress> _courses = const <CourseProgress>[];
+  bool _showAllUnread = false;
+  bool _readingAhead = false;
   DateTime? _loadedAt;
   bool _handledNotification = false;
 
@@ -68,34 +83,37 @@ class _TodayScreenState extends State<TodayScreen> {
     super.dispose();
   }
 
+  static int _minutesFor(String text) {
+    final int words = text.trim().isEmpty
+        ? 0
+        : text.trim().split(RegExp(r'\s+')).length;
+    final int minutes = (words / 160).ceil();
+    return minutes < 1 ? 1 : minutes;
+  }
+
   Future<void> _load() async {
     final AppServices services = context.read<AppServices>();
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    if (_loadedAt == null) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final DateTime now = DateTime.now();
       final int due = await services.cards.countDue(now: now);
-      final int reviews = await services.stats.reviewsToday(now: now);
-      final int goal = services.prefs.dailyGoal;
-      final List<Topic> all = await services.topics.list(limit: 20);
-      all.sort((Topic a, Topic b) => b.updatedAt.compareTo(a.updatedAt));
-      final Map<String, TopicStats> stats = await services.topics
-          .statsForTopics(all.map((Topic t) => t.id).toList());
+      final List<CourseProgress> courses = await services.courseService
+          .progress();
+      final List<_UnreadEntry> unread = await _loadUnread(services, now);
       if (!mounted) return;
       setState(() {
         _dueCount = due;
-        _reviewsToday = reviews;
-        _dailyGoal = goal;
-        _recentTopics = all.take(3).toList(growable: false);
-        _topicStats = stats;
+        _courses = courses;
+        _unread = unread;
         _loadedAt = now;
         _loading = false;
+        _error = null;
       });
-      // Tải nội dung kế hoạch học RIÊNG bước sau: không giữ spinner chính
-      // chờ thêm truy vấn (màn hình hiện ra trước, phần này tự điền sau).
-      unawaited(_loadFeed(now));
       await _handlePendingNotification();
     } catch (e) {
       if (!mounted) return;
@@ -106,53 +124,87 @@ class _TodayScreenState extends State<TodayScreen> {
     }
   }
 
-  Future<String> _resolveFeedTitle(
+  /// Mẩu khóa học đã đến giờ + nội dung kế hoạch cũ đã phát hành mà chưa mở.
+  Future<List<_UnreadEntry>> _loadUnread(
     AppServices services,
-    StudyFeedItem row,
+    DateTime now,
   ) async {
-    try {
-      if (row.kind == StudyFeedKind.quick) {
-        final item = await services.knowledge.getById(row.refId!);
-        return item == null ? row.topicName : item.title;
-      }
-      final lesson = await services.lessons.getById(row.refId!);
-      return lesson == null ? row.topicName : lesson.title;
-    } catch (_) {
-      return row.topicName;
+    final List<_UnreadEntry> entries = <_UnreadEntry>[];
+    for (final CourseItemEntry e in await services.courseService.unread(
+      now: now,
+    )) {
+      final KnowledgeItem? k = e.item.knowledgeItemId == null
+          ? null
+          : await services.knowledge.getById(e.item.knowledgeItemId!);
+      entries.add(
+        _UnreadEntry(
+          topic: e.course.name,
+          level: e.course.level.label,
+          title: e.item.title,
+          minutes: _minutesFor(k?.content ?? e.item.summary),
+          open: () => _openRoute(CourseReaderScreen(itemId: e.item.id)),
+        ),
+      );
     }
-  }
-
-  /// Tải nội dung hôm nay từ kế hoạch học (chỉ phần đã lưu xong — đọc được
-  /// offline). Lỗi giữ nguyên danh sách cũ, không phá màn hình chính.
-  Future<void> _loadFeed(DateTime now) async {
     try {
-      final AppServices services = context.read<AppServices>();
-      final List<StudyFeedItem> rows = (await services.studyPlan.listDay(now))
-          .where((StudyFeedItem r) => r.status.hasContent && r.refId != null)
-          .toList(growable: false);
-      final List<String> titles = <String>[];
+      final List<StudyFeedItem> rows = await services.studyPlan.listDay(now);
       for (final StudyFeedItem row in rows) {
-        titles.add(await _resolveFeedTitle(services, row));
+        if (row.status != StudyFeedStatus.delivered || row.refId == null) {
+          continue;
+        }
+        final String refId = row.refId!;
+        if (row.kind == StudyFeedKind.quick) {
+          final KnowledgeItem? k = await services.knowledge.getById(refId);
+          if (k == null) continue;
+          entries.add(
+            _UnreadEntry(
+              topic: row.topicName,
+              title: k.title,
+              minutes: _minutesFor(k.content),
+              open: () async {
+                await services.studyPlan.markOpened(refId);
+                if (!mounted) return;
+                await _openRoute(KnowledgeDetailScreen(itemId: refId));
+              },
+            ),
+          );
+        } else {
+          final Lesson? l = await services.lessons.getById(refId);
+          if (l == null) continue;
+          entries.add(
+            _UnreadEntry(
+              topic: row.topicName,
+              title: l.title,
+              minutes: l.wordCount > 0 ? _minutesFor('x ' * l.wordCount) : 4,
+              open: () async {
+                await services.studyPlan.markOpened(refId);
+                if (!mounted) return;
+                await _openRoute(LessonReaderScreen(lessonId: refId));
+              },
+            ),
+          );
+        }
       }
-      if (!mounted) return;
-      setState(() {
-        _feedItems = rows;
-        _feedTitles = titles;
-      });
     } catch (e) {
-      if (kDebugMode) debugPrint('Tải nội dung hôm nay lỗi: $e');
+      if (kDebugMode) debugPrint('Tải nội dung kế hoạch lỗi: $e');
     }
+    return entries;
   }
 
-  /// Kéo để làm mới: tải lại ngay + chạy đối soát kế hoạch học ở nền
-  /// (khi đối soát xong tự tải lại lần nữa để hiện nội dung mới).
+  Future<void> _openRoute(Widget screen) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => screen));
+    if (mounted) await _load();
+  }
+
+  /// Kéo để làm mới: tải lại ngay + đối soát kế hoạch/khóa học ở nền.
   Future<void> _refresh() async {
-    final StudyPlanService plan = context.read<AppServices>().studyPlan;
-    if (!plan.isSyncing) {
-      plan.sync().then((_) {
+    unawaited(
+      AppBootstrap.instance.refreshStudyPlan().then((_) {
         if (mounted) _load();
-      }, onError: (_) {});
-    }
+      }, onError: (_) {}),
+    );
     await _load();
   }
 
@@ -183,26 +235,70 @@ class _TodayScreenState extends State<TodayScreen> {
       'Chủ Nhật',
     ];
     final DateTime local = date.toLocal();
-    return '${weekdays[local.weekday - 1]}, ${local.day} tháng ${local.month}';
+    return '${weekdays[local.weekday - 1]}, ${local.day}/${local.month}';
   }
 
-  Future<void> _startReview() async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const ReviewScreen()));
+  Future<void> _startReview() => _openRoute(const ReviewScreen()).then((_) {
     if (AppBootstrap.instance.isReady &&
         AppBootstrap.instance.services.prefs.notificationsEnabled) {
       unawaited(AppBootstrap.instance.refreshReminderSchedule());
     }
-    if (mounted) await _load();
+  });
+
+  /// Nút chính: đi lần lượt — mẩu mới trước, hết thì sang ôn tập.
+  Future<void> _startNext() async {
+    if (_unread.isNotEmpty) {
+      await _unread.first.open();
+    } else if (_dueCount > 0) {
+      await _startReview();
+    }
+  }
+
+  /// Đọc trước: sinh ngay mẩu kế tiếp của khóa chưa xong (không chờ giờ).
+  Future<void> _readAhead() async {
+    final AppServices services = context.read<AppServices>();
+    CourseProgress? target;
+    for (final CourseProgress p in _courses) {
+      if (!p.isDone && p.course.status == CourseStatus.active) {
+        target = p;
+        break;
+      }
+    }
+    if (target == null) return;
+    setState(() => _readingAhead = true);
+    try {
+      final CourseItem? item = await services.courseService.generateNext(
+        target.course.id,
+      );
+      if (!mounted) return;
+      if (item != null) {
+        await _openRoute(CourseReaderScreen(itemId: item.id));
+      } else {
+        await _load();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _readingAhead = false);
+    }
+  }
+
+  Future<void> _addCourse() async {
+    final bool? created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const AddCourseScreen()),
+    );
+    if (created == true && mounted) await _load();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: SafeArea(
-          child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context)),
-        ),
+      body: SafeArea(
+        child: RefreshIndicator(onRefresh: _refresh, child: _buildBody(context)),
+      ),
     );
   }
 
@@ -213,459 +309,338 @@ class _TodayScreenState extends State<TodayScreen> {
     if (_error != null) {
       return AppErrorState(message: _error, onRetry: _load);
     }
-
-    final double goalProgress = _dailyGoal == 0
-        ? 0
-        : (_reviewsToday / _dailyGoal).clamp(0.0, 1.0);
+    final TextTheme text = Theme.of(context).textTheme;
+    final List<CourseProgress> ordered = <CourseProgress>[
+      ..._courses.where((CourseProgress p) => !p.isDone),
+      ..._courses.where((CourseProgress p) => p.isDone),
+    ];
+    final List<_UnreadEntry> shown = _showAllUnread
+        ? _unread
+        : _unread.take(_collapsedUnread).toList(growable: false);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.lg,
+        AppSpacing.md,
         AppSpacing.lg,
         AppSpacing.xxxl,
       ),
       children: <Widget>[
-        // Header
-        Text(
-          'Chào bạn',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: context.appColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          'Mỗi ngày nhớ thêm một chút',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: AppSpacing.sm),
         Row(
           children: <Widget>[
-            Icon(
-              Icons.event_rounded,
-              size: AppSizes.iconSm,
-              color: context.appColors.textSecondary,
-            ),
-            const SizedBox(width: AppSpacing.xs),
             Expanded(
               child: Text(
                 _formatDate(_loadedAt ?? DateTime.now()),
-                style: Theme.of(context).textTheme.bodySmall,
+                style: text.headlineSmall,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            _AddMenu(
+              onAddCourse: _addCourse,
+              onLessons: () => _openRoute(const LessonDiscoverScreen()),
+              onCreateTopic: widget.onCreateTopic,
+              onDiscover: () => _openRoute(const DiscoverScreen()),
+            ),
           ],
         ),
-        const SizedBox(height: AppSpacing.xxl),
-
-        // 1. Kiến thức đến hạn — ưu tiên cao nhất
-        AppSectionHeader(
-          title: 'Ôn kiến thức đến hạn',
-          padding: EdgeInsets.zero,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        AppCard(
-          semanticsLabel: '$_dueCount thẻ đến hạn',
-          onTap: _startReview,
-          child: Row(
-            children: <Widget>[
-              const AppIconBadge(
-                icon: Icons.schedule_rounded,
-                tone: AppIconTone.warning,
-                size: 48,
-                radius: AppRadius.xl,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      _dueCount == 0
-                          ? 'Không có thẻ nào đến hạn'
-                          : 'Dành 5–10 phút để củng cố trí nhớ',
-                      style: Theme.of(context).textTheme.titleMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      _dueCount == 0
-                          ? 'Tuyệt vời! Hãy quay lại sau khi có thẻ đến hạn.'
-                          : '$_dueCount thẻ đang chờ bạn ôn tập.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              // Số thẻ đến hạn là điểm nhấn — luôn giữ trên một dòng, không bị
-              // nội dung bên trái đè lên (Row xếp widget non-flex trước).
-              Text(
-                '$_dueCount',
-                maxLines: 1,
-                softWrap: false,
-                textAlign: TextAlign.end,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: context.appColors.primary,
-                  fontFeatures: AppTheme.tabularFigures,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AppButton(
-          label: _dueCount == 0 ? 'Ôn lại ngẫu nhiên' : 'Bắt đầu ôn tập',
-          icon: Icons.play_arrow_rounded,
-          onPressed: _startReview,
-        ),
-
-        const SizedBox(height: AppSpacing.xxl),
-
-        // 2. Tiến độ hôm nay
-        AppSectionHeader(
-          title: 'Tiến độ hôm nay',
-          actionLabel: '$_reviewsToday/$_dailyGoal mục tiêu',
-          padding: EdgeInsets.zero,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        ClipRRect(
-          borderRadius: AppRadius.pillAll,
-          child: LinearProgressIndicator(
-            value: goalProgress,
-            minHeight: 10,
-            backgroundColor: context.appColors.surfaceMuted,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          '${(goalProgress * 100).round()}% đã hoàn thành',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            fontFeatures: AppTheme.tabularFigures,
-          ),
-          textAlign: TextAlign.right,
-        ),
-
-        const SizedBox(height: AppSpacing.xxl),
-
-        // 3. Nội dung hôm nay (kế hoạch học — bài đã lưu sẵn, đọc offline)
-        if (_feedItems.isNotEmpty) ...<Widget>[
+        const SizedBox(height: AppSpacing.lg),
+        _mainCard(context),
+        if (_unread.isNotEmpty) ...<Widget>[
+          const SizedBox(height: AppSpacing.xxl),
           AppSectionHeader(
-            title: 'Nội dung hôm nay',
-            actionLabel: '${_feedItems.length} mục',
+            title: 'Chưa đọc',
+            actionLabel: _unread.length > _collapsedUnread
+                ? (_showAllUnread ? 'Thu gọn' : 'Xem tất cả (${_unread.length})')
+                : null,
+            onAction: _unread.length > _collapsedUnread
+                ? () => setState(() => _showAllUnread = !_showAllUnread)
+                : null,
             padding: EdgeInsets.zero,
           ),
           const SizedBox(height: AppSpacing.sm),
-          ..._feedItems.asMap().entries.map(
-            (MapEntry<int, StudyFeedItem> entry) {
-              final StudyFeedItem row = entry.value;
-              final String title = _feedTitles[entry.key];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: AppCard(
-                  semanticsLabel: title,
-                  onTap: () => _openFeedItem(row),
-                  child: Row(
-                    children: <Widget>[
-                      AppIconBadge(
-                        icon: row.kind == StudyFeedKind.quick
-                            ? Icons.bolt_rounded
-                            : Icons.article_rounded,
-                        tone: row.kind == StudyFeedKind.quick
-                            ? AppIconTone.warning
-                            : AppIconTone.primary,
-                        size: AppSizes.badgeSm,
-                        radius: AppRadius.md,
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              title,
-                              style: Theme.of(context).textTheme.titleSmall,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              '${row.kind == StudyFeedKind.quick ? 'Thông tin nhanh' : 'Bài viết'} · ${_feedStatusText(row)}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: context.appColors.textTertiary,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.xxl),
+          for (final _UnreadEntry entry in shown) _unreadTile(context, entry),
         ],
-
-        // 4. Nhanh tập trung — 3 hành động chính
-        AppSectionHeader(title: 'Nhanh tập trung', padding: EdgeInsets.zero),
-        const SizedBox(height: AppSpacing.sm),
-        // IntrinsicHeight + stretch: ba thẻ luôn cao bằng nhau dù mô tả dài
-        // ngắn khác nhau hoặc font scale lớn (trước đây mỗi thẻ một chiều cao).
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Expanded(
-                child: _QuickActionCard(
-                  semanticsLabel: 'Bài học AI',
-                  icon: Icons.auto_awesome_rounded,
-                  iconColor: AppColors.info,
-                  iconBg: context.appColors.infoSoft,
-                  title: 'Bài học AI',
-                  subtitle: 'Soạn bài + quiz',
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const LessonDiscoverScreen(),
-                      ),
-                    );
-                    if (mounted) await _load();
-                  },
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _QuickActionCard(
-                  semanticsLabel: 'Tạo chủ đề của tôi',
-                  icon: Icons.add_rounded,
-                  iconColor: AppColors.success,
-                  iconBg: context.appColors.successSoft,
-                  title: 'Tạo chủ đề',
-                  subtitle: 'Từ ghi chú của bạn',
-                  onTap: widget.onCreateTopic,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _QuickActionCard(
-                  semanticsLabel: 'Khám phá chủ đề mới',
-                  icon: Icons.explore_rounded,
-                  iconColor: context.appColors.primary,
-                  iconBg: context.appColors.primarySoft,
-                  title: 'Khám phá',
-                  subtitle: 'Lĩnh vực mới mỗi ngày',
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const DiscoverScreen(),
-                      ),
-                    );
-                    if (mounted) await _load();
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: AppSpacing.xxl),
-
-        // 5. Chủ đề gần đây
-        AppSectionHeader(title: 'Chủ đề gần đây', padding: EdgeInsets.zero),
-        const SizedBox(height: AppSpacing.sm),
-        if (_recentTopics.isEmpty)
-          AppCard(
-            semanticsLabel: 'Không có chủ đề',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Bạn chưa có chủ đề nào.',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Tạo chủ đề đầu tiên để bắt đầu ghi nhớ kiến thức.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AppButton(
-                  label: 'Tạo chủ đề đầu tiên',
-                  icon: Icons.add_rounded,
-                  onPressed: widget.onCreateTopic,
-                ),
-              ],
-            ),
-          )
-        else
-          ..._recentTopics.map(
-            (Topic topic) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: AppCard(
-                semanticsLabel: 'Mở chủ đề ${topic.name}',
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => TopicDetailScreen(topicId: topic.id),
-                    ),
-                  );
-                  if (mounted) await _load();
-                },
-                child: Row(
-                  children: <Widget>[
-                    const AppIconBadge(
-                      icon: Icons.folder_rounded,
-                      tone: AppIconTone.primary,
-                      size: AppSizes.badgeSm,
-                      radius: AppRadius.md,
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            topic.name,
-                            style: Theme.of(context).textTheme.titleSmall,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            _statsForTopic(topic.id),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: context.appColors.textTertiary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+        if (ordered.isNotEmpty) ...<Widget>[
+          const SizedBox(height: AppSpacing.xxl),
+          AppSectionHeader(title: 'Đang theo', padding: EdgeInsets.zero),
+          const SizedBox(height: AppSpacing.sm),
+          for (final CourseProgress p in ordered) _courseTile(context, p),
+        ],
       ],
     );
   }
 
-  String _feedStatusText(StudyFeedItem row) {
-    if (row.status == StudyFeedStatus.delivered ||
-        row.status == StudyFeedStatus.opened) {
-      return 'Đã phát hành';
-    }
-    final DateTime at = context.read<AppServices>().studyPlan.slotTimeFor(row);
-    final DateTime local = at.toLocal();
-    return 'Dự kiến ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-  }
+  Widget _mainCard(BuildContext context) {
+    final TextTheme text = Theme.of(context).textTheme;
+    final int unread = _unread.length;
+    final int minutes =
+        _unread.fold<int>(0, (int sum, _UnreadEntry e) => sum + e.minutes) +
+        (_dueCount * 0.5).ceil();
+    final bool hasWork = unread > 0 || _dueCount > 0;
+    final bool hasActiveCourse = _courses.any(
+      (CourseProgress p) =>
+          !p.isDone && p.course.status == CourseStatus.active,
+    );
 
-  Future<void> _openFeedItem(StudyFeedItem row) async {
-    final AppServices services = context.read<AppServices>();
-    final String? refId = row.refId;
-    if (refId == null) return;
-    await services.studyPlan.markOpened(refId);
-    if (!mounted) return;
-    if (row.kind == StudyFeedKind.quick) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => KnowledgeDetailScreen(itemId: refId),
+    if (hasWork) {
+      final List<String> parts = <String>[
+        if (unread > 0) '$unread mẩu mới',
+        if (_dueCount > 0) '$_dueCount thẻ ôn',
+      ];
+      return AppCard(
+        elevated: true,
+        semanticsLabel: 'Hôm nay bạn còn ${parts.join(' và ')}',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'HÔM NAY BẠN CÒN',
+              style: text.labelMedium?.copyWith(
+                color: context.appColors.textSecondary,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              parts.join(' · '),
+              style: text.headlineSmall?.copyWith(
+                fontFeatures: AppTheme.tabularFigures,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text('≈ $minutes phút', style: text.bodyMedium),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'Bắt đầu',
+              icon: Icons.play_arrow_rounded,
+              onPressed: _startNext,
+            ),
+          ],
         ),
       );
-    } else {
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => LessonReaderScreen(lessonId: refId)));
     }
-    if (mounted) await _load();
+
+    if (_courses.isEmpty) {
+      return AppCard(
+        elevated: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Học một chủ đề mới', style: text.headlineSmall),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Chọn chủ đề và cấp độ, AI sẽ soạn lộ trình rồi nhắc bạn đọc '
+              'từng mẩu mỗi ngày.',
+              style: text.bodyMedium,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'Thêm khóa học',
+              icon: Icons.add_rounded,
+              onPressed: _addCourse,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AppCard(
+      elevated: true,
+      semanticsLabel: 'Xong cho hôm nay',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(Icons.check_circle_rounded, color: AppColors.success),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text('Xong cho hôm nay', style: text.headlineSmall),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            hasActiveCourse
+                ? 'Mẩu kế tiếp sẽ đến theo giờ đã đặt.'
+                : 'Các khóa học đã hoàn thành hoặc đang tạm dừng.',
+            style: text.bodyMedium,
+          ),
+          if (hasActiveCourse) ...<Widget>[
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'Đọc trước mẩu kế tiếp',
+              icon: Icons.fast_forward_rounded,
+              variant: AppButtonVariant.tonal,
+              loading: _readingAhead,
+              onPressed: _readAhead,
+            ),
+          ] else ...<Widget>[
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'Thêm khóa học',
+              icon: Icons.add_rounded,
+              variant: AppButtonVariant.tonal,
+              onPressed: _addCourse,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
-  String _statsForTopic(String topicId) {
-    final s = _topicStats[topicId];
-    if (s == null) return '';
-    if (s.dueCount > 0) {
-      return '${s.knowledgeCount} kiến thức · ${s.dueCount} đến hạn';
-    }
-    return '${s.knowledgeCount} kiến thức';
+  Widget _unreadTile(BuildContext context, _UnreadEntry entry) {
+    final TextTheme text = Theme.of(context).textTheme;
+    final String header = entry.level == null
+        ? entry.topic
+        : '${entry.topic} · ${entry.level}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppCard(
+        semanticsLabel: '$header. ${entry.title}. ${entry.minutes} phút',
+        onTap: () => entry.open(),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    header,
+                    style: text.labelMedium?.copyWith(
+                      color: context.appColors.primary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    entry.title,
+                    style: text.titleSmall,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text('${entry.minutes} phút', style: text.bodySmall),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: context.appColors.textTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _courseTile(BuildContext context, CourseProgress p) {
+    final TextTheme text = Theme.of(context).textTheme;
+    final bool paused = p.course.status == CourseStatus.paused;
+    final String progress = '${p.readCount}/${p.total}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppCard(
+        semanticsLabel:
+            'Khóa ${p.course.name}, ${p.course.level.label}, đã đọc $progress',
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        onTap: () => _openRoute(CourseDetailScreen(courseId: p.course.id)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    p.course.name,
+                    style: text.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  paused
+                      ? 'Tạm dừng'
+                      : (p.isDone ? 'Hoàn thành' : p.course.level.label),
+                  style: text.labelMedium?.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: AppRadius.pillAll,
+                    child: LinearProgressIndicator(
+                      value: p.fraction,
+                      minHeight: 8,
+                      backgroundColor: context.appColors.surfaceMuted,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Text(
+                  progress,
+                  style: text.labelMedium?.copyWith(
+                    fontFeatures: AppTheme.tabularFigures,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({
-    required this.semanticsLabel,
-    required this.icon,
-    required this.iconColor,
-    required this.iconBg,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
+/// Nút [+] ở đầu trang: gom các lối tắt ít dùng hằng ngày vào một menu.
+class _AddMenu extends StatelessWidget {
+  const _AddMenu({
+    required this.onAddCourse,
+    required this.onLessons,
+    required this.onCreateTopic,
+    required this.onDiscover,
   });
 
-  final String semanticsLabel;
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBg;
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
+  final VoidCallback onAddCourse;
+  final VoidCallback onLessons;
+  final VoidCallback? onCreateTopic;
+  final VoidCallback onDiscover;
 
   @override
   Widget build(BuildContext context) {
-    // Bố cục dọc: chịu được 3 card chia 1/3 màn hình + font scale lớn,
-    // không tràn ngang như Row (icon + text + chevron) trước đây.
-    return AppCard(
-      semanticsLabel: semanticsLabel,
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.md,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Align(
-            alignment: Alignment.center,
-            child: AppIconBadge(
-              icon: icon,
-              color: iconColor,
-              background: iconBg,
-              size: 44,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          // Tiêu đề cho phép 2 dòng: "Bài học AI" không bị cắt cụt ở font scale lớn.
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          // Mô tả: tối đa 2 dòng, giãn dòng nhẹ cho dễ đọc, câu chữ đã rút gọn
-          // ở call site để không phải ellipsis ở cỡ chữ thường.
-          Text(
-            subtitle,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(height: 1.25),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return PopupMenuButton<int>(
+      tooltip: 'Thêm',
+      icon: const Icon(Icons.add_circle_rounded, size: 32),
+      color: context.appColors.surface,
+      onSelected: (int value) {
+        switch (value) {
+          case 0:
+            onAddCourse();
+          case 1:
+            onLessons();
+          case 2:
+            onCreateTopic?.call();
+          case 3:
+            onDiscover();
+        }
+      },
+      itemBuilder: (BuildContext context) => const <PopupMenuEntry<int>>[
+        PopupMenuItem<int>(value: 0, child: Text('Thêm khóa học')),
+        PopupMenuItem<int>(value: 1, child: Text('Bài học AI')),
+        PopupMenuItem<int>(value: 2, child: Text('Tạo chủ đề')),
+        PopupMenuItem<int>(value: 3, child: Text('Khám phá')),
+      ],
     );
   }
 }

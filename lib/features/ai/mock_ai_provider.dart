@@ -2,11 +2,13 @@ import 'dart:convert';
 
 import '../discover/domain_catalog.dart';
 import '../discover/topic_seed_catalog.dart';
+import '../../data/models/course.dart';
 import 'ai_provider.dart';
+import 'course_ai.dart';
 
 /// Mock AI dùng cho phát triển và test.
 /// KHÔNG phải dịch vụ AI thật — mọi kết quả được đánh dấu "đề xuất thử nghiệm".
-class MockAIProvider implements AIProvider {
+class MockAIProvider implements AIProvider, CourseAiProvider {
   MockAIProvider({this.latency = const Duration(milliseconds: 30)});
 
   final Duration latency;
@@ -363,5 +365,57 @@ class MockAIProvider implements AIProvider {
       for (final TopicSeed seed in seeds)
         AiTopicSuggestion(title: seed.title, description: seed.description),
     ];
+  }
+
+  static const List<String> _outlineAspects = <String>[
+    'Khái niệm cơ bản',
+    'Nguyên lý hoạt động',
+    'Ứng dụng trong đời sống',
+    'Những hiểu lầm phổ biến',
+    'Lịch sử hình thành',
+    'Các thành phần chính',
+    'So sánh với giải pháp khác',
+    'Mẹo sử dụng hiệu quả',
+    'Giới hạn và rủi ro',
+    'Xu hướng phát triển',
+  ];
+
+  @override
+  Future<List<String>> generateOutline({
+    required String topic,
+    required CourseLevel level,
+    required int count,
+  }) async {
+    await _delay();
+    return <String>[
+      for (int i = 0; i < count; i++)
+        '$topic (${level.label}) · ${_outlineAspects[i % _outlineAspects.length]}'
+            '${i >= _outlineAspects.length ? ' ${i ~/ _outlineAspects.length + 1}' : ''}',
+    ];
+  }
+
+  @override
+  Future<AiBiteDraft> generateBite({
+    required String topic,
+    required CourseLevel level,
+    required String title,
+    required int index,
+    required int total,
+    List<String> previousTitles = const <String>[],
+  }) async {
+    await _delay();
+    final String content =
+        '[Nội dung thử nghiệm] $title. Đây là mẩu $index trên $total của chủ đề '
+        '$topic ở cấp ${level.label}. ${level.hint}. Mẩu này do AI giả lập '
+        'soạn để thử luồng học, không phải kiến thức thật.';
+    return AiBiteDraft(
+      title: title,
+      content: content,
+      summary: 'Mẩu thử nghiệm $index/$total về $topic (${level.label}).',
+      example: 'Ví dụ thử nghiệm cho "$title".',
+      sources: const <String>['Chưa kiểm chứng (mock)'],
+      question: 'Ý chính của "$title" là gì?',
+      answer: 'Ý chính của mẩu $index trong chủ đề $topic.',
+    );
   }
 }

@@ -14,7 +14,7 @@ class SchemaMigration {
 
 abstract final class DbSchema {
   /// Phiên bản schema hiện tại của ứng dụng.
-  static const int currentVersion = 8;
+  static const int currentVersion = 9;
 
   static const String topics = '''
 CREATE TABLE topics (
@@ -174,6 +174,45 @@ CREATE TABLE study_feed_items (
   updated_at INTEGER NOT NULL
 )''';
 
+  /// GĐ23: khóa học = chủ đề + cấp độ + đề cương [total_items] mẩu.
+  static const String courses = '''
+CREATE TABLE courses (
+  id TEXT PRIMARY KEY,
+  topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  level TEXT NOT NULL DEFAULT 'basic',
+  total_items INTEGER NOT NULL DEFAULT 0,
+  per_day INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)''';
+
+  /// Một mẩu trong đề cương. Nội dung thật nằm ở `knowledge_items`.
+  static const String courseItems = '''
+CREATE TABLE course_items (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  knowledge_item_id TEXT REFERENCES knowledge_items(id) ON DELETE SET NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  sources_note TEXT NOT NULL DEFAULT '',
+  release_at INTEGER,
+  read_at INTEGER,
+  error TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)''';
+
+  static const List<String> courseIndexes = <String>[
+    'CREATE UNIQUE INDEX idx_course_items_pos ON course_items(course_id, position)',
+    'CREATE INDEX idx_course_items_status ON course_items(status)',
+    'CREATE INDEX idx_course_items_knowledge ON course_items(knowledge_item_id)',
+    'CREATE INDEX idx_courses_topic ON courses(topic_id)',
+  ];
+
   static const List<String> studyFeedIndexes = <String>[
     'CREATE UNIQUE INDEX idx_feed_dedup ON study_feed_items(dedup_key)',
     'CREATE UNIQUE INDEX idx_feed_slot ON study_feed_items(day_key, kind, slot_index)',
@@ -199,6 +238,7 @@ CREATE TABLE study_feed_items (
     'CREATE INDEX idx_topics_name ON topics(name)',
     ...lessonIndexes,
     ...studyFeedIndexes,
+    ...courseIndexes,
   ];
 
   static const List<String> tables = <String>[
@@ -211,6 +251,8 @@ CREATE TABLE study_feed_items (
     knowledgeGenerationTasks,
     knowledgeReminderHistory,
     studyFeedItems,
+    courses,
+    courseItems,
   ];
 
   /// Dãy migration chính thức của ứng dụng.
@@ -222,6 +264,7 @@ CREATE TABLE study_feed_items (
     SchemaMigration(fromVersion: 5, toVersion: 6, upgrade: _upgradeToV6),
     SchemaMigration(fromVersion: 6, toVersion: 7, upgrade: _upgradeToV7),
     SchemaMigration(fromVersion: 7, toVersion: 8, upgrade: _upgradeToV8),
+    SchemaMigration(fromVersion: 8, toVersion: 9, upgrade: _upgradeToV9),
   ];
 
   static Future<void> _upgradeToV2(DatabaseExecutor db) async {
@@ -280,6 +323,15 @@ CREATE TABLE study_feed_items (
   static Future<void> _upgradeToV8(DatabaseExecutor db) async {
     await db.execute(studyFeedItems);
     for (final String statement in studyFeedIndexes) {
+      await db.execute(statement);
+    }
+  }
+
+  /// GĐ23: chỉ THÊM bảng khóa học + đề cương + index; không đụng bảng cũ.
+  static Future<void> _upgradeToV9(DatabaseExecutor db) async {
+    await db.execute(courses);
+    await db.execute(courseItems);
+    for (final String statement in courseIndexes) {
       await db.execute(statement);
     }
   }

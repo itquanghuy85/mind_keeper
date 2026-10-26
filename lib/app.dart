@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'core/di/app_providers.dart';
 import 'core/services/app_services.dart';
+import 'core/widgets/splash_overlay.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_button.dart';
 import 'features/discover/discover_screen.dart';
@@ -23,9 +24,16 @@ import 'features/topics/create_topic_screen.dart';
 import 'features/topics/topic_detail_screen.dart';
 
 class MindKeeperApp extends StatelessWidget {
-  const MindKeeperApp({super.key, required this.services});
+  const MindKeeperApp({
+    super.key,
+    required this.services,
+    this.showSplash = true,
+  });
 
   final AppServices services;
+
+  /// Màn hình khởi động trong app (tắt trong test để không che nội dung).
+  final bool showSplash;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +52,8 @@ class MindKeeperApp extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
+        builder: (BuildContext context, Widget? child) =>
+            SplashOverlay(enabled: showSplash, child: child ?? const SizedBox()),
         initialRoute: AppRoutes.home,
         onGenerateRoute: buildAppRoute,
       ),

@@ -34,7 +34,8 @@ Cơ chế khác biệt mà app ghi chú/flashcard thông thường không có:
 ## Operating Context
 
 - App Flutter, tiếng Việt, chỉ hướng dọc (khóa orientation trong `lib/main.dart`).
-- Shell 4 tab (IndexedStack): Hôm nay, Chủ đề, Thống kê, Cá nhân.
+- Shell 4 tab (IndexedStack): Trang chủ, Chủ đề, Thống kê, Hồ sơ.
+- **Khóa học (GĐ23)**: chủ đề + cấp độ (Cơ bản/Nâng cao/Pro/Master) + số mẩu; AI dựng đề cương, người dùng duyệt/chỉnh; mỗi ngày phát hành mẩu kế tiếp theo khung giờ, thông báo đọc nhanh (BigText + nút "Đã hiểu"), "Đã hiểu" đưa thẻ vào lịch FSRS; đổi cấp độ giữa chừng giữ đề cương.
 - Màn hình phụ: chi tiết chủ đề, danh sách kiến thức, ôn tập, tạo/sửa kiến thức, khám phá, tạo chủ đề, import, cài đặt thông báo.
 - Ôn tập: một câu hỏi mỗi lần, ẩn đáp án đến khi người dùng bấm "Xem đáp án"; đánh giá nhớ 4 mức Quên / Khó / Tốt / Dễ.
 - Thông báo cục bộ mở đúng nội dung được nhắc (notification payload `card:<id>`).
@@ -54,6 +55,8 @@ Ràng buộc:
 - Không nhúng API key vào client; không commit credentials.
 - Không dùng mock để báo cáo dịch vụ thật đã hoạt động.
 - Không hiển thị số liệu giả.
+
+Nguồn tham khảo của AI: do AI tự ghi (tên giáo trình/từ khóa, không link) và luôn gắn nhãn "Chưa kiểm chứng"; chưa có bước tra cứu web thật (giai đoạn sau, cần backend).
 
 Chưa quyết định: chuẩn accessibility chính thức (xem `## Accessibility & Inclusion`).
 

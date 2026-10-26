@@ -60,6 +60,23 @@ class AppBootstrap {
       // Đối soát kế hoạch học ở NỀN (không chặn khởi động UI): tạo đủ
       // nội dung còn thiếu, lên lịch bài mới. Idempotent nên chạy lại an toàn.
       unawaited(_syncStudyPlan(services));
+      // Nút "Đã hiểu" trên thông báo khóa học (khi app đang chạy).
+      services.notifications.setOnNotificationAction((
+        String actionId,
+        String payload,
+      ) {
+        final NotificationPayload parsed = NotificationPayload.parse(payload);
+        if (actionId == courseActionMarkRead &&
+            parsed.isCourse &&
+            parsed.id != null) {
+          unawaited(
+            services.courseService.markRead(parsed.id!).then((_) {
+              bumpDataVersion();
+            }),
+          );
+        }
+      });
+      unawaited(_syncCourses(services));
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint('Khởi tạo thông báo thất bại: $e\n$st');
@@ -85,10 +102,23 @@ class AppBootstrap {
     }
   }
 
+  Future<void> _syncCourses(AppServices services) async {
+    try {
+      await services.courseService.reconcile();
+      await services.courseService.sync();
+      bumpDataVersion();
+    } catch (e, s) {
+      if (kDebugMode) {
+        debugPrint('Đối soát khóa học thất bại: $e\n$s');
+      }
+    }
+  }
+
   /// Đồng bộ lại kế hoạch học khi mở app / resume / đổi cài đặt.
   Future<void> refreshStudyPlan() async {
     if (!isReady) return;
     await _syncStudyPlan(services);
+    await _syncCourses(services);
   }
 
   Future<void> _scheduleReminder(AppServices services) async {

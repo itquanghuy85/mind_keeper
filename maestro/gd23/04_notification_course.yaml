@@ -1,0 +1,12 @@
+# GD23.4 - Chạm thông báo khóa học mở ĐÚNG mẩu (cold start).
+# run.sh bắn intent SELECT_NOTIFICATION với payload course:<ITEM_ID> trước flow này.
+# ITEM_ID = course_items.id của một mẩu đã có nội dung (vd. ci_store_1 từ dữ liệu gieo
+# cho ảnh cửa hàng: "Vì sao nồi nhôm và nồi thủy tinh không dùng được trên bếp từ?").
+appId: com.mindkeeper.mind_keeper
+name: GD23.4 Thong bao mo dung mau
+---
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Vì sao nồi nhôm[\\s\\S]*"
+    timeout: 40000
+- assertVisible: "Báo nội dung"
+- takeScreenshot: "gd23_04_notification_opened"

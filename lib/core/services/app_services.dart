@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../data/db/app_database.dart';
+import '../../data/repositories/course_repository.dart';
 import '../../data/repositories/knowledge_generation_repository.dart';
 import '../../data/repositories/knowledge_repository.dart';
 import '../../data/repositories/lesson_repository.dart';
@@ -12,6 +13,7 @@ import '../../data/repositories/stats_repository.dart';
 import '../../data/repositories/study_feed_repository.dart';
 import '../../data/repositories/topic_repository.dart';
 import '../../features/ai/ai_service.dart';
+import '../../features/courses/course_service.dart';
 import '../../features/discover/discovery_service.dart';
 import '../../features/knowledge/knowledge_generation_service.dart';
 import '../../features/lessons/lesson_service.dart';
@@ -41,6 +43,8 @@ class AppServices {
     required this.knowledgeGeneration,
     required this.knowledgeReminders,
     required this.studyPlan,
+    required this.courseService,
+    required this.courseRepo,
   });
 
   final AppDatabase database;
@@ -60,6 +64,8 @@ class AppServices {
   final KnowledgeGenerationService knowledgeGeneration;
   final KnowledgeReminderScheduler knowledgeReminders;
   final StudyPlanService studyPlan;
+  final CourseService courseService;
+  final CourseRepository courseRepo;
 
   static AppServices build({
     required AppDatabase database,
@@ -77,6 +83,7 @@ class AppServices {
     final StatsRepository stats = StatsRepository(database);
     final LessonRepository lessons = LessonRepository(database);
     final StudyFeedRepository studyFeed = StudyFeedRepository(database);
+    final CourseRepository courseRepo = CourseRepository(database);
     final KnowledgeGenerationRepository knowledgeGenerationRepo =
         KnowledgeGenerationRepository(database);
     final AiService aiService = ai ?? AiService();
@@ -152,6 +159,16 @@ class AppServices {
         ai: aiService,
         notifications: notificationService,
       ),
+      courseService: CourseService(
+        prefs: preferences,
+        courses: courseRepo,
+        topics: topics,
+        knowledge: knowledge,
+        cards: cards,
+        ai: aiService,
+        notifications: notificationService,
+      ),
+      courseRepo: courseRepo,
     );
   }
 

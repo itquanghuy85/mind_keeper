@@ -143,7 +143,7 @@ void main() {
       await _pump(tester, _wrap(services, const TodayScreen()));
 
       expect(_exception(tester), isNull);
-      expect(find.text('Mỗi ngày nhớ thêm một chút'), findsOneWidget);
+      expect(find.byTooltip('Thêm'), findsOneWidget);
 
       await _dispose(tester, services);
     });
@@ -212,13 +212,8 @@ void main() {
       await _pump(tester, _wrap(services, const TodayScreen()));
 
       expect(_exception(tester), isNull);
-      // Card trạng thái rỗng nằm dưới khung nhìn ở 360×640 — cuộn tới trước khi kiểm tra.
-      await tester.scrollUntilVisible(
-        find.text('Bạn chưa có chủ đề nào.'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Bạn chưa có chủ đề nào.'), findsOneWidget);
+      // Chưa có khóa học: thẻ chính mời thêm khóa học.
+      expect(find.text('Học một chủ đề mới'), findsOneWidget);
 
       await _dispose(tester, services);
     });

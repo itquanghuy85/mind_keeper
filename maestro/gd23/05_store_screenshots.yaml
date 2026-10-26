@@ -1,0 +1,53 @@
+# GD23.5 - Chụp ảnh màn hình cho cửa hàng (store/raw_screenshots/NN_*.png).
+# Điều kiện: DB đã gieo khóa "Bếp từ & lò vi sóng" (xem DOCS/STORE_ASSETS.md) + mock AI.
+# Chạy từ thư mục maestro/gd23 (run.sh đã cd vào đây).
+appId: com.mindkeeper.mind_keeper
+name: GD23.5 Anh cua hang
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Hôm nay bạn còn[\\s\\S]*"
+    timeout: 40000
+- extendedWaitUntil:
+    notVisible: "Mỗi ngày nhớ thêm một chút"
+    timeout: 10000
+- takeScreenshot: "01_home"
+# Thêm khóa học: cấp độ + số mẩu
+- tapOn: "Thêm"
+- tapOn: "Thêm khóa học"
+- tapOn: "Nguyên tử và phân tử"
+- tapOn: "Tiếp tục \\(1 chủ đề\\)"
+- tapOn: "Nâng cao"
+- tapOn: "10"
+- takeScreenshot: "02_config"
+- tapOn: "Soạn đề cương"
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Nguyên tử và phân tử[\\s\\S]*Khái niệm cơ bản[\\s\\S]*"
+    timeout: 30000
+- takeScreenshot: "03_outline"
+- pressKey: back
+- pressKey: back
+- pressKey: back
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Hôm nay bạn còn[\\s\\S]*"
+    timeout: 10000
+# Đọc một mẩu
+- tapOn: "[\\s\\S]*Vì sao nồi nhôm[\\s\\S]*"
+- extendedWaitUntil:
+    visible: "Đã hiểu"
+    timeout: 15000
+- takeScreenshot: "04_reader"
+- pressKey: back
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Hôm nay bạn còn[\\s\\S]*"
+    timeout: 10000
+# Tiến độ khóa học
+- scrollUntilVisible:
+    element: "[\\s\\S]*1/6[\\s\\S]*"
+- tapOn: "[\\s\\S]*1/6[\\s\\S]*"
+- extendedWaitUntil:
+    visible: "Đề cương"
+    timeout: 10000
+- takeScreenshot: "05_course"

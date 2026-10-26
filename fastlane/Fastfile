@@ -1,0 +1,83 @@
+# Các lane đăng cửa hàng cho MindKeeper. Xem DOCS/STORE_AGENT_GUIDE.md.
+# Chuẩn bị metadata + ảnh trước:
+#   SITE_URL=https://<tài-khoản>.github.io/mind_keeper bash tool/store/prepare_fastlane.sh
+#
+# Biến môi trường cần có:
+#   Android: PLAY_JSON_KEY_PATH  (service account JSON của Google Play Console)
+#   iOS:     ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH  (App Store Connect API key .p8)
+
+default_platform(:android)
+
+platform :android do
+  desc "Chỉ cập nhật trang cửa hàng (chữ + ảnh), không tải bản build"
+  lane :play_metadata do
+    upload_to_play_store(
+      track: "production",
+      metadata_path: "fastlane/metadata/android",
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: false,
+      skip_upload_screenshots: false,
+    )
+  end
+
+  desc "Tải AAB lên kênh Internal testing (bản nháp, chưa phát hành)"
+  lane :play_internal do
+    upload_to_play_store(
+      track: "internal",
+      aab: "build/app/outputs/bundle/release/app-release.aab",
+      metadata_path: "fastlane/metadata/android",
+      release_status: "draft",
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  desc "Đẩy bản đã kiểm thử ở Internal lên Production (rollout 100%)"
+  lane :play_promote do
+    upload_to_play_store(
+      track: "internal",
+      track_promote_to: "production",
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+end
+
+platform :ios do
+  def asc_key
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: ENV.fetch("ASC_KEY_PATH"),
+    )
+  end
+
+  desc "Chỉ cập nhật trang App Store (chữ + ảnh), không tải bản build"
+  lane :ios_metadata do
+    deliver(
+      api_key: asc_key,
+      metadata_path: "fastlane/metadata",
+      screenshots_path: "fastlane/screenshots",
+      skip_binary_upload: true,
+      skip_app_version_update: false,
+      force: true,
+      submit_for_review: false,
+      precheck_include_in_app_purchases: false,
+    )
+  end
+
+  desc "Build IPA (cần macOS + Xcode) và tải lên TestFlight"
+  lane :ios_testflight do
+    sh("cd .. && flutter build ipa --release")
+    upload_to_testflight(
+      api_key: asc_key,
+      ipa: "build/ios/ipa/mind_keeper.ipa",
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end
