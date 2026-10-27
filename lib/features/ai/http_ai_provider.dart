@@ -338,6 +338,10 @@ NGUYÊN TẮC:
           'kiến thức ngắn (mỗi mẩu đọc 1-3 phút) cho chủ đề được yêu cầu, sắp xếp '
           'từ dễ đến khó, mỗi mẩu một ý riêng biệt, không trùng lặp. '
           'Tiêu đề là một câu hỏi hoặc mệnh đề rõ ràng, dưới 90 ký tự. '
+          'Nếu chủ đề là một LĨNH VỰC RỘNG (vd. Y tế, Khoa học, Nhân vật nổi tiếng) '
+          'thì hãy tự chọn các hiện tượng, khái niệm hoặc nhân vật cụ thể, hấp dẫn '
+          'bên trong lĩnh vực đó, trải đều nhiều mảng và nêu rõ đối tượng cụ thể '
+          'trong tiêu đề (không ghi chung chung). '
           'Độ khó: ${level.promptGuide} '
           'Trả về JSON: {"titles":["...","..."]}',
       'Chủ đề: $topic\nSố mẩu: $count',

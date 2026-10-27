@@ -1,4 +1,4 @@
-# GD23.2 - Thêm khóa học: chọn chủ đề -> cấp độ + số mẩu -> đề cương -> bắt đầu.
+# GD23.2 - Thêm khóa học: chọn lĩnh vực/chủ đề -> cấp độ + số mẩu -> đề cương -> bắt đầu.
 # Cần mock AI: node tool/mock_ai_server.js 8765 + adb reverse tcp:8765 tcp:8765
 # và APK build với --dart-define=DEEPSEEK_BASE_URL=http://127.0.0.1:8765/v1
 # Nhãn Flutter gộp nhiều dòng trong một thẻ nên dùng regex [\\s\\S]*.
@@ -14,10 +14,12 @@ name: GD23.2 Them khoa hoc
 - tapOn: "Thêm"
 - tapOn: "Thêm khóa học"
 - extendedWaitUntil:
-    visible: "Chọn chủ đề"
+    visible: "Chọn lĩnh vực"
     timeout: 10000
 - assertVisible: "Chọn ít nhất 1 chủ đề"
-- tapOn: "Chủ đề"
+- scrollUntilVisible:
+    element: "Chủ đề riêng"
+- tapOn: "Chủ đề riêng"
 - inputText: "Bep tu"
 - tapOn: "Thêm chủ đề"
 - assertVisible: "Tiếp tục \\(1 chủ đề\\)"

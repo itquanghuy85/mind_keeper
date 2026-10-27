@@ -13,6 +13,7 @@ import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_icon_badge.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../features/knowledge/learned_library_screen.dart';
+import '../ai/ai_presets.dart';
 import '../import/link_import_screen.dart';
 import '../import/media_import_flow.dart';
 import '../import/text_import_screen.dart';
@@ -507,16 +508,21 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _editAi(BuildContext context) async {
     final AppServices services = context.read<AppServices>();
     final PreferencesService prefs = services.prefs;
+    AiPreset preset =
+        AiPresets.match(prefs.aiBaseUrl) ?? AiPresets.byId('openai');
+    String modelId = preset.hasModel(prefs.aiModel)
+        ? prefs.aiModel
+        : preset.defaultModel;
     final TextEditingController baseUrl = TextEditingController(
-      text: prefs.aiBaseUrl,
+      text: preset.isCustom ? prefs.aiBaseUrl : '',
     );
     final TextEditingController apiKey = TextEditingController(
       text: prefs.aiApiKey,
     );
     final TextEditingController model = TextEditingController(
-      text: prefs.aiModel,
+      text: preset.isCustom ? prefs.aiModel : '',
     );
-    bool proxyMode = prefs.aiProxyMode;
+    bool proxyMode = prefs.aiProxyMode && preset.isCustom;
     final bool? saved = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => StatefulBuilder(
@@ -525,47 +531,93 @@ class ProfileScreen extends StatelessWidget {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'Để trống để dùng mock AI (nội dung mẫu, không gọi dịch vụ thật). '
-                  'Không lưu key vào mã nguồn.',
+                  'Chọn nhà cung cấp AI, dán API key là dùng được. '
+                  'Để trống key thì app dùng nội dung mẫu (không gọi dịch vụ thật).',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: AppSpacing.md),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  secondary: const Icon(Icons.shield_outlined),
-                  title: const Text('Gọi qua proxy backend'),
-                  subtitle: const Text(
-                    'Key DeepSeek nằm ở server, không lưu trên máy. '
-                    'Base URL là endpoint proxy.',
+                DropdownButtonFormField<String>(
+                  key: const ValueKey<String>('ai-provider'),
+                  initialValue: preset.id,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Nhà cung cấp'),
+                  items: <DropdownMenuItem<String>>[
+                    for (final AiPreset p in AiPresets.all)
+                      DropdownMenuItem<String>(value: p.id, child: Text(p.name)),
+                  ],
+                  onChanged: (String? id) {
+                    if (id == null) return;
+                    setDialogState(() {
+                      preset = AiPresets.byId(id);
+                      modelId = preset.defaultModel;
+                    });
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+                if (!preset.isCustom) ...<Widget>[
+                  DropdownButtonFormField<String>(
+                    key: ValueKey<String>('ai-model-${preset.id}'),
+                    initialValue: modelId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Model'),
+                    items: <DropdownMenuItem<String>>[
+                      for (final AiModelOption m in preset.models)
+                        DropdownMenuItem<String>(
+                          value: m.id,
+                          child: Text(m.label, overflow: TextOverflow.ellipsis),
+                        ),
+                    ],
+                    onChanged: (String? id) {
+                      if (id != null) setDialogState(() => modelId = id);
+                    },
                   ),
-                  value: proxyMode,
-                  onChanged: (bool value) =>
-                      setDialogState(() => proxyMode = value),
-                ),
-                const Divider(height: 1),
-                const SizedBox(height: AppSpacing.md),
-                AppTextField(
-                  controller: baseUrl,
-                  label: 'Base URL (OpenAI-compatible)',
-                  hint: 'https://api.openai.com/v1',
-                ),
-                const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.md),
+                ] else ...<Widget>[
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(Icons.shield_outlined),
+                    title: const Text('Gọi qua proxy backend'),
+                    subtitle: const Text(
+                      'Key nằm ở server, không lưu trên máy. '
+                      'Base URL là endpoint proxy.',
+                    ),
+                    value: proxyMode,
+                    onChanged: (bool value) =>
+                        setDialogState(() => proxyMode = value),
+                  ),
+                  const Divider(height: 1),
+                  const SizedBox(height: AppSpacing.md),
+                  AppTextField(
+                    controller: baseUrl,
+                    label: 'Base URL (OpenAI-compatible)',
+                    hint: 'https://api.openai.com/v1',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppTextField(
+                    controller: model,
+                    label: 'Model',
+                    hint: 'gpt-4o-mini',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 AppTextField(
                   controller: apiKey,
                   label: proxyMode
                       ? 'API key (để trống khi dùng proxy)'
-                      : 'API key',
+                      : 'API key (dán vào đây)',
                   obscureText: true,
-                  hint: 'sk-...',
+                  hint: preset.keyHint,
                 ),
-                const SizedBox(height: AppSpacing.md),
-                AppTextField(
-                  controller: model,
-                  label: 'Model',
-                  hint: 'gpt-4o-mini',
-                ),
+                if (preset.keyGuide.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    preset.keyGuide,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
               ],
             ),
           ),
@@ -591,10 +643,10 @@ class ProfileScreen extends StatelessWidget {
     );
     if (saved == true) {
       await prefs.setAiConfig(
-        baseUrl: baseUrl.text,
+        baseUrl: preset.isCustom ? baseUrl.text : preset.baseUrl,
         apiKey: apiKey.text,
-        model: model.text,
-        proxyMode: proxyMode,
+        model: preset.isCustom ? model.text : modelId,
+        proxyMode: preset.isCustom ? proxyMode : false,
       );
       services.ai.configureFromSettings(
         baseUrl: prefs.aiBaseUrl,
@@ -606,8 +658,8 @@ class ProfileScreen extends StatelessWidget {
         showAppSnack(
           context,
           message: services.ai.isRealProvider
-              ? 'Đã bật AI thật.'
-              : 'Chưa có cấu hình AI — tiếp tục dùng mock.',
+              ? 'Đã bật AI thật (${preset.name}).'
+              : 'Chưa có API key — tiếp tục dùng nội dung mẫu.',
         );
       }
     }

@@ -11,7 +11,6 @@ import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_chip.dart';
 import '../ai/ai_provider.dart';
-import '../discover/domain_catalog.dart';
 import '../../data/models/course.dart';
 
 /// Cấu hình + đề cương của một chủ đề trong luồng thêm khóa học.
@@ -44,9 +43,20 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
   final Map<String, TextEditingController> _addControllers =
       <String, TextEditingController>{};
 
-  late final List<String> _suggestions = <String>[
-    for (final LearningDomain d in LearningDomains.all)
-      ...d.sampleTopics.take(2),
+  /// Lĩnh vực rộng: AI tự chọn các mẩu cụ thể bên trong theo cấp độ.
+  static const List<String> _categories = <String>[
+    'Y tế & sức khỏe',
+    'Khoa học',
+    'Nhân vật nổi tiếng',
+    'Lịch sử',
+    'Công nghệ',
+    'Đời sống hằng ngày',
+    'Tâm lý & hành vi',
+    'Kinh doanh & tài chính',
+    'Địa lý & du lịch',
+    'Nghệ thuật & văn hóa',
+    'Thiên nhiên & vũ trụ',
+    'Thể thao',
   ];
 
   @override
@@ -166,7 +176,7 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
   @override
   Widget build(BuildContext context) {
     final List<String> titles = <String>[
-      'Chọn chủ đề',
+      'Chọn lĩnh vực',
       'Cấp độ và số mẩu',
       'Đề cương',
     ];
@@ -249,11 +259,26 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       children: <Widget>[
         Text(
-          'Gõ chủ đề bạn muốn tìm hiểu, hoặc chọn gợi ý bên dưới. '
-          'Có thể chọn nhiều chủ đề.',
+          'Chọn lĩnh vực bạn quan tâm (được chọn nhiều). AI sẽ tự soạn các mẩu '
+          'kiến thức xoay quanh lĩnh vực đó theo cấp độ bạn chọn ở bước sau.',
           style: text.bodyMedium,
         ),
         const SizedBox(height: AppSpacing.md),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: <Widget>[
+            for (final String s in _categories)
+              AppChip(
+                label: s,
+                selected: _has(s),
+                onTap: () => _toggleSuggestion(s),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text('Hoặc gõ chủ đề riêng', style: text.titleSmall),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: <Widget>[
             Expanded(
@@ -261,7 +286,7 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
                 controller: _topicController,
                 textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
-                  labelText: 'Chủ đề',
+                  labelText: 'Chủ đề riêng',
                   hintText: 'Ví dụ: Bếp từ và lò vi sóng',
                 ),
                 onSubmitted: _addTopic,
@@ -291,21 +316,6 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
             ],
           ),
         ],
-        const SizedBox(height: AppSpacing.lg),
-        Text('Gợi ý', style: text.titleSmall),
-        const SizedBox(height: AppSpacing.sm),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: <Widget>[
-            for (final String s in _suggestions)
-              AppChip(
-                label: s,
-                selected: _has(s),
-                onTap: () => _toggleSuggestion(s),
-              ),
-          ],
-        ),
         const SizedBox(height: AppSpacing.xl),
       ],
     );

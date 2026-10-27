@@ -195,6 +195,8 @@ void main() {
       await _pump(tester, _wrap(s, const AddCourseScreen()));
       expect(find.text('Chọn ít nhất 1 chủ đề'), findsOneWidget);
       await tester.enterText(find.byType(TextField).first, 'Bếp từ');
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pump();
       await tester.tap(find.byTooltip('Thêm chủ đề'));
       await tester.pump();
       await tester.tap(find.text('Tiếp tục (1 chủ đề)'));
@@ -221,6 +223,8 @@ void main() {
       _phone(tester);
       await _pump(tester, _wrap(s, const AddCourseScreen()));
       await tester.enterText(find.byType(TextField).first, 'Bếp từ');
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pump();
       await tester.tap(find.byTooltip('Thêm chủ đề'));
       await tester.pump();
       await tester.tap(find.text('Tiếp tục (1 chủ đề)'));
@@ -241,6 +245,22 @@ void main() {
       expect(courses, hasLength(1));
       expect(courses.single.level, CourseLevel.pro);
       expect(courses.single.totalItems, 2);
+      await tester.runAsync(s.dispose);
+    });
+  });
+
+  group('Chọn lĩnh vực', () {
+    testWidgets('chọn lĩnh vực rộng → thành chủ đề của khóa', (
+      WidgetTester tester,
+    ) async {
+      final AppServices s = await _build(tester);
+      _phone(tester);
+      await _pump(tester, _wrap(s, const AddCourseScreen()));
+      expect(find.text('Chọn lĩnh vực'), findsWidgets);
+      await tester.tap(find.text('Y tế & sức khỏe'));
+      await tester.tap(find.text('Nhân vật nổi tiếng'));
+      await tester.pump();
+      expect(find.text('Tiếp tục (2 chủ đề)'), findsOneWidget);
       await tester.runAsync(s.dispose);
     });
   });
