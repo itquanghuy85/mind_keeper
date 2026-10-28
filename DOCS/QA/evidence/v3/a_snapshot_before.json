@@ -1,0 +1,38 @@
+{
+ "counts": {
+  "topics": 1,
+  "lessons": 0,
+  "sources": 0,
+  "knowledge_items": 1,
+  "review_cards": 1,
+  "review_logs": 1,
+  "knowledge_generation_tasks": 0,
+  "knowledge_reminder_history": 0,
+  "study_feed_items": 28,
+  "courses": 0,
+  "course_items": 0
+ },
+ "cards": [
+  {
+   "id": "rc_17931779586202ac8ff",
+   "due_at": 1793178645827,
+   "fsrs_state": 0,
+   "stability": 3.2602,
+   "difficulty": 4.884631634813845,
+   "reps": 1,
+   "lapses": 0
+  }
+ ],
+ "user_version": 10,
+ "prefs": {
+  "daily_goal": "33",
+  "new_topics_per_day": "3",
+  "reminder_hour": "7",
+  "reminder_minute": "45",
+  "lesson_default_mode": "deep",
+  "ai_api_key": "sk-DEVICE-SECRET-TEST",
+  "onboarding_completed": null,
+  "default_course_level": null,
+  "notifications_enabled": null
+ }
+}

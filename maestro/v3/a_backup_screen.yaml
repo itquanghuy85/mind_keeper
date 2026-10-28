@@ -1,0 +1,29 @@
+# Nghiệm thu A: màn Hồ sơ → Sao lưu & khôi phục + xuất file (hộp thoại lưu của hệ thống).
+appId: com.mindkeeper.mind_keeper
+name: V3 A Sao luu va khoi phuc
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: ".*Hồ sơ.*"
+    timeout: 60000
+- tapOn: ".*Hồ sơ.*"
+- scrollUntilVisible:
+    element: "Sao lưu & khôi phục"
+- tapOn: "Sao lưu & khôi phục"
+- extendedWaitUntil:
+    visible: "Xuất file sao lưu"
+    timeout: 10000
+- assertVisible: "[\\s\\S]*KHÔNG được sao lưu[\\s\\S]*"
+- assertVisible: "Chọn file để khôi phục"
+- takeScreenshot: "v3_a_backup_screen"
+- tapOn: "Xuất file sao lưu"
+- extendedWaitUntil:
+    visible: "(?i)lưu"
+    timeout: 15000
+- tapOn: "(?i)lưu"
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Đã xuất[\\s\\S]*"
+    timeout: 15000
+- takeScreenshot: "v3_a_export_done"

@@ -1,0 +1,16 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow V3 A Sao luu va khoi phuc
+Launch app "com.mindkeeper.mind_keeper"... COMPLETED
+Assert that ".*Hồ sơ.*" is visible... COMPLETED
+Tap on ".*Hồ sơ.*"... COMPLETED
+Scrolling DOWN until "Sao lưu & khôi phục" is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on "Sao lưu & khôi phục"... COMPLETED
+Assert that "Xuất file sao lưu" is visible... COMPLETED
+Assert that "[\s\S]*KHÔNG được sao lưu[\s\S]*" is visible... COMPLETED
+Assert that "Chọn file để khôi phục" is visible... COMPLETED
+Take screenshot v3_a_backup_screen... COMPLETED
+Tap on "Xuất file sao lưu"... COMPLETED
+Assert that "(?i)lưu" is visible... COMPLETED
+Tap on "(?i)lưu"... COMPLETED
+Assert that "[\s\S]*Đã xuất[\s\S]*" is visible... COMPLETED
+Take screenshot v3_a_export_done... COMPLETED

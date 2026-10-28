@@ -774,3 +774,10 @@ Triển khai theo 4 pha, mỗi pha có test + nghiệm thu trước khi sang pha
 - Nghiệm thu CPH2325 + test: xem `DOCS/QA/NOTIFICATION_FIX_REPORT.md` (phần "Bổ sung") — 35/37 file test pass (251 test); `layout_overflow_test` (3 fail) và `study_plan_screen_test` (treo) là lỗi có sẵn.
 - Còn lại: iOS chưa verify; báo thức thẻ ôn vẫn inexact; Maestro rò rỉ `tmp*.apk` trong `%TEMP%`.
 
+## Sao lưu & khôi phục (2026-10-28)
+
+- Màn Hồ sơ → "Sao lưu & khôi phục" (`BackupRestoreScreen`, `BackupService`): xuất/nhập file `.mkbackup` (JSON) gồm 11 bảng SQLite + prefs người dùng (`PreferencesService.backupKeys`); KHÔNG gồm khóa API/cấu hình AI, phiên chạy, ID thông báo, file media (ghi rõ trong UI). Header: format, version, schemaVersion, exportedAt, appVersion, counts.
+- Khôi phục: validate (từ chối file sai định dạng / schema mới hơn / counts lệch), xác nhận "Thay thế toàn bộ dữ liệu hiện tại", tự ghi bản sao lưu an toàn trong `app_flutter/backups/` trước khi ghi đè, ghi trong MỘT transaction (lỗi → rollback), `foreign_key_check`, xóa `storage_path` tuyệt đối; sau đó hủy lịch thông báo cũ, tắt cờ nhắc nếu thiếu quyền, lập lại lịch, bump `dataVersion`.
+- Nghiệm thu trên CPH2325: roundtrip xuất → xóa dữ liệu → khôi phục khớp số dòng, lịch FSRS (due/stability/difficulty/reps) và prefs; file không chứa API key; file hỏng và schema v99 bị từ chối. Báo cáo: `DOCS/QA/BACKUP_RESTORE_REPORT.md`.
+- Chưa có: sao lưu cloud, mã hóa file, tự động sao lưu định kỳ. iOS chưa verify.
+

@@ -37,15 +37,22 @@ class PreferencesService extends ChangeNotifier {
       'knowledge_reading_frequency';
 
   // Proactive knowledge reminders
-  static const String _keyKnowledgeReminderEnabled = 'knowledge_reminder_enabled';
-  static const String _keyKnowledgeReminderStartHour = 'knowledge_reminder_start_hour';
-  static const String _keyKnowledgeReminderStartMinute = 'knowledge_reminder_start_minute';
-  static const String _keyKnowledgeReminderEndHour = 'knowledge_reminder_end_hour';
-  static const String _keyKnowledgeReminderEndMinute = 'knowledge_reminder_end_minute';
+  static const String _keyKnowledgeReminderEnabled =
+      'knowledge_reminder_enabled';
+  static const String _keyKnowledgeReminderStartHour =
+      'knowledge_reminder_start_hour';
+  static const String _keyKnowledgeReminderStartMinute =
+      'knowledge_reminder_start_minute';
+  static const String _keyKnowledgeReminderEndHour =
+      'knowledge_reminder_end_hour';
+  static const String _keyKnowledgeReminderEndMinute =
+      'knowledge_reminder_end_minute';
   static const String _keyKnowledgeReminderCount = 'knowledge_reminder_count';
   static const String _keyKnowledgeReminderSource = 'knowledge_reminder_source';
-  static const String _keyKnowledgeReminderSelectedTopics = 'knowledge_reminder_selected_topics';
-  static const String _keyKnowledgeReminderScheduledIds = 'knowledge_reminder_scheduled_ids';
+  static const String _keyKnowledgeReminderSelectedTopics =
+      'knowledge_reminder_selected_topics';
+  static const String _keyKnowledgeReminderScheduledIds =
+      'knowledge_reminder_scheduled_ids';
 
   // GĐ17 — Kế hoạch học chủ động (hàng ngày)
   static const String _keyStudyPlanPaused = 'study_plan_paused';
@@ -62,6 +69,55 @@ class PreferencesService extends ChangeNotifier {
       'study_plan_excluded_topics';
   static const String _keyStudyPlanRotation = 'study_plan_rotation';
   static const String _keyStudyPlanPrefetchDays = 'study_plan_prefetch_days';
+
+  // Onboarding + mặc định khóa học
+  static const String _keyOnboardingCompleted = 'onboarding_completed';
+  static const String _keyDefaultCourseLevel = 'default_course_level';
+
+  /// Khóa prefs người dùng được đưa vào file sao lưu `.mkbackup`.
+  ///
+  /// KHÔNG gồm: khóa/URL/model AI (`ai_*`), phiên ôn đang chạy (`session_*`),
+  /// ID thông báo đã lập (`knowledge_reminder_scheduled_ids`) — các giá trị này
+  /// là bí mật hoặc trạng thái runtime, không được xuất.
+  static const List<String> backupKeys = <String>[
+    _keyNotificationsEnabled,
+    _keyReminderHour,
+    _keyReminderMinute,
+    _keyDailyGoal,
+    _keyNewTopicsPerDay,
+    _keyHiddenCategories,
+    _keyFavoriteCategories,
+    _keyLessonDefaultMode,
+    _keyFavoriteDomains,
+    _keyHiddenDomains,
+    _keyKnowledgeReadingEnabled,
+    _keyKnowledgeReadingHour,
+    _keyKnowledgeReadingMinute,
+    _keyKnowledgeReadingDays,
+    _keyKnowledgeReadingFrequency,
+    _keyKnowledgeReminderEnabled,
+    _keyKnowledgeReminderStartHour,
+    _keyKnowledgeReminderStartMinute,
+    _keyKnowledgeReminderEndHour,
+    _keyKnowledgeReminderEndMinute,
+    _keyKnowledgeReminderCount,
+    _keyKnowledgeReminderSource,
+    _keyKnowledgeReminderSelectedTopics,
+    _keyStudyPlanPaused,
+    _keyStudyPlanQuickPerDay,
+    _keyStudyPlanLessonPerDay,
+    _keyStudyPlanStartHour,
+    _keyStudyPlanStartMinute,
+    _keyStudyPlanEndHour,
+    _keyStudyPlanEndMinute,
+    _keyStudyPlanSlots,
+    _keyStudyPlanNewContentNotifications,
+    _keyStudyPlanExcludedTopics,
+    _keyStudyPlanRotation,
+    _keyStudyPlanPrefetchDays,
+    _keyOnboardingCompleted,
+    _keyDefaultCourseLevel,
+  ];
 
   // Fallback khi prefs chưa cấu hình — inject lúc build, không nhúng trong source.
   // DeepSeek defaults
@@ -279,10 +335,12 @@ class PreferencesService extends ChangeNotifier {
       _prefs.getString(_keyKnowledgeReminderSource) ?? 'all';
 
   List<String> get knowledgeReminderSelectedTopics =>
-      _prefs.getStringList(_keyKnowledgeReminderSelectedTopics) ?? const <String>[];
+      _prefs.getStringList(_keyKnowledgeReminderSelectedTopics) ??
+      const <String>[];
 
   List<int> get knowledgeReminderScheduledIds =>
-      (_prefs.getStringList(_keyKnowledgeReminderScheduledIds) ?? const <String>[])
+      (_prefs.getStringList(_keyKnowledgeReminderScheduledIds) ??
+              const <String>[])
           .map((String e) => int.tryParse(e))
           .whereType<int>()
           .toList();
@@ -299,7 +357,10 @@ class PreferencesService extends ChangeNotifier {
     required int endMinute,
   }) async {
     await _prefs.setInt(_keyKnowledgeReminderStartHour, startHour.clamp(0, 23));
-    await _prefs.setInt(_keyKnowledgeReminderStartMinute, startMinute.clamp(0, 59));
+    await _prefs.setInt(
+      _keyKnowledgeReminderStartMinute,
+      startMinute.clamp(0, 59),
+    );
     await _prefs.setInt(_keyKnowledgeReminderEndHour, endHour.clamp(0, 23));
     await _prefs.setInt(_keyKnowledgeReminderEndMinute, endMinute.clamp(0, 59));
     notifyListeners();
@@ -336,8 +397,7 @@ class PreferencesService extends ChangeNotifier {
   bool get studyPlanPaused => _prefs.getBool(_keyStudyPlanPaused) ?? false;
 
   /// Số thông tin nhanh mới mỗi ngày (0 = không phát hành loại này).
-  int get studyPlanQuickPerDay =>
-      _prefs.getInt(_keyStudyPlanQuickPerDay) ?? 5;
+  int get studyPlanQuickPerDay => _prefs.getInt(_keyStudyPlanQuickPerDay) ?? 5;
 
   /// Số bài viết mới mỗi ngày (0 = không phát hành loại này).
   int get studyPlanLessonPerDay =>
@@ -369,7 +429,8 @@ class PreferencesService extends ChangeNotifier {
   int get studyPlanRotation => _prefs.getInt(_keyStudyPlanRotation) ?? 0;
 
   /// Số ngày tạo trước nội dung (mục tiêu ban đầu 3).
-  int get studyPlanPrefetchDays => _prefs.getInt(_keyStudyPlanPrefetchDays) ?? 3;
+  int get studyPlanPrefetchDays =>
+      _prefs.getInt(_keyStudyPlanPrefetchDays) ?? 3;
 
   Future<void> setStudyPlanPaused(bool value) async {
     await _prefs.setBool(_keyStudyPlanPaused, value);
@@ -435,5 +496,68 @@ class PreferencesService extends ChangeNotifier {
   Future<void> clearSession() async {
     await _prefs.remove(_keySessionCardIds);
     await _prefs.remove(_keySessionIndex);
+  }
+
+  /// Đã hoàn tất (hoặc bỏ qua) onboarding lần đầu chưa.
+  bool get onboardingCompleted =>
+      _prefs.getBool(_keyOnboardingCompleted) ?? false;
+
+  Future<void> setOnboardingCompleted(bool value) async {
+    await _prefs.setBool(_keyOnboardingCompleted, value);
+    notifyListeners();
+  }
+
+  /// Cấp độ mặc định của khóa học mới (`basic|advanced|pro|master`).
+  String get defaultCourseLevel =>
+      _prefs.getString(_keyDefaultCourseLevel) ?? 'basic';
+
+  Future<void> setDefaultCourseLevel(String levelId) async {
+    await _prefs.setString(_keyDefaultCourseLevel, levelId.trim());
+    notifyListeners();
+  }
+
+  /// Xuất prefs người dùng (chỉ [backupKeys], đã được lọc kiểu) cho file sao lưu.
+  Map<String, Object> exportBackupPrefs() {
+    final Map<String, Object> out = <String, Object>{};
+    for (final String key in backupKeys) {
+      final Object? value = _prefs.get(key);
+      if (value is bool || value is int || value is String) {
+        out[key] = value!;
+      } else if (value is List<String>) {
+        out[key] = List<String>.of(value);
+      }
+    }
+    return out;
+  }
+
+  /// Khôi phục prefs từ file sao lưu: chỉ nhận khóa trong [backupKeys] và đúng
+  /// kiểu (`bool`, `int`, `String`, danh sách chuỗi); khóa lạ hoặc sai kiểu bị bỏ qua.
+  /// Khóa có trong [backupKeys] nhưng vắng trong file được xóa để về mặc định.
+  /// Trả về số khóa đã áp dụng.
+  Future<int> restoreBackupPrefs(Map<String, Object?> data) async {
+    int applied = 0;
+    for (final String key in backupKeys) {
+      if (!data.containsKey(key)) {
+        await _prefs.remove(key);
+        continue;
+      }
+      final Object? value = data[key];
+      bool ok = true;
+      if (value is bool) {
+        await _prefs.setBool(key, value);
+      } else if (value is int) {
+        await _prefs.setInt(key, value);
+      } else if (value is String) {
+        await _prefs.setString(key, value);
+      } else if (value is List<Object?> &&
+          value.every((Object? e) => e is String)) {
+        await _prefs.setStringList(key, value.cast<String>());
+      } else {
+        ok = false;
+      }
+      if (ok) applied++;
+    }
+    notifyListeners();
+    return applied;
   }
 }

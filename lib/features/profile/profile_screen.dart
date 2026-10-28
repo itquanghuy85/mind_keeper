@@ -18,6 +18,7 @@ import '../import/link_import_screen.dart';
 import '../import/media_import_flow.dart';
 import '../import/text_import_screen.dart';
 import '../import/voice_import_screen.dart';
+import 'backup_restore_screen.dart';
 import 'notification_settings_screen.dart';
 import 'privacy_screen.dart';
 import 'study_plan_screen.dart';
@@ -305,6 +306,21 @@ class ProfileScreen extends StatelessWidget {
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const NotificationSettingsScreen(),
+                      ),
+                    ),
+                  ),
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
+                    leading: const Icon(Icons.backup_outlined),
+                    title: 'Sao lưu & khôi phục',
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const BackupRestoreScreen(),
                       ),
                     ),
                   ),

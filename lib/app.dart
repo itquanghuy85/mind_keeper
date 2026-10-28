@@ -16,6 +16,7 @@ import 'features/knowledge/knowledge_library_screen.dart';
 import 'features/knowledge/learned_library_screen.dart';
 import 'features/lessons/lesson_discover_screen.dart';
 import 'features/lessons/lesson_reader_screen.dart';
+import 'package:mind_keeper/features/profile/backup_restore_screen.dart';
 import 'package:mind_keeper/features/profile/notification_settings_screen.dart';
 import 'package:mind_keeper/features/profile/study_plan_screen.dart';
 import 'features/review/review_screen.dart';
@@ -78,6 +79,7 @@ abstract final class AppRoutes {
   static const String linkImport = '/import/link';
   static const String notificationSettings = '/settings/notifications';
   static const String studyPlan = '/settings/study-plan';
+  static const String backupRestore = '/settings/backup';
   static const String lessonDiscover = '/lessons/discover';
   static const String lessonRead = '/lessons/read';
 }
@@ -145,6 +147,10 @@ Route<dynamic>? buildAppRoute(RouteSettings settings) {
     AppRoutes.notificationSettings => MaterialPageRoute<void>(
       settings: settings,
       builder: (_) => const NotificationSettingsScreen(),
+    ),
+    AppRoutes.backupRestore => MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => const BackupRestoreScreen(),
     ),
     AppRoutes.studyPlan => MaterialPageRoute<void>(
       settings: settings,

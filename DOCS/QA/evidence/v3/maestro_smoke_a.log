@@ -1,0 +1,9 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow CPH2239 smoke launch
+Launch app "com.mindkeeper.mind_keeper"... COMPLETED
+Assert that "Thêm" is visible... COMPLETED
+Take screenshot cph2239_01_home... COMPLETED
+Assert that "Thêm" is visible... COMPLETED
+Take screenshot cph2239_01_menu_open... COMPLETED
+Press Back key... COMPLETED
+exit=0
