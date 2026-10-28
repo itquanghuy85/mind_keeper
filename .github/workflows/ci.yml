@@ -33,3 +33,39 @@ jobs:
 
       - name: Run tests
         run: flutter test
+
+  ios-build:
+    name: Build iOS (simulator, no codesign)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.4'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Pod install
+        working-directory: ios
+        run: pod install
+
+      - name: Build iOS simulator (Runner + ShareExtension)
+        run: |
+          set -o pipefail
+          flutter build ios --simulator --debug --no-codesign 2>&1 | tee ios-build.log
+
+      - name: Verify ShareExtension is built and embedded
+        run: |
+          grep -E "ShareExtension|ShareViewController|ShareBridge" ios-build.log || true
+          APP=build/ios/iphonesimulator/Runner.app
+          ls -la "$APP/PlugIns"
+          test -d "$APP/PlugIns/ShareExtension.appex"
+          plutil -p "$APP/PlugIns/ShareExtension.appex/Info.plist" | grep -E "NSExtensionPointIdentifier|NSExtensionPrincipalClass|CFBundleIdentifier"
+          plutil -p "$APP/Info.plist" | grep -A4 CFBundleURLSchemes

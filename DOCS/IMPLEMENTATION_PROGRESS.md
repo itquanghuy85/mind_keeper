@@ -795,3 +795,8 @@ Triển khai theo 4 pha, mỗi pha có test + nghiệm thu trước khi sang pha
 - Nghiệm thu CPH2325: 6 flow Maestro (warm/cold, trùng lặp, mở đầy đủ) + share sheet hệ thống thật + hồi quy thông báo cold start; 11 test. Báo cáo: `DOCS/QA/QUICK_CAPTURE_REPORT.md`.
 - iOS (Share Extension) để sau, **chưa verify**.
 
+## Share Extension iOS (2026-10-28)
+
+- Thêm target `ShareExtension` (text + URL http/https), App Group `group.com.mindkeeper.mindKeeper`, URL scheme `mindkeeper`, `ios/Runner/ShareBridge.swift` (channel `mindkeeper/share`, `getInitialShared`/`onShared`, payload UUID đọc-và-xóa nên không giao trùng), job CI `ios-build` (macos-latest, `flutter build ios --simulator --no-codesign`, kiểm tra `.appex` được embed). Logic thông báo iOS không đổi.
+- Đã kiểm: analyze 0 error (7 warning cũ), `quick_capture_test` 11/11, Android CPH2325 share cold + warm vẫn mở Lưu nhanh.
+- **Chưa verify**: CI macOS chưa chạy (chưa push), Swift/pbxproj chưa được Xcode biên dịch, chưa chạy share sheet trên iPhone. Chi tiết và cách test thủ công: `DOCS/QA/IOS_SHARE_EXTENSION_REPORT.md`.

@@ -17,5 +17,19 @@ import UserNotifications
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    // Cầu nối Share Extension (channel "mindkeeper/share") — cùng contract với Android.
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "ShareBridge") {
+      ShareBridge.register(with: registrar)
+    }
+  }
+
+  // Fallback khi không dùng scene lifecycle: mindkeeper://share?id=...
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    ShareBridge.shared?.handleIncoming(url: url)
+    return super.application(app, open: url, options: options)
   }
 }

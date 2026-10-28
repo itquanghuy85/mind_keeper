@@ -37,7 +37,7 @@ Không thêm package: dùng `MethodChannel` trên `MainActivity` (không có pac
 - Snackbar kết quả 3 giây quá ngắn để kiểm tự động → nâng lên 6 giây (cũng dễ đọc hơn).
 
 ## 3. Rủi ro / ghi chú
-- **iOS** (Share Extension) để sau, **chưa verify**.
+- **iOS**: đã viết Share Extension + `ShareBridge` (App Group, URL scheme `mindkeeper`) và job CI macOS — xem `IOS_SHARE_EXTENSION_REPORT.md`. **Chưa có kết quả CI, chưa chạy trên Mac/iPhone thật**; CI xanh (khi có) ≠ share sheet iOS đã chạy.
 - Chỉ nhận `text/plain`; ảnh/file chia sẻ chưa hỗ trợ.
 - Link không được tải trang tự động ở "Lưu nhanh" (offline-first); muốn trích nội dung trang dùng "Mở đầy đủ".
 - "Tóm tắt bằng AI" chỉ hiện khi đã cấu hình AI thật; chưa thử trên máy thật vì máy không có key (không dùng key giả).
