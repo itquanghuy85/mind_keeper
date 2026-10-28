@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <boolean name="flutter.onboarding_completed" value="true" />
+    <long name="flutter.reminder_hour" value="20" />
+    <long name="flutter.reminder_minute" value="0" />
+    <boolean name="flutter.notifications_enabled" value="true" />
+    <string name="flutter.default_course_level">advanced</string>
+</map>

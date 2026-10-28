@@ -1,0 +1,16 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow V3 B Xem lai gioi thieu
+Launch app "com.mindkeeper.mind_keeper"... COMPLETED
+Assert that ".*Hồ sơ.*" is visible... COMPLETED
+Tap on ".*Hồ sơ.*"... COMPLETED
+Scrolling DOWN until "Xem lại giới thiệu" is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on "Xem lại giới thiệu"... COMPLETED
+Assert that "Bắt đầu" is visible... COMPLETED
+Take screenshot v3_b_review_intro... COMPLETED
+Tap on "Bắt đầu"... COMPLETED
+Assert that "Chỉ đổi cấp độ mặc định[\s\S]*" is visible... COMPLETED
+Tap on "Pro"... COMPLETED
+Tap on "Tiếp tục"... COMPLETED
+Tap on "Xong"... COMPLETED
+Assert that "Xem lại giới thiệu" is visible... COMPLETED
+Take screenshot v3_b_review_done... COMPLETED

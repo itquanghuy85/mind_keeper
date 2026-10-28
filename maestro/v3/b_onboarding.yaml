@@ -1,0 +1,32 @@
+# Nghiệm thu B: onboarding 3 bước trên cài mới (chọn 2 chủ đề + cấp độ + xin quyền thông báo).
+appId: com.mindkeeper.mind_keeper
+name: V3 B Onboarding
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Bắt đầu"
+    timeout: 60000
+- takeScreenshot: "v3_b_1_intro"
+- tapOn: "Bắt đầu"
+- tapOn: "Khoa học"
+- tapOn: "Lịch sử"
+- tapOn: "Nâng cao"
+- takeScreenshot: "v3_b_2_choose"
+- tapOn: "Tiếp tục"
+- extendedWaitUntil:
+    visible: "Nhắc học mỗi ngày"
+    timeout: 10000
+- tapOn: "Cho phép thông báo"
+- runFlow:
+    when:
+      visible: "(?i)cho phép"
+    commands:
+      - tapOn: "(?i)cho phép"
+- takeScreenshot: "v3_b_3_reminder"
+- tapOn: "Xong"
+- extendedWaitUntil:
+    visible: "[\\s\\S]*thẻ ôn[\\s\\S]*"
+    timeout: 30000
+- takeScreenshot: "v3_b_4_home"

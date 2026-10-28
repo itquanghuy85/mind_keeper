@@ -25,6 +25,10 @@
 - Màn đọc mẩu khóa học / bài học: thẻ **Mẹo nhớ** (`MemoryTipCard`: icon bóng đèn + tiêu đề + 1 câu) nằm sau nội dung/tóm tắt; **ẩn hoàn toàn** khi mẹo rỗng (nội dung cũ).
 - Thông báo Android: small icon đơn sắc `ic_stat_mindkeeper` (chữ M + sao, trắng/trong suốt) và large icon logo màu `ic_notification_large` cho mọi kênh; title = tên mẩu/bài, body = ý chính ≤180 ký tự, bigText = tóm tắt + "Mẹo nhớ: …", subText = chủ đề (khóa học: khóa · cấp độ).
 
+## Onboarding
+
+- Hiện trước `AppShell` khi cài mới: 3 bước, tiêu đề "Bước x/3", nút chính ở đáy (Bắt đầu → Tiếp tục → Xong), "Bỏ qua" luôn ở góc phải; chip chủ đề dùng `AppChip`, giới hạn 2–3; trạng thái quyền thông báo là văn bản rõ ràng (không chặn khi thiếu).
+
 ## Trang chủ (GĐ23) — một việc chính mỗi lần mở
 
 - Đầu trang: ngày + nút `[+]` (menu: Thêm khóa học, Bài học AI, Tạo chủ đề, Khám phá). Không lời chào/khẩu hiệu.

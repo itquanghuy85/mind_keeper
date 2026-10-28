@@ -1,0 +1,14 @@
+appId: com.mindkeeper.mind_keeper
+name: V3 B Bo qua onboarding
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Bắt đầu"
+    timeout: 60000
+- tapOn: "Bỏ qua"
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Học một chủ đề mới[\\s\\S]*"
+    timeout: 30000
+- takeScreenshot: "v3_b_skip_home"

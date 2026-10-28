@@ -9,7 +9,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<AppServices> buildTestServices() async {
   sqfliteFfiInit();
-  SharedPreferences.setMockInitialValues(<String, Object>{});
+  SharedPreferences.setMockInitialValues(<String, Object>{
+    'onboarding_completed': true,
+  });
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   final AppDatabase app = AppDatabase(
     factory: databaseFactoryFfi,
@@ -35,6 +37,11 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MindKeeperApp(services: services!));
     // Đợi load dữ liệu DB thật (ngoài fake async).
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pump();
+    // HomeGate quyết định onboarding (DB) rồi AppShell mới tải dữ liệu Hôm nay.
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 300)),
     );

@@ -15,10 +15,10 @@ import '../../data/models/course.dart';
 
 /// Cấu hình + đề cương của một chủ đề trong luồng thêm khóa học.
 class _Draft {
-  _Draft(this.topic);
+  _Draft(this.topic, {this.level = CourseLevel.basic});
 
   final String topic;
-  CourseLevel level = CourseLevel.basic;
+  CourseLevel level;
   int count = 10;
   List<String>? outline;
   String? error;
@@ -76,7 +76,14 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
     final String topic = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (topic.isEmpty || _has(topic)) return;
     setState(() {
-      _drafts.add(_Draft(topic));
+      _drafts.add(
+        _Draft(
+          topic,
+          level: CourseLevel.fromDb(
+            context.read<AppServices>().prefs.defaultCourseLevel,
+          ),
+        ),
+      );
       _topicController.clear();
     });
   }
@@ -131,9 +138,7 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
   bool get _canStart =>
       !_starting &&
       _drafts.isNotEmpty &&
-      _drafts.every(
-        (_Draft d) => d.outline != null && d.outline!.isNotEmpty,
-      );
+      _drafts.every((_Draft d) => d.outline != null && d.outline!.isNotEmpty);
 
   Future<void> _start() async {
     final AppServices services = context.read<AppServices>();
@@ -229,9 +234,7 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
         label = _drafts.isEmpty
             ? 'Chọn ít nhất 1 chủ đề'
             : 'Tiếp tục (${_drafts.length} chủ đề)';
-        onPressed = _drafts.isEmpty
-            ? null
-            : () => setState(() => _step = 1);
+        onPressed = _drafts.isEmpty ? null : () => setState(() => _step = 1);
       case 1:
         label = 'Soạn đề cương';
         onPressed = _goToOutline;

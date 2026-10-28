@@ -1,0 +1,11 @@
+appId: com.mindkeeper.mind_keeper
+name: V3 B Nguoi dung cu khong bi chan
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "[\\s\\S]*thẻ ôn[\\s\\S]*"
+    timeout: 60000
+- assertNotVisible: "Bước 1/3"
+- takeScreenshot: "v3_b_legacy_home"

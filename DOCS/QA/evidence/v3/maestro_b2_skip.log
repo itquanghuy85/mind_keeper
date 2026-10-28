@@ -1,0 +1,7 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow V3 B Bo qua onboarding
+Launch app "com.mindkeeper.mind_keeper"... COMPLETED
+Assert that "Bắt đầu" is visible... COMPLETED
+Tap on "Bỏ qua"... COMPLETED
+Assert that "[\s\S]*Học một chủ đề mới[\s\S]*" is visible... COMPLETED
+Take screenshot v3_b_skip_home... COMPLETED

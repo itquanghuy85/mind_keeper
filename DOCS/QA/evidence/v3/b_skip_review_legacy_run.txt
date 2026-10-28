@@ -1,0 +1,17 @@
+b2_skip exit=1 (lần đầu sai selector; chạy lại sau khi sửa: exit=0)
+-- sau Bỏ qua:
+topics 0 onboarding prefs
+    <boolean name="flutter.onboarding_completed" value="true" />
+-- trước xem lại:
+topics 0 onboarding prefs
+    <boolean name="flutter.onboarding_completed" value="true" />
+b3_review exit=0
+-- sau xem lại:
+topics 0 onboarding prefs
+    <boolean name="flutter.onboarding_completed" value="true" />
+    <string name="flutter.default_course_level">pro</string>
+build/scratch_db/b.db: 1 file pushed, 0 skipped. 3.8 MB/s (196608 bytes in 0.049s)
+b4_legacy exit=0
+-- sau người dùng cũ:
+topics 2 onboarding prefs
+    <boolean name="flutter.onboarding_completed" value="true" />

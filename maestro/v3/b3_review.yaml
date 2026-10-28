@@ -1,0 +1,28 @@
+appId: com.mindkeeper.mind_keeper
+name: V3 B Xem lai gioi thieu
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: ".*Hồ sơ.*"
+    timeout: 60000
+- tapOn: ".*Hồ sơ.*"
+- scrollUntilVisible:
+    element: "Xem lại giới thiệu"
+- tapOn: "Xem lại giới thiệu"
+- extendedWaitUntil:
+    visible: "Bắt đầu"
+    timeout: 10000
+- takeScreenshot: "v3_b_review_intro"
+- tapOn: "Bắt đầu"
+- extendedWaitUntil:
+    visible: "Chỉ đổi cấp độ mặc định[\\s\\S]*"
+    timeout: 10000
+- tapOn: "Pro"
+- tapOn: "Tiếp tục"
+- tapOn: "Xong"
+- extendedWaitUntil:
+    visible: "Xem lại giới thiệu"
+    timeout: 15000
+- takeScreenshot: "v3_b_review_done"

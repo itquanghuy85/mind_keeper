@@ -1,0 +1,21 @@
+Mốc thời gian từng bước Maestro (giây kể từ đầu flow; duration = ms của bước):
+    0.0s       8ms  defineVariablesCommand
+    0.0s       5ms  applyConfigurationCommand
+    0.0s    8374ms  launchAppCommand
+    8.4s   19532ms  assertConditionCommand
+   27.9s    1046ms  takeScreenshotCommand
+   29.0s    4524ms  tapOnElement
+   33.5s    3575ms  tapOnElement
+   37.1s    3367ms  tapOnElement
+   40.4s    3468ms  tapOnElement
+   43.9s     442ms  takeScreenshotCommand
+   44.4s    3812ms  tapOnElement
+   48.2s     292ms  assertConditionCommand
+   48.5s    4224ms  tapOnElement
+   52.7s    3056ms  runFlowCommand
+   52.9s    2848ms  tapOnElement
+   55.8s     394ms  takeScreenshotCommand
+   56.2s    4317ms  tapOnElement
+   60.5s    5074ms  assertConditionCommand
+   65.6s     312ms  takeScreenshotCommand
+TỔNG flow (gồm khởi động app): 65.9 s

@@ -781,3 +781,10 @@ Triển khai theo 4 pha, mỗi pha có test + nghiệm thu trước khi sang pha
 - Nghiệm thu trên CPH2325: roundtrip xuất → xóa dữ liệu → khôi phục khớp số dòng, lịch FSRS (due/stability/difficulty/reps) và prefs; file không chứa API key; file hỏng và schema v99 bị từ chối. Báo cáo: `DOCS/QA/BACKUP_RESTORE_REPORT.md`.
 - Chưa có: sao lưu cloud, mã hóa file, tự động sao lưu định kỳ. iOS chưa verify.
 
+## Onboarding 60 giây (2026-10-28)
+
+- `HomeGate` trước `AppShell`: lần đầu (chưa `onboarding_completed` và DB trống) hiện `OnboardingScreen` 3 bước (giá trị → 2–3 chủ đề + cấp độ mặc định → giờ nhắc + quyền thông báo); có "Bỏ qua"; người dùng cũ (DB đã có dữ liệu) tự coi như đã onboarding, không bị chặn.
+- Nội dung mẫu OFFLINE: mỗi chủ đề 1 entry `DiscoveryCatalog` qua `DiscoveryService.saveEntry` (không gọi AI, không nhân bản). Cấp độ chọn được lưu làm mặc định cho khóa học mới (`AddCourseScreen`).
+- Hồ sơ → "Xem lại giới thiệu": chỉ cập nhật cấp độ/giờ nhắc, không seed lại. Thiếu quyền thông báo không chặn, tắt cờ và báo rõ.
+- Nghiệm thu CPH2325 (cài mới thật, Bỏ qua, Xem lại, người dùng cũ) + 9 test: `DOCS/QA/ONBOARDING_REPORT.md`. Thời gian: intro → Trang chủ 37,7 s (Maestro); tổng gồm khởi động lạnh 65,9 s.
+

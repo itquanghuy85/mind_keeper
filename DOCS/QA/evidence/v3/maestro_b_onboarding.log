@@ -1,0 +1,20 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow V3 B Onboarding
+Launch app "com.mindkeeper.mind_keeper"... COMPLETED
+Assert that "Bắt đầu" is visible... COMPLETED
+Take screenshot v3_b_1_intro... COMPLETED
+Tap on "Bắt đầu"... COMPLETED
+Tap on "Khoa học"... COMPLETED
+Tap on "Lịch sử"... COMPLETED
+Tap on "Nâng cao"... COMPLETED
+Take screenshot v3_b_2_choose... COMPLETED
+Tap on "Tiếp tục"... COMPLETED
+Assert that "Nhắc học mỗi ngày" is visible... COMPLETED
+Tap on "Cho phép thông báo"... COMPLETED
+Run flow when "(?i)cho phép" is visible...
+  Tap on "(?i)cho phép"... COMPLETED
+Run flow when "(?i)cho phép" is visible... COMPLETED
+Take screenshot v3_b_3_reminder... COMPLETED
+Tap on "Xong"... COMPLETED
+Assert that "[\s\S]*thẻ ôn[\s\S]*" is visible... COMPLETED
+Take screenshot v3_b_4_home... COMPLETED

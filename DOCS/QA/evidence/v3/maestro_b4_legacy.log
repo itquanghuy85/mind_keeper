@@ -1,0 +1,6 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow V3 B Nguoi dung cu khong bi chan
+Launch app "com.mindkeeper.mind_keeper"... COMPLETED
+Assert that "[\s\S]*thẻ ôn[\s\S]*" is visible... COMPLETED
+Assert that "Bước 1/3" is not visible... COMPLETED
+Take screenshot v3_b_legacy_home... COMPLETED

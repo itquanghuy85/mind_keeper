@@ -16,11 +16,11 @@ import 'features/knowledge/knowledge_library_screen.dart';
 import 'features/knowledge/learned_library_screen.dart';
 import 'features/lessons/lesson_discover_screen.dart';
 import 'features/lessons/lesson_reader_screen.dart';
+import 'features/onboarding/home_gate.dart';
 import 'package:mind_keeper/features/profile/backup_restore_screen.dart';
 import 'package:mind_keeper/features/profile/notification_settings_screen.dart';
 import 'package:mind_keeper/features/profile/study_plan_screen.dart';
 import 'features/review/review_screen.dart';
-import 'features/shell/app_shell.dart';
 import 'features/topics/create_topic_screen.dart';
 import 'features/topics/topic_detail_screen.dart';
 
@@ -53,8 +53,10 @@ class MindKeeperApp extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        builder: (BuildContext context, Widget? child) =>
-            SplashOverlay(enabled: showSplash, child: child ?? const SizedBox()),
+        builder: (BuildContext context, Widget? child) => SplashOverlay(
+          enabled: showSplash,
+          child: child ?? const SizedBox(),
+        ),
         initialRoute: AppRoutes.home,
         onGenerateRoute: buildAppRoute,
       ),
@@ -89,7 +91,7 @@ Route<dynamic>? buildAppRoute(RouteSettings settings) {
   return switch (settings.name) {
     AppRoutes.home || null => MaterialPageRoute<void>(
       settings: settings,
-      builder: (_) => const AppShell(),
+      builder: (_) => const HomeGate(),
     ),
     AppRoutes.discover => MaterialPageRoute<void>(
       settings: settings,

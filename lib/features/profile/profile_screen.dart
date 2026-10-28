@@ -18,6 +18,7 @@ import '../import/link_import_screen.dart';
 import '../import/media_import_flow.dart';
 import '../import/text_import_screen.dart';
 import '../import/voice_import_screen.dart';
+import '../onboarding/onboarding_screen.dart';
 import 'backup_restore_screen.dart';
 import 'notification_settings_screen.dart';
 import 'privacy_screen.dart';
@@ -324,6 +325,25 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const Divider(
+                    height: 1,
+                    indent: AppSpacing.lg,
+                    endIndent: AppSpacing.lg,
+                  ),
+                  _SettingsTile(
+                    leading: const Icon(Icons.waving_hand_outlined),
+                    title: 'Xem lại giới thiệu',
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (BuildContext routeContext) =>
+                            OnboardingScreen(
+                              review: true,
+                              onDone: () => Navigator.of(routeContext).pop(),
+                            ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -562,7 +582,10 @@ class ProfileScreen extends StatelessWidget {
                   decoration: const InputDecoration(labelText: 'Nhà cung cấp'),
                   items: <DropdownMenuItem<String>>[
                     for (final AiPreset p in AiPresets.all)
-                      DropdownMenuItem<String>(value: p.id, child: Text(p.name)),
+                      DropdownMenuItem<String>(
+                        value: p.id,
+                        child: Text(p.name),
+                      ),
                   ],
                   onChanged: (String? id) {
                     if (id == null) return;
