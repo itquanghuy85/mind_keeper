@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../core/services/notification_service.dart';
+import '../../core/services/notification_text.dart';
 import '../../core/services/preferences_service.dart';
 import '../../core/utils/id_generator.dart';
 import '../../data/models/enums.dart';
@@ -765,6 +766,7 @@ class StudyPlanService {
         examples: draft.examples,
         commonMistakes: draft.commonMistakes,
         summary: draft.summary,
+        memoryTip: draft.memoryTip,
       ),
       questions: <LessonQuestion>[
         for (final AiQuestionDraft q in draft.questions)
@@ -821,11 +823,13 @@ class StudyPlanService {
       final DateTime at = slotTimeFor(row);
       if (!at.toUtc().isAfter(base.toUtc())) continue; // không lùi lịch quá khứ
 
-      final (String title, String body) = await _notificationText(row);
+      final StudyNotificationText text = await _notificationText(row);
       await notifications.scheduleContentNotification(
         id: notificationIdFor(row),
-        title: title,
-        body: body,
+        title: text.title,
+        body: text.body,
+        bigText: text.bigText,
+        subText: text.subText,
         at: at,
         payload: _payloadFor(row),
       );
@@ -851,20 +855,50 @@ class StudyPlanService {
       ? '${NotificationPayload.kindQuick}:${row.refId}'
       : '${NotificationPayload.kindLesson}:${row.refId}';
 
-  Future<(String, String)> _notificationText(StudyFeedItem row) async {
+  /// Nội dung thông báo bài mới:
+  /// - Thông tin nhanh: title = tên mẩu; body = 1–2 câu ý chính (≤180 ký tự);
+  ///   subText = chủ đề.
+  /// - Bài học: title = tên bài; body = tóm tắt; bigText = tóm tắt + mẹo nhớ;
+  ///   subText = chủ đề.
+  Future<StudyNotificationText> _notificationText(StudyFeedItem row) async {
     if (row.kind == StudyFeedKind.quick) {
       final KnowledgeItem? item = row.refId == null
           ? null
           : await knowledge.getById(row.refId!);
-      return (
-        'Thông tin nhanh mới',
-        item == null ? row.topicName : '${row.topicName} · ${item.title}',
+      if (item == null) {
+        return StudyNotificationText(
+          title: 'Thông tin nhanh mới',
+          body: row.topicName,
+          subText: row.topicName,
+        );
+      }
+      final String lead = leadSentences(item.content);
+      return StudyNotificationText(
+        title: item.title,
+        body: lead.isEmpty ? item.title : lead,
+        subText: row.topicName,
       );
     }
     final Lesson? lesson = row.refId == null
         ? null
         : await lessons.getById(row.refId!);
-    return ('Bài viết mới', lesson == null ? row.topicName : lesson.title);
+    if (lesson == null) {
+      return StudyNotificationText(
+        title: 'Bài viết mới',
+        body: row.topicName,
+        subText: row.topicName,
+      );
+    }
+    final LessonContent c = lesson.content;
+    final String summary = c.summary.trim().isNotEmpty
+        ? c.summary
+        : (c.keyPoints.isNotEmpty ? c.keyPoints.first : c.introduction);
+    return StudyNotificationText(
+      title: lesson.title,
+      body: notificationBody(summary),
+      bigText: composeBigText(summary, c.memoryTip),
+      subText: lesson.topic.trim().isEmpty ? row.topicName : lesson.topic,
+    );
   }
 
   /// Thời điểm phát hành của một dòng theo khung giờ người dùng đặt.
@@ -1068,4 +1102,19 @@ class _ContentExhaustedException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Nội dung một thông báo bài mới (title/body/bigText/subText).
+class StudyNotificationText {
+  const StudyNotificationText({
+    required this.title,
+    required this.body,
+    required this.subText,
+    String? bigText,
+  }) : bigText = bigText ?? body;
+
+  final String title;
+  final String body;
+  final String bigText;
+  final String subText;
 }

@@ -1,0 +1,6 @@
+    == id=353927383 mind_keeper_review
+      icon=Icon(typ=RESOURCE pkg=com.mindkeeper.mind_keeper id=0x7f070075)
+                android.title=String (Kiểm thử nhắc ôn (GĐ15.1))
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.text=String (TEST-GD151: Chạm thông báo này mở đúng câu hỏi chứ?)
+                android.largeIcon=Icon (Icon(typ=BITMAP size=51x51))

@@ -150,6 +150,7 @@ class CourseItem {
     this.status = CourseItemStatus.pending,
     this.knowledgeItemId,
     this.summary = '',
+    this.memoryTip = '',
     this.sourcesNote = '',
     this.releaseAt,
     this.readAt,
@@ -168,6 +169,9 @@ class CourseItem {
   /// Bản tóm tắt 2–3 câu dùng cho thông báo (đọc nhanh không cần mở app).
   final String summary;
 
+  /// Mẹo nhớ 1 câu (≤120 ký tự); rỗng với mẩu cũ hoặc khi AI không trả về.
+  final String memoryTip;
+
   /// Nguồn tham khảo do AI tự ghi — luôn là "chưa kiểm chứng".
   final String sourcesNote;
   final DateTime? releaseAt;
@@ -183,6 +187,7 @@ class CourseItem {
     CourseItemStatus? status,
     String? knowledgeItemId,
     String? summary,
+    String? memoryTip,
     String? sourcesNote,
     DateTime? releaseAt,
     bool clearReleaseAt = false,
@@ -198,6 +203,7 @@ class CourseItem {
     status: status ?? this.status,
     knowledgeItemId: knowledgeItemId ?? this.knowledgeItemId,
     summary: summary ?? this.summary,
+    memoryTip: memoryTip ?? this.memoryTip,
     sourcesNote: sourcesNote ?? this.sourcesNote,
     releaseAt: clearReleaseAt ? null : (releaseAt ?? this.releaseAt),
     readAt: readAt ?? this.readAt,
@@ -214,6 +220,7 @@ class CourseItem {
     'status': status.dbValue,
     'knowledge_item_id': knowledgeItemId,
     'summary': summary,
+    'memory_tip': memoryTip,
     'sources_note': sourcesNote,
     'release_at': releaseAt?.toUtc().millisecondsSinceEpoch,
     'read_at': readAt?.toUtc().millisecondsSinceEpoch,
@@ -230,6 +237,7 @@ class CourseItem {
     status: CourseItemStatus.fromDb(map['status'] as String?),
     knowledgeItemId: map['knowledge_item_id'] as String?,
     summary: (map['summary'] ?? '') as String,
+    memoryTip: (map['memory_tip'] ?? '') as String,
     sourcesNote: (map['sources_note'] ?? '') as String,
     releaseAt: _ms(map['release_at']),
     readAt: _ms(map['read_at']),

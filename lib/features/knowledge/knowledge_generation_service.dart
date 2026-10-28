@@ -188,6 +188,7 @@ class KnowledgeGenerationService {
               examples: draft.examples,
               commonMistakes: draft.commonMistakes,
               summary: draft.summary,
+              memoryTip: draft.memoryTip,
             ),
             questions: questions,
             sources: sources,

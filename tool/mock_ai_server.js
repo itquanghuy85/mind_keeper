@@ -15,34 +15,30 @@ function log(obj) {
   fs.appendFileSync(LOG, line + '\n');
 }
 
-// Bài học trả về ĐÚNG camelCase như prompt trong http_ai_provider.dart yêu cầu.
+// Bài học NGẮN (khoảng 150 từ), trả về ĐÚNG camelCase như prompt trong http_ai_provider.dart.
 function buildLesson(topic) {
-  const body =
-    'Nội dung chi tiết về ' + topic + '. ' +
-    'Phần giải thích mở rộng với nhiều ví dụ thực tế giúp người học nắm chắc kiến thức nền tảng. '.repeat(8);
   return {
     title: 'Bài học: ' + topic,
-    learningObjectives: [
-      'Hiểu bản chất của ' + topic,
-      'Áp dụng ' + topic + ' vào bài toán thực tế',
-    ],
-    introduction: 'Mở đầu về ' + topic + '. ' + body,
+    learningObjectives: ['Hiểu ý chính của ' + topic, 'Áp dụng vào thực tế'],
+    introduction: 'Bài học ngắn giúp bạn nắm nhanh ' + topic + ' và dùng được ngay hằng ngày.',
     concepts: [
-      { name: 'Khái niệm nền của ' + topic, explanation: 'Giải thích chi tiết. ' + body },
+      { name: 'Ý cốt lõi', explanation: 'Điều quan trọng nhất cần nhớ để không nhầm lẫn khi áp dụng.' },
     ],
     sections: [
-      { heading: 'Phần 1: Tổng quan', body: body },
-      { heading: 'Phần 2: Ứng dụng', body: body },
+      { heading: 'Phần 1: Tổng quan', body: 'Hãy nhìn chủ đề này như một bức tranh lớn gồm vài ý chính liên kết với nhau. Nắm được sườn ý, bạn sẽ dễ nhớ các chi tiết nhỏ hơn.' },
+      { heading: 'Phần 2: Ứng dụng', body: 'Hãy gắn nó với một việc quen thuộc trong ngày, rồi tự giải thích lại bằng lời của mình để nhớ lâu hơn.' },
     ],
-    keyPoints: ['Ý chính 1 về ' + topic, 'Ý chính 2 về ' + topic, 'Ý chính 3 về ' + topic],
-    examples: ['Ví dụ 1 về ' + topic, 'Ví dụ 2 về ' + topic],
-    commonMistakes: ['Sai lầm 1 về ' + topic, 'Sai lầm 2 về ' + topic],
-    summary: 'Tóm tắt về ' + topic + '. ' + body,
+    keyPoints: ['Hiểu bản chất trước khi ghi nhớ', 'Liên hệ với ví dụ quen thuộc', 'Ôn lại đúng lúc để nhớ lâu'],
+    examples: ['Ví dụ: giải thích ' + topic + ' cho một người bạn trong một câu.'],
+    commonMistakes: ['Học vẹt mà không hiểu bản chất'],
+    summary: 'Nắm sườn ý chính rồi tự giải thích lại để nhớ lâu.',
+    memoryTip: 'Gắn ý chính với một hình ảnh quen thuộc rồi tự kể lại.',
     questions: [
-      { question: 'Câu hỏi 1 về ' + topic + '?', answer: 'Đáp án 1.', explanation: 'Giải thích 1.' },
-      { question: 'Câu hỏi 2 về ' + topic + '?', answer: 'Đáp án 2.', explanation: 'Giải thích 2.' },
+      { question: 'Ý chính của ' + topic + ' là gì?', answer: 'Nắm sườn ý chính rồi tự giải thích lại.', explanation: 'Xem lại Phần 1.' },
+      { question: 'Làm sao nhớ lâu hơn?', answer: 'Liên hệ ví dụ quen thuộc và ôn lại đúng lúc.', explanation: 'Xem lại Phần 2.' },
+      { question: 'Sai lầm thường gặp khi học?', answer: 'Học vẹt mà không hiểu bản chất.', explanation: 'Xem mục Sai lầm thường gặp.' },
     ],
-    sources: [{ title: 'Nguồn tham khảo về ' + topic, url: 'https://example.com/' + encodeURIComponent(topic) }],
+    sources: [],
     medical: false,
   };
 }
@@ -51,9 +47,9 @@ function buildKnowledge(text) {
   const base = (text || 'Chủ đề').slice(0, 60);
   return {
     items: [
-      { title: 'Thông tin nhanh 1: ' + base, content: 'Nội dung chi tiết 1 về ' + base + '. '.padEnd(120, 'x'), details: 'Chi tiết 1' },
-      { title: 'Thông tin nhanh 2: ' + base, content: 'Nội dung chi tiết 2 về ' + base + '. '.padEnd(120, 'y'), details: 'Chi tiết 2' },
-      { title: 'Thông tin nhanh 3: ' + base, content: 'Nội dung chi tiết 3 về ' + base + '. '.padEnd(120, 'z'), details: 'Chi tiết 3' },
+      { title: 'Thông tin nhanh 1: ' + base, content: 'Ý chính thứ nhất về ' + base + ' là hiểu bản chất trước khi ghi nhớ. Khi hiểu rõ nguyên lý, bạn sẽ tự suy ra nhiều điều mà không cần học thuộc lòng.', details: 'Chi tiết 1' },
+      { title: 'Thông tin nhanh 2: ' + base, content: 'Ý chính thứ hai về ' + base + ' là gắn kiến thức với ví dụ quen thuộc. Ví dụ gần gũi giúp não bộ nhớ lâu hơn.', details: 'Chi tiết 2' },
+      { title: 'Thông tin nhanh 3: ' + base, content: 'Ý chính thứ ba về ' + base + ' là ôn lại đúng lúc. Việc nhắc lại chủ động củng cố trí nhớ tốt hơn đọc lướt.', details: 'Chi tiết 3' },
     ],
   };
 }
@@ -88,16 +84,20 @@ function buildBite(user) {
   const topic = t ? t[1].trim() : 'Chủ đề';
   const idx = m ? m[1] : '1';
   const title = m ? m[3].trim() : 'Mẩu';
+  // Mẩu NGẮN 120-180 từ, tối đa 3 ý chính.
+  const content = 'Đây là nội dung mẩu ' + idx + ' của chủ đề ' + topic + ': ' + title + '. ' +
+    'Ý chính thứ nhất: hiểu bản chất của vấn đề trước khi ghi nhớ chi tiết, vì khi hiểu rõ nguyên lý bạn sẽ tự suy ra được nhiều điều mà không cần học thuộc lòng từng câu chữ riêng lẻ. ' +
+    'Ý chính thứ hai: liên hệ nội dung này với một tình huống quen thuộc trong cuộc sống hằng ngày, bởi những ví dụ gần gũi giúp não bộ gắn kiến thức mới vào trải nghiệm đã có và nhớ lâu hơn. ' +
+    'Ý chính thứ ba: ôn lại sau một khoảng thời gian ngắn bằng cách tự giải thích bằng lời của chính mình, vì việc nhắc lại chủ động củng cố trí nhớ tốt hơn nhiều so với chỉ đọc lướt.';
   return {
     title,
-    content: 'Đây là nội dung mẩu ' + idx + ' của chủ đề ' + topic + '. ' +
-      'Phần giải thích chi tiết giúp bạn hiểu rõ vấn đề: ' + title + '. ' +
-      'Nội dung được soạn mẫu cho kiểm thử, dài đủ để đọc như một mẩu kiến thức thật.',
-    summary: 'Ý chính của mẩu ' + idx + ' về ' + topic + ': ' + title + '.',
-    example: 'Ví dụ minh họa cho mẩu ' + idx + '.',
+    content,
+    summary: 'Hiểu bản chất, liên hệ ví dụ quen thuộc và tự giải thích lại: ' + title + '.',
+    memoryTip: 'Nhớ "' + title + '" bằng một hình ảnh quen thuộc rồi tự kể lại.',
+    example: 'Hãy giải thích mẩu ' + idx + ' cho một người bạn chỉ trong một câu.',
     sources: ['Giáo trình ' + topic + ' (mẫu kiểm thử)'],
     question: 'Ý chính của mẩu ' + idx + ' về ' + topic + ' là gì?',
-    answer: 'Ý chính của mẩu ' + idx + '.',
+    answer: 'Hiểu bản chất, liên hệ ví dụ và tự giải thích lại.',
   };
 }
 

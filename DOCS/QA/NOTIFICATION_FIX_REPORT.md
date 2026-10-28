@@ -77,3 +77,61 @@ Giới hạn trung thực:
 - `layout_overflow_test` (3 fail) và `study_plan_screen_test` (treo) là lỗi có sẵn, chưa sửa.
 - Thông báo khóa học trên ColorOS cần quyền thông báo (và nên bật "Tự khởi chạy", bỏ tối ưu pin) mới ổn định; adb không cấp được quyền này.
 - Chưa chạy lại toàn bộ suite sau `dart format` (format không đổi logic; analyze vẫn 0 error).
+
+---
+
+# Bổ sung: nội dung thông báo mới, icon Android, nội dung ngắn + Mẹo nhớ (2026-10-28)
+
+Bằng chứng: `DOCS/QA/evidence/v2/`. Thiết bị: CPH2325 (`T4E6S8IFU4AQBM8L`). Chỉ áp dụng cho nội dung MỚI, không sửa dữ liệu cũ; báo thức thẻ ôn vẫn **inexact**; **chưa verify iOS** (không có Mac).
+
+## 1. Thay đổi
+| Nhóm | File chính | Nội dung |
+|------|-----------|----------|
+| Helper cắt text | `lib/core/services/notification_text.dart` | `truncateAtWord` (không cắt giữa từ, ≤ max kể cả `…`), `leadSentences`, `notificationBody`, `composeBigText` ("Mẹo nhớ: …") |
+| Thông báo | `notification_service.dart`, `course_service.dart`, `study_plan_service.dart` | Quick: title = tên mẩu, body = 1–2 câu ≤180, subText = chủ đề. Course: title = tên mẩu, body = tóm tắt ≤180, bigText = tóm tắt + "Mẹo nhớ", subText = khóa · cấp độ. Lesson: title = tên bài, body = summary, bigText = summary + mẹo nhớ, subText = chủ đề. Thẻ ôn / nhắc kiến thức giữ nguyên. |
+| Icon Android | `res/drawable-{m,h,xh,xxh,xxxh}dpi/ic_stat_mindkeeper.png`, `drawable-nodpi/ic_notification_large.png`, `res/raw/keep.xml` | Small icon đơn sắc chữ M + sao dùng trong `AndroidInitializationSettings` và mọi kênh; large icon = logo màu |
+| Schema | `schema.dart`, `course.dart` | v10: `course_items.memory_tip` (ALTER, mẩu cũ = rỗng); đóng băng DDL v9 (`courseItemsV9`) để migration v8→v9→v10 không lỗi "duplicate column" |
+| Nội dung ngắn | `lesson.dart` (`LessonMode` 100–180 từ + mô tả mới, `LessonContent.memoryTip` → `memory_tip`), `ai_provider.dart`, `course_ai.dart`, `http_ai_provider.dart`, `mock_ai_provider.dart`, `ai_service.dart` (prompt version v3), `tool/mock_ai_server.js` | Prompt: 120–180 từ, ≤3 ý chính, ví dụ 1 câu, summary 1–2 câu ≤200, memoryTip 1 câu ≤120 (prompt cũ ghi 500–800 từ đã sửa); parser cắt theo từ |
+| Màn đọc | `lib/core/widgets/memory_tip_card.dart`, `course_reader_screen.dart`, `lesson_reader_screen.dart` | Thẻ "Mẹo nhớ", ẩn khi rỗng |
+| Test | `test/core/notification_text_test.dart`, `test/data/migration_v10_test.dart`, `test/features/memory_tip_content_test.dart` (mới); `migration_v9_test`, `course_service_test`, `study_plan_service_test` (cập nhật) | |
+| Maestro | `maestro/notif/20_course_cold_start.yaml` (thêm kiểm "Mẹo nhớ"), `21_…`, `10_…` | |
+
+## 2. Kết quả kiểm tra
+- `flutter analyze`: **0 error**; 7 warning **có sẵn** (`firebase_messaging_service.dart` ×2, `layout_overflow_test.dart` ×5), 27 issue tổng — không có cảnh báo mới.
+- `flutter test` từng file (timeout 180 s; log `evidence/v2/flutter_test_per_file.txt`): **37 file → 35 file pass = 251 test passed**, 0 skipped.
+  - `layout_overflow_test.dart`: 0 pass / 3 fail — **có sẵn** (đã xác nhận trên HEAD ở phần trên).
+  - `study_plan_screen_test.dart`: chạy riêng, timeout 180 s (rc=124) — **treo có sẵn**.
+  - Lưu ý: một lần chạy trước bị hỏng toàn bộ vì ổ C: đầy (lỗi tải test), đã loại bỏ và chạy lại.
+- Migration trên máy thật: DB v9 sạch được app mới tự nâng lên `user_version 10`, có cột `memory_tip`.
+
+## 3. Nghiệm thu trên CPH2325 (mock AI, không dùng AI thật/key)
+Số liệu nội dung mới (`evidence/v2/content_stats.txt`): mẩu khóa học **141 từ** (tóm tắt 88–91 ký tự, mẹo nhớ 75–78); bài học **163–181 từ**, 3 ý chính, 1 ví dụ, mẹo nhớ 54 ký tự. Một bài 181 từ (1 từ quá khung) do tên chủ đề rất dài của mock; mô tả chế độ mới: `maestro_screens/notif_10_mode_descriptions.png`.
+
+| Hạng mục | Kết quả | Bằng chứng |
+|----------|---------|-----------|
+| Smoke `maestro/cph2239/01_smoke.yaml` | PASS exit=0 | `maestro_cph2239_smoke.log` |
+| `gd23/02_add_course` (mock AI) | PASS | `maestro_gd23_02_add_course.log` |
+| `notif/10_create_sample_lesson` | PASS | `maestro_10_lesson.log` |
+| `notif/20_course_cold_start` (có kiểm "Mẹo nhớ") | PASS | `maestro_20_course_cold.log`, `maestro_screens/notif_20_course_cold_opened.png` |
+| `notif/30_schedule_card_notification` | PASS | `maestro_30_card*.log` |
+| Icon mới (small đơn sắc + large logo màu) | Có | `notif_shade_collapsed.png`, `notif_shade_expanded.png` |
+| Nội dung quick/course/lesson | `dumpsys`: title, subText, `BigTextStyle`, largeIcon; thu gọn thấy ý chính, mở rộng thấy "Mẹo nhớ: …" | `notif_dumpsys_v2.txt`, ảnh shade ở trên |
+| Màn đọc có thẻ "Mẹo nhớ" | Course + lesson | `course_warm_opened.png`, `lesson_reader_memory_tip.png` |
+| Lesson chạm | warm `lesson_warm_opened.png`; cold (am kill, chạm thật) `lesson_cold_opened.png` | |
+| Quick chạm | warm `quick_warm_opened.png`; cold (chạm thật) `quick_cold_opened.png` | |
+| Course chạm | warm (chạm thật) `course_warm_opened.png`; cold qua intent `SELECT_NOTIFICATION` (flow 20) — **không phải chạm thật** vì thông báo khóa học thứ hai không còn | |
+| Thẻ ôn không hồi quy | thông báo + chạm cold mở đúng thẻ | `card_regress_shade.png`, `card_cold_opened.png`, `notif_dumpsys_card_regress.txt` |
+| Dữ liệu cũ (giả lập) | Xóa `memory_tip` của 1 mẩu và 1 bài trong DB máy → mở bình thường, thẻ "Mẹo nhớ" ẩn | `legacy_course_opened.png`, `legacy_lesson_opened.png` |
+
+Giả lập dữ liệu cũ bằng sửa DB (không có APK đời cũ để tạo dữ liệu thật); migration thật đã kiểm riêng bằng `migration_v10_test` và trên máy.
+
+## 4. Dọn dẹp
+DB máy về rỗng (mọi bảng = 0, đã v10), `shared_prefs` về bản gốc (`evidence/v2/prefs_after.xml`), cài lại APK debug thường (không trỏ mock AI), dừng mock server, gỡ `adb reverse`.
+
+## 5. Rủi ro / ghi chú
+- iOS chưa verify (small/large icon chỉ áp dụng Android; nội dung chữ dùng chung).
+- Báo thức thẻ ôn vẫn inexact (trễ ~90 giây trên CPH2325, đã chấp nhận).
+- Maestro rò rỉ file `tmp*.apk` (~226 MB/lần chạy) vào `%TEMP%`: đã làm đầy ổ C: (≈133 GB, 1203 file) và được xóa; nên dọn `%TEMP%` định kỳ khi chạy Maestro nhiều.
+- Mock quick ("Chủ đề: …") có chữ lặp do dữ liệu mock, không phải lỗi app.
+- `course_service.dart` và `ai_service.dart` có thay đổi có sẵn của người dùng (câu thông báo lỗi AI) — chỉ commit hunk thuộc phạm vi này.
+

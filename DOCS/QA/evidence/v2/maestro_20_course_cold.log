@@ -1,0 +1,6 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow NOTIF Course cold start
+Assert that "[\s\S]*Bep tu - Khái niệm cơ bản[\s\S]*" is visible... COMPLETED
+Assert that "Đã hiểu" is visible... COMPLETED
+Assert that "[\s\S]*Mẹo nhớ[\s\S]*" is visible... COMPLETED
+Take screenshot notif_20_course_cold_opened... COMPLETED

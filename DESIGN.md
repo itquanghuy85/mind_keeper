@@ -22,6 +22,8 @@
 - Shell 4 tab (IndexedStack).
 - Route đặt tên cho: chủ đề, chi tiết chủ đề, kiến thức, ôn tập, khám phá, import, cài đặt.
 - Notification payload `card:<id>` mở thẳng thẻ cần ôn.
+- Màn đọc mẩu khóa học / bài học: thẻ **Mẹo nhớ** (`MemoryTipCard`: icon bóng đèn + tiêu đề + 1 câu) nằm sau nội dung/tóm tắt; **ẩn hoàn toàn** khi mẹo rỗng (nội dung cũ).
+- Thông báo Android: small icon đơn sắc `ic_stat_mindkeeper` (chữ M + sao, trắng/trong suốt) và large icon logo màu `ic_notification_large` cho mọi kênh; title = tên mẩu/bài, body = ý chính ≤180 ký tự, bigText = tóm tắt + "Mẹo nhớ: …", subText = chủ đề (khóa học: khóa · cấp độ).
 
 ## Trang chủ (GĐ23) — một việc chính mỗi lần mở
 

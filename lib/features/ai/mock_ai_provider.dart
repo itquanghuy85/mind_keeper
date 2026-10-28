@@ -219,21 +219,66 @@ class MockAIProvider implements AIProvider, CourseAiProvider {
     required int questionCount,
   }) async {
     await _delay();
-    final int targetMin = wordMin < 80 ? 80 : wordMin;
-    final int targetMax = wordMax <= targetMin ? targetMin + 60 : wordMax;
+    final int targetMin = wordMin < 60 ? 60 : wordMin;
+    final int targetMax = wordMax <= targetMin ? targetMin + 40 : wordMax;
 
+    // Bài ngắn: tối đa 2 phần, 3 ý chính, ví dụ 1 câu, 1 khái niệm.
     final int sectionCount = switch (mode) {
-      'overview' => 3,
-      'deep' => 5,
-      'path' => 4,
-      _ => 4,
+      'overview' => 1,
+      _ => 2,
     };
 
-    // Ghép câu cho đến khi đạt tối thiểu, rồi thêm chừng nào còn vừa khung từ.
+    final List<String> objectives = <String>[
+      'Hiểu ý chính của $topic',
+      'Áp dụng $topic vào thực tế',
+    ];
+    final String introduction =
+        'Bài học này giúp bạn nắm nhanh $topic trong lĩnh vực $domain.';
+    final List<AiLessonConcept> concepts = <AiLessonConcept>[
+      AiLessonConcept(
+        name: 'Ý cốt lõi',
+        explanation: 'Điều quan trọng nhất cần nhớ về $topic.',
+      ),
+    ];
+    final List<String> examples = <String>[
+      'Ví dụ gần gũi: ${_lessonSentences[2]}',
+    ];
+    final List<String> commonMistakes = <String>[
+      'Học vẹt mà không hiểu bản chất',
+    ];
+    const List<String> memoryTips = <String>[
+      'Gắn ý chính với một hình ảnh quen thuộc rồi tự kể lại.',
+      'Đọc xong hãy tự giải thích lại bằng một câu.',
+      'Ôn lại sau một ngày để giữ ý chính lâu hơn.',
+    ];
+    final String memoryTip = memoryTips[topic.length % memoryTips.length];
+    final String summary =
+        'Tóm lại, $topic cần được nắm bằng cách hiểu ý chính rồi ôn lại.';
+
+    // Số từ đã dùng cho các phần cố định → phần còn lại dành cho sections,
+    // sao cho tổng (đúng cách tính LessonContent.wordCount) nằm trong khung.
+    int fixed = _words(introduction) + _words(summary);
+    for (final String e in examples) {
+      fixed += _words(e);
+    }
+    for (final String o in objectives) {
+      fixed += _words(o);
+    }
+    for (final AiLessonConcept c in concepts) {
+      fixed += _words(c.name) + _words(c.explanation);
+    }
+    for (final String m in commonMistakes) {
+      fixed += _words(m);
+    }
+    fixed += 3 * 8; // ý chính (keyPoints) ≈ 8 từ/ý
+    fixed += sectionCount * 3; // tiêu đề phần
+    final int sectionMin = (targetMin - fixed).clamp(20, 1000);
+    final int sectionMax = (targetMax - fixed).clamp(sectionMin + 10, 1200);
+
     final List<String> sentences = <String>[];
     int total = 0;
     int cursor = 0;
-    while (total < targetMin) {
+    while (total < sectionMin) {
       final String sentence =
           _lessonSentences[cursor % _lessonSentences.length];
       sentences.add(sentence);
@@ -244,7 +289,7 @@ class MockAIProvider implements AIProvider, CourseAiProvider {
       final String sentence =
           _lessonSentences[cursor % _lessonSentences.length];
       final int sentenceWords = _words(sentence);
-      if (total + sentenceWords > targetMax) break;
+      if (total + sentenceWords > sectionMax) break;
       sentences.add(sentence);
       total += sentenceWords;
       cursor++;
@@ -298,53 +343,32 @@ class MockAIProvider implements AIProvider, CourseAiProvider {
     final String lowerTopic = topic.toLowerCase();
     final bool medical = _medicalKeywords.any(lowerTopic.contains);
 
-    // Tạo concepts mẫu
-    final List<AiLessonConcept> concepts = <AiLessonConcept>[
-      AiLessonConcept(
-        name: 'Khái niệm cốt lõi 1',
-        explanation:
-            'Giải thích chi tiết về khái niệm cốt lõi đầu tiên liên quan đến $topic.',
-      ),
-      AiLessonConcept(
-        name: 'Khái niệm cốt lõi 2',
-        explanation:
-            'Giải thích chi tiết về khái niệm cốt lõi thứ hai liên quan đến $topic.',
-      ),
-    ];
-
     return AiLessonDraft(
       title: '$topic — khám phá trong $domain',
-      learningObjectives: <String>[
-        'Hiểu được khái niệm cơ bản của $topic',
-        'Nắm vững các nguyên lý quan trọng',
-        'Áp dụng được vào thực tế',
-      ],
-      introduction:
-          'Bài học này giúp bạn khám phá $topic trong lĩnh vực $domain, '
-          'đi từ bức tranh tổng quan đến những chi tiết đáng nhớ nhất.',
+      learningObjectives: objectives,
+      introduction: introduction,
       concepts: concepts,
       sections: sections,
       keyPoints: <String>[
-        for (final AiLessonSection section in sections.take(3))
-          '${section.body.split(RegExp(r'[.!?]+')).first.trim()}.',
+        for (int i = 0; i < 3; i++)
+          'Ý chính ${i + 1}: ${_lessonKeyPoints[(topic.length + i) % _lessonKeyPoints.length]}',
       ],
-      examples: <String>[
-        'Ví dụ gần gũi: ${_lessonSentences[2]}',
-        'Tình huống thực tế: ${_lessonSentences[5]}',
-      ],
-      commonMistakes: <String>[
-        'Học vẹt mà không hiểu bản chất',
-        'Bỏ qua việc ôn tập định kỳ',
-        'Không liên kết kiến thức mới với kiến thức cũ',
-      ],
-      summary:
-          'Tóm lại, $topic đòi hỏi cách nhìn vừa bao quát vừa chi tiết. '
-          'Hãy quay lại các phần chính và làm quiz ghi nhớ để giữ bài học lâu dài.',
+      examples: examples,
+      commonMistakes: commonMistakes,
+      summary: summary,
+      memoryTip: memoryTip,
       questions: questions,
       sources: const <AiLessonSource>[], // Mock không bịa nguồn.
       medical: medical,
     );
   }
+
+  static const List<String> _lessonKeyPoints = <String>[
+    'hiểu bản chất trước khi ghi nhớ.',
+    'liên hệ với ví dụ quen thuộc.',
+    'ôn lại đúng lúc để nhớ lâu.',
+    'tự giải thích lại bằng lời của mình.',
+  ];
 
   @override
   Future<List<AiTopicSuggestion>> suggestTopics({
@@ -404,14 +428,26 @@ class MockAIProvider implements AIProvider, CourseAiProvider {
     List<String> previousTitles = const <String>[],
   }) async {
     await _delay();
-    final String content =
-        '[Nội dung thử nghiệm] $title. Đây là mẩu $index trên $total của chủ đề '
-        '$topic ở cấp ${level.label}. ${level.hint}. Mẩu này do AI giả lập '
-        'soạn để thử luồng học, không phải kiến thức thật.';
+    // Mẩu ngắn 120–180 từ, tối đa 3 ý chính (đúng yêu cầu nội dung mới).
+    final StringBuffer body = StringBuffer(
+      '[Nội dung thử nghiệm] $title. Đây là mẩu $index trên $total của chủ đề '
+      '$topic ở cấp ${level.label}. ${level.hint}.',
+    );
+    int words = _words(body.toString());
+    int cursor = index;
+    while (words < 130) {
+      final String sentence =
+          _lessonSentences[cursor % _lessonSentences.length];
+      body.write(' $sentence');
+      words += _words(sentence);
+      cursor++;
+    }
+    final String content = body.toString();
     return AiBiteDraft(
       title: title,
       content: content,
       summary: 'Mẩu thử nghiệm $index/$total về $topic (${level.label}).',
+      memoryTip: 'Nhớ "$title" bằng một hình ảnh quen thuộc rồi tự kể lại.',
       example: 'Ví dụ thử nghiệm cho "$title".',
       sources: const <String>['Chưa kiểm chứng (mock)'],
       question: 'Ý chính của "$title" là gì?',

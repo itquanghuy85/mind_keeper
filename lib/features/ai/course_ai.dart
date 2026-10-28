@@ -4,6 +4,7 @@
 /// provider nào hỗ trợ khóa học thì implement thêm [CourseAiProvider].
 library;
 
+import '../../core/services/notification_text.dart';
 import '../../data/models/course.dart';
 
 /// Một mẩu kiến thức đã soạn: bản đầy đủ + bản tóm tắt cho thông báo.
@@ -12,6 +13,7 @@ class AiBiteDraft {
     required this.title,
     required this.content,
     required this.summary,
+    this.memoryTip = '',
     this.example = '',
     this.sources = const <String>[],
     this.question = '',
@@ -23,8 +25,11 @@ class AiBiteDraft {
   /// Nội dung đầy đủ (đọc trong app).
   final String content;
 
-  /// 2–3 câu: ý chính để đọc ngay trong thông báo.
+  /// 1–2 câu (≤200 ký tự): ý chính để đọc ngay trong thông báo.
   final String summary;
+
+  /// Mẹo nhớ 1 câu (≤120 ký tự); rỗng nếu AI không trả về.
+  final String memoryTip;
   final String example;
 
   /// Tên giáo trình / từ khóa nên tra — KHÔNG ghi link.
@@ -50,6 +55,13 @@ class AiBiteDraft {
     }
     String summary = pick(<String>['summary']);
     if (summary.isEmpty) summary = shortSummary(content);
+    if (summary.length > maxSummaryChars) {
+      summary = truncateAtWord(summary, maxSummaryChars);
+    }
+    String memoryTip = pick(<String>['memoryTip', 'memory_tip', 'tip']);
+    if (memoryTip.length > maxMemoryTipChars) {
+      memoryTip = truncateAtWord(memoryTip, maxMemoryTipChars);
+    }
     final List<String> sources = <String>[];
     final Object? rawSources = map['sources'];
     if (rawSources is List<Object?>) {
@@ -66,6 +78,7 @@ class AiBiteDraft {
       title: title,
       content: content,
       summary: summary,
+      memoryTip: memoryTip,
       example: pick(<String>['example']),
       sources: sources,
       question: pick(<String>['question']),
@@ -73,22 +86,13 @@ class AiBiteDraft {
     );
   }
 
-  /// Cắt [text] thành tối đa ~3 câu / 280 ký tự (dùng khi AI bỏ trống summary).
-  static String shortSummary(String text) {
-    final String flat = text.trim().replaceAll(RegExp(r'\s+'), ' ');
-    final List<String> sentences = flat.split(RegExp(r'(?<=[.!?])\s+'));
-    final StringBuffer out = StringBuffer();
-    int count = 0;
-    for (final String s in sentences) {
-      if (count >= 3 || out.length + s.length > 280) break;
-      if (out.isNotEmpty) out.write(' ');
-      out.write(s);
-      count++;
-    }
-    final String result = out.toString().trim();
-    if (result.isNotEmpty) return result;
-    return flat.length <= 280 ? flat : '${flat.substring(0, 277)}…';
-  }
+  /// Giới hạn độ dài tóm tắt / mẹo nhớ (ký tự) cho nội dung mới.
+  static const int maxSummaryChars = 200;
+  static const int maxMemoryTipChars = 120;
+
+  /// Lấy tối đa 2 câu / 200 ký tự (dùng khi AI bỏ trống summary).
+  static String shortSummary(String text) =>
+      leadSentences(text, maxSentences: 2, max: maxSummaryChars);
 }
 
 abstract class CourseAiProvider {

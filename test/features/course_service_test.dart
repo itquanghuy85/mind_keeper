@@ -128,6 +128,19 @@ void main() {
       expect(e.value, startsWith('course:'));
       expect(r.fake.courseBigTexts[e.key], isNotEmpty);
     }
+    // Nội dung mới: title = tên mẩu, body ≤180, bigText = tóm tắt + mẹo nhớ,
+    // subText = khóa · cấp độ.
+    for (final CourseItem it in items.take(2)) {
+      final int id = CourseService.notificationIdFor(it.id);
+      expect(r.fake.courseTitles[id], it.title);
+      expect(r.fake.courseBodies[id]!.length, lessThanOrEqualTo(180));
+      expect(it.memoryTip, isNotEmpty);
+      expect(
+        r.fake.courseBigTexts[id],
+        contains('Mẹo nhớ: ${it.memoryTip}'),
+      );
+      expect(r.fake.courseSubTexts[id], contains(' · '));
+    }
     expect(
       r.fake.coursePayloads.values.toSet(),
       <String>{'course:${items[0].id}', 'course:${items[1].id}'},

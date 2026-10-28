@@ -1,0 +1,12 @@
+                android.bigText=String (Nắm sườn ý chính rồi tự giải thích lại để nhớ lâu.
+Mẹo nhớ: Gắn ý chính với một hình ảnh quen thuộc rồi tự kể lại.)
+                android.infoText=null
+                android.progressIndeterminate=Boolean (false)
+                android.bigText=String (Ý chính thứ nhất về Chủ đề: Kiểm thử thông báo. là hiểu bản chất trước khi ghi nhớ.)
+                android.infoText=null
+                android.progressIndeterminate=Boolean (false)
+                android.remoteInputHistory=null
+                android.bigText=String (Hiểu bản chất, liên hệ ví dụ quen thuộc và tự giải thích lại: Bep tu - Khái niệm cơ bản.
+Mẹo nhớ: Nhớ "Bep tu - Khái niệm cơ bản" bằng một hình ảnh quen thuộc rồi tự kể lại.)
+                android.infoText=null
+                android.progressIndeterminate=Boolean (false)

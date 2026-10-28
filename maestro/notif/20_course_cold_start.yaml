@@ -8,4 +8,5 @@ name: NOTIF Course cold start
     visible: "[\\s\\S]*Bep tu - Khái niệm cơ bản[\\s\\S]*"
     timeout: 60000
 - assertVisible: "Đã hiểu"
+- assertVisible: "[\\s\\S]*Mẹo nhớ[\\s\\S]*"
 - takeScreenshot: "notif_20_course_cold_opened"

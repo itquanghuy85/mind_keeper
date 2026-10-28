@@ -11,6 +11,7 @@ import '../../core/widgets/app_chip.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_feedback.dart';
 import '../../core/widgets/app_icon_badge.dart';
+import '../../core/widgets/memory_tip_card.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/knowledge_item.dart';
 import '../../data/models/lesson.dart';
@@ -406,6 +407,10 @@ class _LessonReaderScreenState extends State<LessonReaderScreen> {
                     ],
                   ),
                 ),
+              ],
+              if (lesson.content.memoryTip.trim().isNotEmpty) ...<Widget>[
+                const SizedBox(height: AppSpacing.lg),
+                MemoryTipCard(tip: lesson.content.memoryTip),
               ],
               const SizedBox(height: AppSpacing.lg),
               _SourcesSection(

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icon thông báo được tham chiếu theo tên (getIdentifier) nên cần giữ khi shrink. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_mindkeeper,@drawable/ic_notification_large" />

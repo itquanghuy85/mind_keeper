@@ -1,0 +1,25 @@
+    == id=-8019296 mind_keeper_new_content
+      icon=Icon(typ=RESOURCE pkg=com.mindkeeper.mind_keeper id=0x7f070075)
+                android.title=String (Bài học: Kiểm thử thông báo)
+                android.subText=String (Kiểm thử thông báo)
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.text=String (Nắm sườn ý chính rồi tự giải thích lại để nhớ lâu.)
+                android.largeIcon=Icon (Icon(typ=BITMAP size=51x51))
+                android.bigText=String (Nắm sườn ý chính rồi tự giải thích lại để nhớ lâu.
+    == id=-8019264 mind_keeper_new_content
+      icon=Icon(typ=RESOURCE pkg=com.mindkeeper.mind_keeper id=0x7f070075)
+                android.title=String (Thông tin nhanh 1: Chủ đề: Kiểm thử thông báo.)
+                android.subText=String (Kiểm thử thông báo)
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.text=String (Ý chính thứ nhất về Chủ đề: Kiểm thử thông báo. là hiểu bản chất trước khi ghi nhớ.)
+                android.largeIcon=Icon (Icon(typ=BITMAP size=51x51))
+                android.bigText=String (Ý chính thứ nhất về Chủ đề: Kiểm thử thông báo. là hiểu bản chất trước khi ghi nhớ.)
+    == id=-9637858 mind_keeper_course
+      icon=Icon(typ=RESOURCE pkg=com.mindkeeper.mind_keeper id=0x7f070075)
+                android.title=String (Bep tu - Khái niệm cơ bản)
+                android.subText=String (Bep tu · Nâng cao)
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.text=String (Hiểu bản chất, liên hệ ví dụ quen thuộc và tự giải thích lại: Bep tu - Khái niệm cơ bản.)
+                android.largeIcon=Icon (Icon(typ=BITMAP size=51x51))
+                android.bigText=String (Hiểu bản chất, liên hệ ví dụ quen thuộc và tự giải thích lại: Bep tu - Khái niệm cơ bản.
+                android.summaryText=String (Mẩu 1/4 · Chưa kiểm chứng)

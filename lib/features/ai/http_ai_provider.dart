@@ -86,7 +86,9 @@ class HttpAIProvider implements AIProvider, CourseAiProvider {
     if (charset != null && charset != 'utf-8' && charset != 'utf8') {
       // dart:convert chỉ có sẵn latin1; các charset khác cần thư viện ngoài.
       // Hợp đồng API hiện tại dùng UTF-8 → mọi charset lạ đều rơi về UTF-8.
-      if (charset == 'iso-8859-1' || charset == 'latin1' || charset == 'latin-1') {
+      if (charset == 'iso-8859-1' ||
+          charset == 'latin1' ||
+          charset == 'latin-1') {
         return latin1.decode(response.bodyBytes);
       }
       return utf8.decode(response.bodyBytes);
@@ -256,24 +258,24 @@ class HttpAIProvider implements AIProvider, CourseAiProvider {
         ? 3
         : (questionCount > 5 ? 5 : questionCount);
     final String systemPrompt =
-        '''Bạn là chuyên gia soạn thảo bài học chất lượng cao cho ứng dụng học tập chủ động. Hãy tạo bài học JSON tiếng Việt đầy đủ, có cấu trúc, độ dài 500-800 từ.
+        '''Bạn là chuyên gia soạn bài học NGẮN cho ứng dụng học mỗi ngày. Hãy tạo bài học JSON tiếng Việt gọn, dễ nhớ, tổng độ dài $wordMin-$wordMax từ.
 
 CẤU TRÚC BẮT BUỘC:
 {
   "title": "Tiêu đề rõ ràng, hấp dẫn",
-  "learningObjectives": ["Mục tiêu 1", "Mục tiêu 2", "Mục tiêu 3"],
-  "introduction": "Mở đầu 100-150 từ: bối cảnh, tại sao quan trọng, người học sẽ đạt được gì",
+  "learningObjectives": ["Mục tiêu 1", "Mục tiêu 2"],
+  "introduction": "Mở đầu 1-2 câu (khoảng 25 từ)",
   "concepts": [
-    {"name": "Khái niệm 1", "explanation": "Giải thích chi tiết 150-200 từ"},
-    {"name": "Khái niệm 2", "explanation": "Giải thích chi tiết 150-200 từ"}
+    {"name": "Khái niệm chính", "explanation": "Giải thích 1-2 câu (khoảng 30 từ)"}
   ],
   "sections": [
-    {"heading": "Phần 1: Tên phần", "body": "Nội dung chi tiết 200-300 từ"}
+    {"heading": "Phần 1: Tên phần", "body": "Nội dung khoảng 40-50 từ"}
   ],
-  "keyPoints": ["Ý chính 1", "Ý chính 2", "Ý chính 3", "Ý chính 4", "Ý chính 5"],
-  "examples": ["Ví dụ thực tế 1", "Ví dụ thực tế 2"],
-  "commonMistakes": ["Sai lầm thường gặp 1", "Sai lầm thường gặp 2"],
-  "summary": "Tóm tắt 3-5 ý quan trọng nhất, 100-150 từ",
+  "keyPoints": ["Ý chính 1", "Ý chính 2", "Ý chính 3"],
+  "examples": ["Một ví dụ thực tế, đúng 1 câu"],
+  "commonMistakes": ["Một sai lầm thường gặp"],
+  "summary": "Tóm tắt 1-2 câu nêu ý chính, tối đa 200 ký tự",
+  "memoryTip": "Một mẹo nhớ đúng 1 câu, tối đa 120 ký tự",
   "questions": [
     {"question": "Câu hỏi 1", "answer": "Đáp án", "explanation": "Giải thích"}
   ],
@@ -282,7 +284,8 @@ CẤU TRÚC BẮT BUỘC:
 }
 
 NGUYÊN TẮC:
-- Độ dài toàn bài: $wordMin-$wordMax từ
+- Độ dài toàn bài: $wordMin-$wordMax từ; tối đa 3 ý chính (keyPoints), tối đa 2 phần (sections)
+- Ví dụ chỉ 1 câu; summary 1-2 câu; memoryTip 1 câu
 - Số câu hỏi: $maxQuestions (3-5)
 - Không bịa nguồn - để mảng sources rỗng nếu không chắc chắn
 - Nội dung y tế: medical=true + disclaimer
@@ -375,9 +378,11 @@ NGUYÊN TẮC:
           'Độ khó: ${level.promptGuide} '
           'Viết tiếng Việt tự nhiên, chính xác, KHÔNG lặp lại các mẩu đã học, '
           'không bịa số liệu. '
-          'JSON: {"title":"","content":"150-250 từ, chia đoạn ngắn","summary":'
-          '"2-3 câu nêu ý chính để đọc nhanh trong thông báo, dưới 280 ký tự",'
-          '"example":"một ví dụ cụ thể","sources":["tên giáo trình hoặc từ khóa '
+          'Nội dung NGẮN: 120-180 từ, tối đa 3 ý chính, ví dụ đúng 1 câu. '
+          'JSON: {"title":"","content":"120-180 từ, chia đoạn ngắn, tối đa 3 ý chính",'
+          '"summary":"1-2 câu nêu ý chính để đọc nhanh trong thông báo, tối đa 200 ký tự",'
+          '"memoryTip":"một mẹo nhớ đúng 1 câu, tối đa 120 ký tự",'
+          '"example":"một ví dụ cụ thể, đúng 1 câu","sources":["tên giáo trình hoặc từ khóa '
           'nên tra cứu, KHÔNG ghi đường link, để mảng rỗng nếu không chắc"],'
           '"question":"một câu hỏi tự kiểm tra","answer":"đáp án ngắn"}',
       'Chủ đề: $topic\nMẩu $index/$total: $title\nCác mẩu đã có: $previous',

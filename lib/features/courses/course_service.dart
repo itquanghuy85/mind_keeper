@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../core/services/notification_service.dart';
+import '../../core/services/notification_text.dart';
 import '../../core/services/preferences_service.dart';
 import '../../data/models/course.dart';
 import '../../data/models/enums.dart';
@@ -288,6 +289,7 @@ class CourseService {
       status: CourseItemStatus.ready,
       knowledgeItemId: saved.id,
       summary: draft.summary.trim(),
+      memoryTip: draft.memoryTip.trim(),
       sourcesNote: draft.sources.join('; '),
       releaseAt: releaseAt.toUtc(),
       clearError: true,
@@ -374,11 +376,13 @@ class CourseService {
     for (final CourseItemEntry entry in upcoming) {
       final CourseItem item = entry.item;
       if (item.releaseAt == null || !item.hasContent) continue;
+      final String summary = item.summary.isEmpty ? item.title : item.summary;
       await notifications.scheduleCourseNotification(
         id: notificationIdFor(item.id),
-        title: '${entry.course.name} · ${entry.course.level.label}',
-        body: item.title,
-        bigText: item.summary.isEmpty ? item.title : item.summary,
+        title: item.title,
+        body: notificationBody(summary),
+        bigText: composeBigText(summary, item.memoryTip),
+        subText: '${entry.course.name} · ${entry.course.level.label}',
         footer:
             'Mẩu ${item.position + 1}/${entry.course.totalItems} · '
             '$courseUnverifiedLabel',

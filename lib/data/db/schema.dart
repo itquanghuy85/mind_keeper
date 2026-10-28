@@ -14,7 +14,7 @@ class SchemaMigration {
 
 abstract final class DbSchema {
   /// Phiên bản schema hiện tại của ứng dụng.
-  static const int currentVersion = 9;
+  static const int currentVersion = 10;
 
   static const String topics = '''
 CREATE TABLE topics (
@@ -198,6 +198,26 @@ CREATE TABLE course_items (
   status TEXT NOT NULL DEFAULT 'pending',
   knowledge_item_id TEXT REFERENCES knowledge_items(id) ON DELETE SET NULL,
   summary TEXT NOT NULL DEFAULT '',
+  memory_tip TEXT NOT NULL DEFAULT '',
+  sources_note TEXT NOT NULL DEFAULT '',
+  release_at INTEGER,
+  read_at INTEGER,
+  error TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)''';
+
+  /// DDL course_items ĐỜI v9 (chưa có cột mẹo nhớ): đóng băng cho migration
+  /// v8→v9; cột `memory_tip` được thêm ở bước v9→v10.
+  static const String courseItemsV9 = '''
+CREATE TABLE course_items (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  knowledge_item_id TEXT REFERENCES knowledge_items(id) ON DELETE SET NULL,
+  summary TEXT NOT NULL DEFAULT '',
   sources_note TEXT NOT NULL DEFAULT '',
   release_at INTEGER,
   read_at INTEGER,
@@ -265,6 +285,7 @@ CREATE TABLE course_items (
     SchemaMigration(fromVersion: 6, toVersion: 7, upgrade: _upgradeToV7),
     SchemaMigration(fromVersion: 7, toVersion: 8, upgrade: _upgradeToV8),
     SchemaMigration(fromVersion: 8, toVersion: 9, upgrade: _upgradeToV9),
+    SchemaMigration(fromVersion: 9, toVersion: 10, upgrade: _upgradeToV10),
   ];
 
   static Future<void> _upgradeToV2(DatabaseExecutor db) async {
@@ -330,9 +351,16 @@ CREATE TABLE course_items (
   /// GĐ23: chỉ THÊM bảng khóa học + đề cương + index; không đụng bảng cũ.
   static Future<void> _upgradeToV9(DatabaseExecutor db) async {
     await db.execute(courses);
-    await db.execute(courseItems);
+    await db.execute(courseItemsV9);
     for (final String statement in courseIndexes) {
       await db.execute(statement);
     }
+  }
+
+  /// Mẹo nhớ của mẩu khóa học: chỉ THÊM cột; mẩu cũ có memory_tip rỗng.
+  static Future<void> _upgradeToV10(DatabaseExecutor db) async {
+    await db.execute(
+      "ALTER TABLE course_items ADD COLUMN memory_tip TEXT NOT NULL DEFAULT ''",
+    );
   }
 }

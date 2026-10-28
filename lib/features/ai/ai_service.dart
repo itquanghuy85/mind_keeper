@@ -14,7 +14,7 @@ class AiService {
 
   /// Phiên bản prompt sinh bài học. Đổi giá trị này để invalidate
   /// cache/dedup khi yêu cầu nội dung thay đổi.
-  static const String lessonPromptVersion = 'v2';
+  static const String lessonPromptVersion = 'v3';
 
   AIProvider _provider;
   final Duration cacheTtl;

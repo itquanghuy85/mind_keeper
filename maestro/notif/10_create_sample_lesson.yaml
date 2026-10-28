@@ -26,6 +26,8 @@ name: NOTIF Tao bai hoc mau
     visibilityPercentage: 40
     centerElement: true
     timeout: 20000
+    optional: true
+- takeScreenshot: "notif_10_mode_descriptions"
 - tapOn: "Tạo bài học[\\s\\S]*"
 - extendedWaitUntil:
     notVisible: "Chủ đề trong Khoa học"

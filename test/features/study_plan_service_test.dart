@@ -384,6 +384,36 @@ void main() {
       }
       await services.dispose();
     });
+
+    test('nội dung thông báo: quick/lesson có title, body ≤180, subText', () async {
+      final (:services, :plan) = await _buildServices(
+        quickPerDay: 1,
+        lessonPerDay: 1,
+        notificationsEnabled: true,
+      );
+      await _seedTopic(services, name: 'P2');
+
+      await plan.sync();
+      await plan.sync();
+
+      final FakeNotificationService fake =
+          services.notifications as FakeNotificationService;
+      expect(fake.contentPayloads, isNotEmpty);
+      for (final MapEntry<int, String> e in fake.contentPayloads.entries) {
+        final String title = fake.contentTitles[e.key]!;
+        final String body = fake.contentBodies[e.key]!;
+        expect(title, isNotEmpty);
+        expect(body, isNotEmpty);
+        expect(body.length, lessThanOrEqualTo(180));
+        expect(fake.contentSubTexts[e.key], isNotEmpty);
+        if (e.value.startsWith('lesson:')) {
+          expect(fake.contentBigTexts[e.key], isNotEmpty);
+        } else {
+          expect(title, isNot('Thông tin nhanh mới'));
+        }
+      }
+      await services.dispose();
+    });
   });
 
   group('StudyPlanService — hồi quy lỗi đã sửa (GĐ17)', () {

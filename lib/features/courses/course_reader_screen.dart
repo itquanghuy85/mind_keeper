@@ -12,6 +12,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_feedback.dart';
+import '../../core/widgets/memory_tip_card.dart';
 import '../../data/models/course.dart';
 import '../../data/models/knowledge_item.dart';
 import 'course_service.dart';
@@ -236,6 +237,10 @@ class _CourseReaderScreenState extends State<CourseReaderScreen> {
             AppCard(
               child: Text(block, style: text.bodyMedium?.copyWith(height: 1.5)),
             ),
+          ],
+          if (item.memoryTip.trim().isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppSpacing.lg),
+            MemoryTipCard(tip: item.memoryTip),
           ],
           const SizedBox(height: AppSpacing.lg),
           Row(

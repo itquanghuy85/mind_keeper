@@ -1,6 +1,8 @@
 /// Schema đầu vào/đầu ra cho AI. Validate trước khi dùng kết quả.
 library;
 
+import '../../core/services/notification_text.dart';
+
 /// Exception cho lỗi cấu hình AI.
 class AiConfigurationException implements Exception {
   const AiConfigurationException({
@@ -162,10 +164,7 @@ class AiLessonSource {
 
 /// Bài học AI: cấu trúc đầy đủ cho một buổi khám phá kiến thức.
 class AiTopicSuggestion {
-  const AiTopicSuggestion({
-    required this.title,
-    required this.description,
-  });
+  const AiTopicSuggestion({required this.title, required this.description});
 
   final String title;
   final String description;
@@ -197,6 +196,7 @@ class AiLessonDraft {
     required this.questions,
     required this.sources,
     this.medical = false,
+    this.memoryTip = '',
   });
 
   final String title;
@@ -208,6 +208,9 @@ class AiLessonDraft {
   final List<String> examples;
   final List<String> commonMistakes;
   final String summary;
+
+  /// Mẹo nhớ 1 câu (≤120 ký tự); rỗng nếu AI không trả về.
+  final String memoryTip;
   final List<AiQuestionDraft> questions;
 
   /// Nguồn tham khảo. BẮT BUỘC để rỗng khi AI không chắc — không được bịa.
@@ -288,10 +291,10 @@ class AiLessonDraft {
     if (title.isEmpty || introduction.isEmpty) {
       throw const FormatException('Thiếu title hoặc introduction');
     }
-    final List<String> learningObjectives = _pickTextList(
-      map,
-      <String>['learningObjectives', 'learning_objectives'],
-    );
+    final List<String> learningObjectives = _pickTextList(map, <String>[
+      'learningObjectives',
+      'learning_objectives',
+    ]);
     final List<AiLessonConcept> concepts = <AiLessonConcept>[];
     for (final Object? item
         in (map['concepts'] as List<Object?>?) ?? const <Object?>[]) {
@@ -344,16 +347,27 @@ class AiLessonDraft {
       sections: sections,
       keyPoints: _pickTextList(map, <String>['keyPoints', 'key_points']),
       examples: _pickTextList(map, <String>['examples']),
-      commonMistakes: _pickTextList(
-        map,
-        <String>['commonMistakes', 'common_mistakes'],
+      commonMistakes: _pickTextList(map, <String>[
+        'commonMistakes',
+        'common_mistakes',
+      ]),
+      summary: _clamp(_pick(map, <String>['summary']), maxSummaryChars),
+      memoryTip: _clamp(
+        _pick(map, <String>['memoryTip', 'memory_tip', 'tip']),
+        maxMemoryTipChars,
       ),
-      summary: _pick(map, <String>['summary']),
       questions: questions,
       sources: sources,
       medical: map['medical'] == true || map['is_medical'] == true,
     );
   }
+
+  /// Giới hạn tóm tắt / mẹo nhớ của bài học mới (ký tự).
+  static const int maxSummaryChars = 200;
+  static const int maxMemoryTipChars = 120;
+
+  static String _clamp(String text, int max) =>
+      text.length <= max ? text : truncateAtWord(text, max);
 
   static List<String> _textList(Object? value) {
     if (value is! List<Object?>) return const <String>[];

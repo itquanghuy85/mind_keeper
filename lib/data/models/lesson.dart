@@ -5,34 +5,34 @@ enum LessonMode {
   overview(
     id: 'overview',
     label: 'Tổng quan',
-    description: 'Một vòng quan sát nhanh toàn cảnh chủ đề.',
-    wordMin: 180,
-    wordMax: 300,
+    description: 'Vài ý chính để nắm nhanh chủ đề, đọc dưới 1 phút.',
+    wordMin: 100,
+    wordMax: 140,
     questions: 3,
   ),
   standard(
     id: 'standard',
     label: 'Tiêu chuẩn',
-    description: 'Bài cân bằng, đọc trong 3–5 phút.',
-    wordMin: 350,
-    wordMax: 600,
-    questions: 4,
+    description: 'Bài ngắn gọn 120–180 từ, đọc trong khoảng 1 phút.',
+    wordMin: 120,
+    wordMax: 180,
+    questions: 3,
   ),
   deep(
     id: 'deep',
     label: 'Chuyên sâu',
-    description: 'Nhiều phần chi tiết, đào sâu từng khái niệm.',
-    wordMin: 400,
-    wordMax: 700,
-    questions: 5,
+    description: 'Thêm một khái niệm và ví dụ, vẫn gọn trong 140–180 từ.',
+    wordMin: 140,
+    wordMax: 180,
+    questions: 4,
   ),
   path(
     id: 'path',
     label: 'Theo lộ trình',
-    description: 'Đi từng chặng, mỗi chặng có quiz chặn để mở tiếp.',
-    wordMin: 300,
-    wordMax: 600,
-    questions: 4,
+    description: 'Đi từng chặng ngắn, mỗi chặng có quiz chặn để mở tiếp.',
+    wordMin: 120,
+    wordMax: 180,
+    questions: 3,
   );
 
   const LessonMode({
@@ -182,6 +182,7 @@ class LessonContent {
     required this.examples,
     required this.commonMistakes,
     required this.summary,
+    this.memoryTip = '',
   });
 
   final List<String> learningObjectives;
@@ -192,6 +193,9 @@ class LessonContent {
   final List<String> examples;
   final List<String> commonMistakes;
   final String summary;
+
+  /// Mẹo nhớ 1 câu; rỗng với bài cũ (không có khóa `memory_tip` trong JSON).
+  final String memoryTip;
 
   factory LessonContent.fromMap(Map<String, Object?> map) {
     final String introduction = (map['introduction'] ?? '').toString().trim();
@@ -227,6 +231,7 @@ class LessonContent {
       examples: _stringList(map['examples']),
       commonMistakes: _stringList(map['common_mistakes']),
       summary: (map['summary'] ?? '').toString().trim(),
+      memoryTip: (map['memory_tip'] ?? '').toString().trim(),
     );
   }
 
@@ -248,6 +253,7 @@ class LessonContent {
     'examples': examples,
     'common_mistakes': commonMistakes,
     'summary': summary,
+    'memory_tip': memoryTip,
   };
 
   int get wordCount {

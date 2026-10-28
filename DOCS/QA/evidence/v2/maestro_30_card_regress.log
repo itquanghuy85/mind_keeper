@@ -1,0 +1,9 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow NOTIF Len lich thong bao the
+Launch app "com.mindkeeper.mind_keeper"... COMPLETED
+Assert that ".*Hồ sơ.*" is visible... COMPLETED
+Tap on ".*Hồ sơ.*"... COMPLETED
+Scrolling DOWN until ".*Cài đặt thông báo chi tiết.*" is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on ".*Cài đặt thông báo chi tiết.*"... COMPLETED
+Scrolling DOWN until "Lên lịch.*" is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on "Lên lịch.*"... COMPLETED

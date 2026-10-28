@@ -765,3 +765,12 @@ Triển khai theo 4 pha, mỗi pha có test + nghiệm thu trước khi sang pha
 - Báo thức thẻ ôn giữ **inexact**; độ trễ ~90 giây trên CPH2325 là hành vi đã chấp nhận.
 - Dữ liệu mẫu đã dọn, prefs khôi phục về bản gốc.
 - Đính chính mục "Cập nhật phiên sửa lỗi (2026-10-28)" phía trên: `layout_overflow_test` hiện vẫn lỗi (3 fail), không còn ở trạng thái đã sửa.
+
+## Nội dung thông báo mới + icon + nội dung ngắn có Mẹo nhớ (2026-10-28)
+
+- Thông báo quick/course/lesson dựng lại: title = tên mẩu/bài, body = ý chính ≤180 ký tự (helper `notification_text.dart`, không cắt giữa từ), bigText = tóm tắt + "Mẹo nhớ: …", subText = chủ đề (khóa học: khóa · cấp độ). Thẻ ôn / nhắc kiến thức giữ nguyên.
+- Icon Android: small `ic_stat_mindkeeper` (chữ M + sao, đơn sắc) + large `ic_notification_large` (logo màu) cho mọi kênh.
+- Nội dung mới ngắn: mẩu/bài 120–180 từ, ≤3 ý chính, ví dụ 1 câu, summary ≤200, `memoryTip` ≤120 ký tự. Schema **v10** (`course_items.memory_tip`; DDL v9 đóng băng cho migration), `LessonContent.memory_tip`, prompt bài học bump `v3`, `LessonMode` 100–180 từ. Card "Mẹo nhớ" ở CourseReader/LessonReader, ẩn khi rỗng.
+- Nghiệm thu CPH2325 + test: xem `DOCS/QA/NOTIFICATION_FIX_REPORT.md` (phần "Bổ sung") — 35/37 file test pass (251 test); `layout_overflow_test` (3 fail) và `study_plan_screen_test` (treo) là lỗi có sẵn.
+- Còn lại: iOS chưa verify; báo thức thẻ ôn vẫn inexact; Maestro rò rỉ `tmp*.apk` trong `%TEMP%`.
+

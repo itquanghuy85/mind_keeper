@@ -29,8 +29,8 @@ void main() {
         'idx_courses_topic',
       ]),
     );
-    expect(DbSchema.currentVersion, 9);
-    expect(await app.db.getVersion(), 9);
+    expect(DbSchema.currentVersion, 10);
+    expect(await app.db.getVersion(), 10);
     await app.close();
   });
 
@@ -63,7 +63,7 @@ void main() {
       directory: dir.path,
     );
     await upgraded.open();
-    expect(await upgraded.db.getVersion(), 9);
+    expect(await upgraded.db.getVersion(), DbSchema.currentVersion);
     expect(
       (await upgraded.db.query('topics', where: "id = 'tp_v8'")).single['name'],
       'Chủ đề v8',

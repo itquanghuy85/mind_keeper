@@ -241,12 +241,17 @@ abstract class NotificationService {
   ///
   /// KHÁC [scheduleKnowledgeReminder]: không ép prefix `lesson:` nên payload
   /// `quick:<id>` giữ nguyên để mở đúng mục kiến thức.
+  ///
+  /// [bigText] hiện khi vuốt mở rộng (mặc định = [body]); [subText] là dòng phụ
+  /// ở đầu thông báo (vd. tên chủ đề).
   Future<void> scheduleContentNotification({
     required int id,
     required String title,
     required String body,
     required DateTime at,
     required String payload,
+    String? bigText,
+    String? subText,
   });
 
   /// Hủy một thông báo nội dung mới theo id (idempotent).
@@ -292,6 +297,7 @@ abstract class NotificationService {
     required String body,
     required String bigText,
     String footer = '',
+    String subText = '',
     required DateTime at,
     required String payload,
   });
@@ -437,6 +443,10 @@ class FakeNotificationService implements NotificationService {
   /// Lịch thông báo nội dung mới (GĐ17): id → thời điểm + payload đã dùng.
   final Map<int, DateTime> scheduledContent = <int, DateTime>{};
   final Map<int, String> contentPayloads = <int, String>{};
+  final Map<int, String> contentTitles = <int, String>{};
+  final Map<int, String> contentBodies = <int, String>{};
+  final Map<int, String> contentBigTexts = <int, String>{};
+  final Map<int, String> contentSubTexts = <int, String>{};
   final List<int> cancelledContent = <int>[];
 
   @override
@@ -446,10 +456,16 @@ class FakeNotificationService implements NotificationService {
     required String body,
     required DateTime at,
     required String payload,
+    String? bigText,
+    String? subText,
   }) async {
     if (!at.toUtc().isAfter(DateTime.now().toUtc())) return;
     scheduledContent[id] = at.toUtc();
     contentPayloads[id] = payload;
+    contentTitles[id] = title;
+    contentBodies[id] = body;
+    contentBigTexts[id] = bigText ?? body;
+    contentSubTexts[id] = subText ?? '';
     calls.add('scheduleContentNotification:$id:$payload');
   }
 
@@ -514,6 +530,8 @@ class FakeNotificationService implements NotificationService {
   final Map<int, String> coursePayloads = <int, String>{};
   final Map<int, String> courseBigTexts = <int, String>{};
   final Map<int, String> courseTitles = <int, String>{};
+  final Map<int, String> courseBodies = <int, String>{};
+  final Map<int, String> courseSubTexts = <int, String>{};
   final List<int> cancelledCourse = <int>[];
   void Function(String actionId, String payload)? onAction;
 
@@ -524,6 +542,7 @@ class FakeNotificationService implements NotificationService {
     required String body,
     required String bigText,
     String footer = '',
+    String subText = '',
     required DateTime at,
     required String payload,
   }) async {
@@ -532,6 +551,8 @@ class FakeNotificationService implements NotificationService {
     coursePayloads[id] = payload;
     courseBigTexts[id] = bigText;
     courseTitles[id] = title;
+    courseBodies[id] = body;
+    courseSubTexts[id] = subText;
     calls.add('scheduleCourseNotification:$id:$payload');
   }
 
@@ -577,12 +598,21 @@ class LocalNotificationService implements NotificationService {
 
   static const int _dailyReminderId = 1001;
 
+  /// Icon nhỏ đơn sắc (chữ M) trên thanh trạng thái: res/drawable-*/ic_stat_mindkeeper.png.
+  static const String _smallIcon = 'ic_stat_mindkeeper';
+
+  /// Icon lớn (logo màu mới): res/drawable-nodpi/ic_notification_large.png.
+  static const DrawableResourceAndroidBitmap _largeIcon =
+      DrawableResourceAndroidBitmap('ic_notification_large');
+
   static const AndroidNotificationDetails _androidDetails =
       AndroidNotificationDetails(
         'mind_keeper_review',
         'Nhắc ôn tập',
         channelDescription: 'Thông báo nhắc đến giờ ôn kiến thức',
         importance: Importance.high,
+        icon: _smallIcon,
+        largeIcon: _largeIcon,
         priority: Priority.high,
       );
 
@@ -596,17 +626,25 @@ class LocalNotificationService implements NotificationService {
         'Nhắc ôn tập',
         channelDescription: 'Thông báo nhắc đến giờ ôn kiến thức',
         importance: Importance.high,
+        icon: _smallIcon,
+        largeIcon: _largeIcon,
         priority: Priority.high,
         groupKey: _reviewGroup,
       );
 
   /// Bản sao của [base] có kiểu BigText để nội dung kiến thức hiện đầy đủ khi
   /// vuốt mở rộng (mặc định Android cắt body còn một dòng).
+  ///
+  /// [bigText] là phần mở rộng (mặc định = [body]); [subText] là dòng phụ ở đầu
+  /// thông báo (vd. tên chủ đề). Mọi kênh đều dùng icon nhỏ đơn sắc + icon lớn.
   static AndroidNotificationDetails _withBigText(
     AndroidNotificationDetails base,
     String title,
-    String body,
-  ) {
+    String body, {
+    String? bigText,
+    String? subText,
+  }) {
+    final String sub = (subText ?? '').trim();
     return AndroidNotificationDetails(
       base.channelId,
       base.channelName,
@@ -614,7 +652,13 @@ class LocalNotificationService implements NotificationService {
       importance: base.importance,
       priority: base.priority,
       groupKey: base.groupKey,
-      styleInformation: BigTextStyleInformation(body, contentTitle: title),
+      icon: _smallIcon,
+      largeIcon: _largeIcon,
+      subText: sub.isEmpty ? null : sub,
+      styleInformation: BigTextStyleInformation(
+        bigText ?? body,
+        contentTitle: title,
+      ),
     );
   }
 
@@ -643,7 +687,7 @@ class LocalNotificationService implements NotificationService {
       ],
     );
     const AndroidInitializationSettings android = AndroidInitializationSettings(
-      '@mipmap/launcher_icon',
+      _smallIcon,
     );
     final InitializationSettings settings = InitializationSettings(
       android: android,
@@ -895,6 +939,8 @@ class LocalNotificationService implements NotificationService {
         channelDescription:
             'Thông báo nội dung mới theo kế hoạch học hằng ngày',
         importance: Importance.high,
+        icon: _smallIcon,
+        largeIcon: _largeIcon,
         priority: Priority.high,
         groupKey: 'mind_keeper_group_article',
       );
@@ -906,6 +952,8 @@ class LocalNotificationService implements NotificationService {
         channelDescription:
             'Thông báo nội dung mới theo kế hoạch học hằng ngày',
         importance: Importance.high,
+        icon: _smallIcon,
+        largeIcon: _largeIcon,
         priority: Priority.high,
         groupKey: 'mind_keeper_group_quick',
       );
@@ -917,6 +965,8 @@ class LocalNotificationService implements NotificationService {
     required String body,
     required DateTime at,
     required String payload,
+    String? bigText,
+    String? subText,
   }) async {
     final DateTime utc = at.toUtc();
     // Không lên lịch trong quá khứ — không bao giờ bịa thông báo giả.
@@ -934,6 +984,8 @@ class LocalNotificationService implements NotificationService {
               : _articleDetails,
           title,
           body,
+          bigText: bigText,
+          subText: subText,
         ),
         iOS: const DarwinNotificationDetails(),
       ),
@@ -1059,6 +1111,7 @@ class LocalNotificationService implements NotificationService {
     required String body,
     required String bigText,
     String footer = '',
+    String subText = '',
     required DateTime at,
     required String payload,
   }) async {
@@ -1085,8 +1138,11 @@ class LocalNotificationService implements NotificationService {
           channelDescription:
               'Mẩu kiến thức theo khóa học, đọc nhanh ngay trên thông báo',
           importance: Importance.high,
+          icon: _smallIcon,
+          largeIcon: _largeIcon,
           priority: Priority.high,
           groupKey: 'mind_keeper_group_course',
+          subText: subText.trim().isEmpty ? null : subText.trim(),
           styleInformation: BigTextStyleInformation(
             bigText,
             contentTitle: title,

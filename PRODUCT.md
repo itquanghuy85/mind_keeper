@@ -35,7 +35,7 @@ Cơ chế khác biệt mà app ghi chú/flashcard thông thường không có:
 
 - App Flutter, tiếng Việt, chỉ hướng dọc (khóa orientation trong `lib/main.dart`).
 - Shell 4 tab (IndexedStack): Trang chủ, Chủ đề, Thống kê, Hồ sơ.
-- **Khóa học (GĐ23)**: chủ đề + cấp độ (Cơ bản/Nâng cao/Pro/Master) + số mẩu; AI dựng đề cương, người dùng duyệt/chỉnh; mỗi ngày phát hành mẩu kế tiếp theo khung giờ, thông báo đọc nhanh (BigText + nút "Đã hiểu"), "Đã hiểu" đưa thẻ vào lịch FSRS; đổi cấp độ giữa chừng giữ đề cương.
+- **Khóa học (GĐ23)**: chủ đề + cấp độ (Cơ bản/Nâng cao/Pro/Master) + số mẩu; AI dựng đề cương, người dùng duyệt/chỉnh; mỗi ngày phát hành mẩu kế tiếp theo khung giờ, thông báo đọc nhanh (BigText + nút "Đã hiểu"), "Đã hiểu" đưa thẻ vào lịch FSRS; đổi cấp độ giữa chừng giữ đề cương. Nội dung mới ngắn gọn: mẩu/bài 120–180 từ, tối đa 3 ý chính, ví dụ 1 câu, tóm tắt 1–2 câu (≤200 ký tự) và **Mẹo nhớ** 1 câu (≤120 ký tự) hiển thị thành thẻ riêng trong màn đọc (ẩn với nội dung cũ chưa có mẹo). Thông báo nội dung mới: tiêu đề = tên mẩu/bài, dòng thu gọn = ý chính (≤180 ký tự), mở rộng = tóm tắt + "Mẹo nhớ: …", dòng phụ = chủ đề (hoặc khóa · cấp độ); icon nhỏ đơn sắc chữ M + icon lớn logo màu.
 - Màn hình phụ: chi tiết chủ đề, danh sách kiến thức, ôn tập, tạo/sửa kiến thức, khám phá, tạo chủ đề, import, cài đặt thông báo.
 - Ôn tập: một câu hỏi mỗi lần, ẩn đáp án đến khi người dùng bấm "Xem đáp án"; đánh giá nhớ 4 mức Quên / Khó / Tốt / Dễ.
 - Thông báo cục bộ mở đúng nội dung được nhắc (notification payload `card:<id>`).
