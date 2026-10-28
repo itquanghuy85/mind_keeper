@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
-/// Nội dung người dùng chia sẻ vào app (share sheet Android, text/plain).
+/// Nội dung người dùng chia sẻ vào app (share sheet Android text/plain; iOS qua
+/// Share Extension → App Group → `ShareBridge.swift`, cùng channel và contract).
 class SharedPayload {
   const SharedPayload({required this.text, this.subject = ''});
 
@@ -42,7 +43,8 @@ class SharedPayload {
   int get hashCode => Object.hash(text, subject);
 }
 
-/// Cầu nối nhận share sheet từ `MainActivity` (cold + warm start).
+/// Cầu nối nhận share sheet từ `MainActivity` (Android) và `ShareBridge.swift`
+/// (iOS) — cold + warm start.
 ///
 /// - [initialize] chạy một lần trước `runApp`: lấy nội dung của intent khởi chạy
 ///   (cold start) và lắng nghe `onShared` (warm start).
@@ -76,7 +78,7 @@ class ShareIntake {
         deliver(SharedPayload.fromMap(initial));
       }
     } on MissingPluginException {
-      // Nền tảng không có kênh (iOS/desktop/test) — bỏ qua.
+      // Nền tảng không có kênh (desktop/web/test) — bỏ qua. iOS có kênh qua ShareBridge.
     } on PlatformException {
       // Không đọc được intent khởi chạy — không chặn khởi động.
     }
