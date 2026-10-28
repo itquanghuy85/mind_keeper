@@ -756,3 +756,12 @@ Triển khai theo 4 pha, mỗi pha có test + nghiệm thu trước khi sang pha
 - Thiết bị kiểm thử hiện tại: OPPO CPH2239 (Android 13) thay thế CPH2203.
 - `flutter test` trên Windows vẫn cần workaround `tool/run_flutter_test.ps1` (kill `flutter_tester.exe` + xóa `build/native_assets/` trước mỗi lần chạy do `sqlite3.dll` bị lock).
 - Phiên này được phép commit/push (theo yêu cầu chủ).
+
+## Nghiệm thu thông báo trên CPH2325 (2026-10-28)
+
+- Sửa: `notification_service.dart` (BigText cho nhắc kiến thức / nội dung mới / thẻ ôn), `notification_router.dart` (payload thiếu id không crash), `notification_settings_screen.dart` (nút debug không còn lỗi trùng kiến thức), `ios/Runner/AppDelegate.swift` (đặt delegate thông báo — **chưa verify iOS**).
+- Máy nghiệm thu cố định: OPPO CPH2325 (`T4E6S8IFU4AQBM8L`). Smoke + flow `maestro/notif/` (10, 20, 21, 30) PASS; chạm warm/cold `card:`, `lesson:` (thông báo thật) và `course:` (warm thật, cold qua intent `SELECT_NOTIFICATION`) mở đúng màn.
+- Test từng file (timeout 180 giây): 225 test pass; `layout_overflow_test` 3 fail **có sẵn trên HEAD**; `study_plan_screen_test` treo **có sẵn**. Chi tiết và đường dẫn ảnh/log: `DOCS/QA/NOTIFICATION_FIX_REPORT.md`.
+- Báo thức thẻ ôn giữ **inexact**; độ trễ ~90 giây trên CPH2325 là hành vi đã chấp nhận.
+- Dữ liệu mẫu đã dọn, prefs khôi phục về bản gốc.
+- Đính chính mục "Cập nhật phiên sửa lỗi (2026-10-28)" phía trên: `layout_overflow_test` hiện vẫn lỗi (3 fail), không còn ở trạng thái đã sửa.

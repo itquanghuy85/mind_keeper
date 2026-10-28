@@ -1,0 +1,10 @@
+# Nghiệm thu thông báo: chạm thông báo bài học (cold start) mở ĐÚNG LessonReaderScreen.
+# Trước flow: am force-stop + am start -a SELECT_NOTIFICATION --es payload lesson:<LESSON_ID>
+appId: com.mindkeeper.mind_keeper
+name: NOTIF Lesson cold start
+---
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Bài học: Kiểm thử thông báo[\\s\\S]*"
+    timeout: 60000
+- assertVisible: "Làm quiz ghi nhớ"
+- takeScreenshot: "notif_21_lesson_cold_opened"

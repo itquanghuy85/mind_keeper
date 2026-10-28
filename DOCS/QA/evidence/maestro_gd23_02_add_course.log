@@ -1,0 +1,31 @@
+=== 02_add_course
+Running on T4E6S8IFU4AQBM8L
+ > Flow GD23.2 Them khoa hoc
+Launch app "com.mindkeeper.mind_keeper"... COMPLETED
+Assert that "Thêm" is visible... COMPLETED
+Tap on "Thêm"... COMPLETED
+Tap on "Thêm khóa học"... COMPLETED
+Assert that "Chọn lĩnh vực" is visible... COMPLETED
+Assert that "Chọn ít nhất 1 chủ đề" is visible... COMPLETED
+Scrolling DOWN until "Chủ đề riêng" is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Tap on "Chủ đề riêng"... COMPLETED
+Input text Bep tu... COMPLETED
+Tap on "Thêm chủ đề"... COMPLETED
+Assert that "Tiếp tục \(1 chủ đề\)" is visible... COMPLETED
+Take screenshot gd23_02_topics... COMPLETED
+Tap on "Tiếp tục \(1 chủ đề\)"... COMPLETED
+Assert that "Cấp độ và số mẩu" is visible... COMPLETED
+Tap on "Nâng cao"... COMPLETED
+Assert that "[\s\S]*Nguyên lý hoạt động[\s\S]*" is visible... COMPLETED
+Tap on "5"... COMPLETED
+Take screenshot gd23_02_config... COMPLETED
+Tap on "Soạn đề cương"... COMPLETED
+Assert that "[\s\S]*Bep tu - Khái niệm cơ bản[\s\S]*" is visible... COMPLETED
+Assert that "Bắt đầu học" is visible... COMPLETED
+Take screenshot gd23_02_outline... COMPLETED
+Tap on "Bỏ mục 5"... COMPLETED
+Assert that "[\s\S]*Bep tu - Lịch sử hình thành[\s\S]*" is not visible... COMPLETED
+Tap on "Bắt đầu học"... COMPLETED
+Assert that "Đang theo" is visible... COMPLETED
+Scrolling DOWN until "[\s\S]*Bep tu[\s\S]*" is visible with speed 40, visibility percentage 100%, timeout 20000 ms, with centering disabled... COMPLETED
+Take screenshot gd23_02_home_after... COMPLETED

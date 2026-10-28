@@ -1,0 +1,17 @@
+    NotificationRecord(0x0f16827a: pkg=com.mindkeeper.mind_keeper user=UserHandle{0} id=-9146030 tag=null importance=4 key=0|com.mindkeeper.mind_keeper|-9146030|null|10711: Notification(channel=mind_keeper_course shortcut=null con
+            actions={
+                android.title=String (Bep tu · Nâng cao)
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.text=String (Bep tu - Khái niệm cơ bản)
+                android.bigText=String (Ý chính của mẩu 1 về Bep tu: Bep tu - Khái niệm cơ bản.)
+                android.summaryText=String (Mẩu 1/4 · Chưa kiểm chứng)
+    NotificationRecord(0x0773fe07: pkg=com.mindkeeper.mind_keeper user=UserHandle{0} id=-8019297 tag=null importance=4 key=0|com.mindkeeper.mind_keeper|-8019297|null|10711: Notification(channel=mind_keeper_new_content shortcut=nul
+                android.title=String (Bài viết mới)
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.text=String (Bài học: Cơ bản về Kiểm thử thông báo)
+                android.bigText=String (Bài học: Cơ bản về Kiểm thử thông báo)
+    NotificationRecord(0x0d70283d: pkg=com.mindkeeper.mind_keeper user=UserHandle{0} id=-8019296 tag=null importance=4 key=0|com.mindkeeper.mind_keeper|-8019296|null|10711: Notification(channel=mind_keeper_new_content shortcut=nul
+                android.title=String (Bài viết mới)
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.text=String (Bài học: Kiểm thử thông báo)
+                android.bigText=String (Bài học: Kiểm thử thông báo)

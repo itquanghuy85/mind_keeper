@@ -1,0 +1,5 @@
+    NotificationRecord(0x0fa857a5: pkg=com.mindkeeper.mind_keeper user=UserHandle{0} id=366547842 tag=null importance=4 key=0|com.mindkeeper.mind_keeper|366547842|null|10711: Notification(channel=mind
+                android.title=String (Kiểm thử nhắc ôn (GĐ15.1))
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.text=String (TEST-GD151: Chạm thông báo này mở đúng câu hỏi chứ?)
+                android.bigText=String (TEST-GD151: Chạm thông báo này mở đúng câu hỏi chứ?)

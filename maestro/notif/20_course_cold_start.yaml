@@ -1,0 +1,11 @@
+# Nghiệm thu thông báo: chạm thông báo khóa học (cold start) mở ĐÚNG mẩu.
+# Trước flow: am force-stop + am start -a SELECT_NOTIFICATION --es payload course:<ITEM_ID>
+# (cùng đường đi plugin với chạm thông báo thật; xem maestro/gd23/run.sh flow 04).
+appId: com.mindkeeper.mind_keeper
+name: NOTIF Course cold start
+---
+- extendedWaitUntil:
+    visible: "[\\s\\S]*Bep tu - Khái niệm cơ bản[\\s\\S]*"
+    timeout: 60000
+- assertVisible: "Đã hiểu"
+- takeScreenshot: "notif_20_course_cold_opened"

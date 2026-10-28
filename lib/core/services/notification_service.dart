@@ -110,17 +110,9 @@ class NotificationPayload {
     final String? id = json['id']?.toString();
     switch (type) {
       case kindArticle:
-        return NotificationPayload(
-          type: type,
-          id: id,
-          knowledgeItemId: id,
-        );
+        return NotificationPayload(type: type, id: id, knowledgeItemId: id);
       case kindQuickInfo:
-        return NotificationPayload(
-          type: type,
-          id: id,
-          knowledgeItemId: id,
-        );
+        return NotificationPayload(type: type, id: id, knowledgeItemId: id);
       case kindReviewDue:
         return const NotificationPayload(type: kindReviewDue);
       case kindCourse:
@@ -130,11 +122,7 @@ class NotificationPayload {
       case kindLesson:
         return NotificationPayload(type: type, id: id, lessonId: id);
       case kindQuick:
-        return NotificationPayload(
-          type: type,
-          id: id,
-          knowledgeItemId: id,
-        );
+        return NotificationPayload(type: type, id: id, knowledgeItemId: id);
       default:
         return NotificationPayload(type: type, id: id);
     }
@@ -612,6 +600,24 @@ class LocalNotificationService implements NotificationService {
         groupKey: _reviewGroup,
       );
 
+  /// Bản sao của [base] có kiểu BigText để nội dung kiến thức hiện đầy đủ khi
+  /// vuốt mở rộng (mặc định Android cắt body còn một dòng).
+  static AndroidNotificationDetails _withBigText(
+    AndroidNotificationDetails base,
+    String title,
+    String body,
+  ) {
+    return AndroidNotificationDetails(
+      base.channelId,
+      base.channelName,
+      channelDescription: base.channelDescription,
+      importance: base.importance,
+      priority: base.priority,
+      groupKey: base.groupKey,
+      styleInformation: BigTextStyleInformation(body, contentTitle: title),
+    );
+  }
+
   @override
   Future<bool> initialize() async {
     if (_initialized) return true;
@@ -645,8 +651,7 @@ class LocalNotificationService implements NotificationService {
     );
     await _plugin.initialize(
       settings: settings,
-      onDidReceiveBackgroundNotificationResponse:
-          courseNotificationBackground,
+      onDidReceiveBackgroundNotificationResponse: courseNotificationBackground,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         if (response.actionId == courseActionMarkRead) {
           // Nút "Đã hiểu": ghi nhận, KHÔNG mở màn hình.
@@ -838,9 +843,9 @@ class LocalNotificationService implements NotificationService {
       title: title,
       body: body,
       scheduledDate: tz.TZDateTime.from(utc, tz.local),
-      notificationDetails: const NotificationDetails(
-        android: _reviewGroupDetails,
-        iOS: DarwinNotificationDetails(),
+      notificationDetails: NotificationDetails(
+        android: _withBigText(_reviewGroupDetails, title, body),
+        iOS: const DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       payload: '${NotificationPayload.kindCard}:$cardId',
@@ -867,9 +872,9 @@ class LocalNotificationService implements NotificationService {
       title: title,
       body: body,
       scheduledDate: tz.TZDateTime.from(utc, tz.local),
-      notificationDetails: const NotificationDetails(
-        android: _androidDetails,
-        iOS: DarwinNotificationDetails(),
+      notificationDetails: NotificationDetails(
+        android: _withBigText(_androidDetails, title, body),
+        iOS: const DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       payload: payload.startsWith('lesson:') ? payload : 'lesson:$payload',
@@ -887,7 +892,8 @@ class LocalNotificationService implements NotificationService {
       AndroidNotificationDetails(
         'mind_keeper_new_content',
         'Bài học mới',
-        channelDescription: 'Thông báo nội dung mới theo kế hoạch học hằng ngày',
+        channelDescription:
+            'Thông báo nội dung mới theo kế hoạch học hằng ngày',
         importance: Importance.high,
         priority: Priority.high,
         groupKey: 'mind_keeper_group_article',
@@ -897,7 +903,8 @@ class LocalNotificationService implements NotificationService {
       AndroidNotificationDetails(
         'mind_keeper_new_content',
         'Bài học mới',
-        channelDescription: 'Thông báo nội dung mới theo kế hoạch học hằng ngày',
+        channelDescription:
+            'Thông báo nội dung mới theo kế hoạch học hằng ngày',
         importance: Importance.high,
         priority: Priority.high,
         groupKey: 'mind_keeper_group_quick',
@@ -921,9 +928,13 @@ class LocalNotificationService implements NotificationService {
       scheduledDate: tz.TZDateTime.from(utc, tz.local),
       notificationDetails: NotificationDetails(
         // Gom theo loại: bài viết với bài viết, thông tin nhanh với nhau.
-        android: payload.startsWith('${NotificationPayload.kindQuick}:')
-            ? _quickDetails
-            : _articleDetails,
+        android: _withBigText(
+          payload.startsWith('${NotificationPayload.kindQuick}:')
+              ? _quickDetails
+              : _articleDetails,
+          title,
+          body,
+        ),
         iOS: const DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,

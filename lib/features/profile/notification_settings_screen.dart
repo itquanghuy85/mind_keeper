@@ -199,6 +199,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         title: 'Thẻ kiểm thử GĐ15.1',
         content:
             'Nội dung riêng cho kiểm thử thông báo — không phải dữ liệu người dùng.',
+        skipDuplicateCheck: true,
       );
       final ReviewCard card = await services.cards.create(
         knowledgeItemId: item.id,
@@ -344,7 +345,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            granted ? 'Enabled proactive reminders.' : 'Notification permission denied.',
+            granted
+                ? 'Enabled proactive reminders.'
+                : 'Notification permission denied.',
           ),
         ),
       );
@@ -360,7 +363,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   Future<void> _pickKnowledgeReminderTime({required bool start}) async {
     final PreferencesService prefs = context.read<PreferencesService>();
     final TimeOfDay initial = TimeOfDay(
-      hour: start ? prefs.knowledgeReminderStartHour : prefs.knowledgeReminderEndHour,
+      hour: start
+          ? prefs.knowledgeReminderStartHour
+          : prefs.knowledgeReminderEndHour,
       minute: start
           ? prefs.knowledgeReminderStartMinute
           : prefs.knowledgeReminderEndMinute,
@@ -390,8 +395,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
   Future<void> _previewKnowledgeReminder() async {
     final AppServices services = context.read<AppServices>();
-    final List<KnowledgeReminderPreviewItem> items =
-        await services.knowledgeReminders.buildSchedule();
+    final List<KnowledgeReminderPreviewItem> items = await services
+        .knowledgeReminders
+        .buildSchedule();
     if (!mounted) return;
     await showDialog<void>(
       context: context,
@@ -464,7 +470,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                         setState(() {});
                       },
                     ),
-                    if (prefs.knowledgeReminderSource == 'selected') ...<Widget>[
+                    if (prefs.knowledgeReminderSource ==
+                        'selected') ...<Widget>[
                       for (final Topic topic in topics)
                         CheckboxListTile(
                           title: Text(topic.name),

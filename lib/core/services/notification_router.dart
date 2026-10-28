@@ -31,18 +31,24 @@ class NotificationRouter {
   }) async {
     final Future<void> Function() action;
 
+    // Payload JSON có thể thiếu id → rơi về phiên ôn tập thay vì crash.
+    final String? id = payload.id;
+    final bool hasId = id != null && id.isNotEmpty;
+
     switch (payload.type) {
-      case NotificationPayload.kindCard:
-        action = () => _openCardReview(context, payload.cardId ?? payload.id!);
-      case NotificationPayload.kindLesson:
-        action = () => _openLesson(context, services, payload.lessonId ?? payload.id!);
-      case NotificationPayload.kindCourse:
-        action = () => _openCourseItem(context, services, payload.id!);
-      case NotificationPayload.kindQuick:
-        action = () => _openKnowledge(context, payload.knowledgeItemId ?? payload.id!);
-      case NotificationPayload.kindArticle:
-      case NotificationPayload.kindQuickInfo:
-        action = () => _openKnowledge(context, payload.id!);
+      case NotificationPayload.kindCard when hasId || payload.cardId != null:
+        action = () => _openCardReview(context, payload.cardId ?? id!);
+      case NotificationPayload.kindLesson
+          when hasId || payload.lessonId != null:
+        action = () => _openLesson(context, services, payload.lessonId ?? id!);
+      case NotificationPayload.kindCourse when hasId:
+        action = () => _openCourseItem(context, services, id);
+      case NotificationPayload.kindQuick
+          when hasId || payload.knowledgeItemId != null:
+        action = () => _openKnowledge(context, payload.knowledgeItemId ?? id!);
+      case NotificationPayload.kindArticle when hasId:
+      case NotificationPayload.kindQuickInfo when hasId:
+        action = () => _openKnowledge(context, id);
       case NotificationPayload.kindReviewDue:
       case NotificationPayload.kindReview:
         action = () => _openReviewSession(context);
@@ -109,8 +115,8 @@ class NotificationRouter {
   }
 
   static Future<void> _openReviewSession(BuildContext context) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ReviewScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const ReviewScreen()));
   }
 }

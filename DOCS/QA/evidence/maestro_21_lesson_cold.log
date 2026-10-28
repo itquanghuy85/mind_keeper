@@ -1,0 +1,5 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow NOTIF Lesson cold start
+Assert that "[\s\S]*Bài học: Kiểm thử thông báo[\s\S]*" is visible... COMPLETED
+Assert that "Làm quiz ghi nhớ" is visible... COMPLETED
+Take screenshot notif_21_lesson_cold_opened... COMPLETED

@@ -1,0 +1,40 @@
+# Nghiệm thu thông báo: tạo 1 bài học mẫu bằng mock AI (không dùng AI thật).
+# Cần: node tool/mock_ai_server.js 8765 + adb reverse tcp:8765 tcp:8765 và APK build với
+#   --dart-define=DEEPSEEK_BASE_URL=http://127.0.0.1:8765/v1 --dart-define=DEEPSEEK_PROXY_MODE=true
+appId: com.mindkeeper.mind_keeper
+name: NOTIF Tao bai hoc mau
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Thêm"
+    timeout: 40000
+- tapOn: "Thêm"
+- tapOn: "Bài học AI"
+- extendedWaitUntil:
+    visible: "Chọn lĩnh vực để AI soạn bài học"
+    timeout: 15000
+- tapOn: "Mở lĩnh vực Khoa học[\\s\\S]*"
+- extendedWaitUntil:
+    visible: "Chủ đề trong Khoa học"
+    timeout: 15000
+- tapOn: "Chủ đề khám phá 1[\\s\\S]*"
+- scrollUntilVisible:
+    element: "Tạo bài học"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 20000
+- tapOn: "Tạo bài học[\\s\\S]*"
+- extendedWaitUntil:
+    notVisible: "Chủ đề trong Khoa học"
+    timeout: 120000
+- scrollUntilVisible:
+    element: "Mở bài học Bài học: Chủ đề khám phá 1[\\s\\S]*"
+    direction: DOWN
+    visibilityPercentage: 40
+    centerElement: true
+    timeout: 30000
+- assertVisible: "Mở bài học Bài học: Chủ đề khám phá 1[\\s\\S]*"
+- takeScreenshot: "notif_10_lesson_created"

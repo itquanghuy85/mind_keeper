@@ -1,0 +1,17 @@
+# Nghiệm thu thông báo thẻ ôn: bấm "Lên lịch +2 phút" ở Cài đặt thông báo (mục Kiểm thử, chỉ bản debug).
+appId: com.mindkeeper.mind_keeper
+name: NOTIF Len lich thong bao the
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: ".*Hồ sơ.*"
+    timeout: 40000
+- tapOn: ".*Hồ sơ.*"
+- scrollUntilVisible:
+    element: ".*Cài đặt thông báo chi tiết.*"
+- tapOn: ".*Cài đặt thông báo chi tiết.*"
+- scrollUntilVisible:
+    element: "Lên lịch.*"
+- tapOn: "Lên lịch.*"

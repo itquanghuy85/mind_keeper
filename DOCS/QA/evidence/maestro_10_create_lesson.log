@@ -1,0 +1,16 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow NOTIF Tao bai hoc mau
+Launch app "com.mindkeeper.mind_keeper"... COMPLETED
+Assert that "Thêm" is visible... COMPLETED
+Tap on "Thêm"... COMPLETED
+Tap on "Bài học AI"... COMPLETED
+Assert that "Chọn lĩnh vực để AI soạn bài học" is visible... COMPLETED
+Tap on "Mở lĩnh vực Khoa học[\s\S]*"... COMPLETED
+Assert that "Chủ đề trong Khoa học" is visible... COMPLETED
+Tap on "Chủ đề khám phá 1[\s\S]*"... COMPLETED
+Scrolling DOWN until "Tạo bài học" is visible with speed 40, visibility percentage 40%, timeout 20000 ms, with centering enabled... COMPLETED
+Tap on "Tạo bài học[\s\S]*"... COMPLETED
+Assert that "Chủ đề trong Khoa học" is not visible... COMPLETED
+Scrolling DOWN until "Mở bài học Bài học: Chủ đề khám phá 1[\s\S]*" is visible with speed 40, visibility percentage 40%, timeout 30000 ms, with centering enabled... COMPLETED
+Assert that "Mở bài học Bài học: Chủ đề khám phá 1[\s\S]*" is visible... COMPLETED
+Take screenshot notif_10_lesson_created... COMPLETED
