@@ -1,0 +1,15 @@
+# CPH2239 smoke test: launch app + màn hình chính không crash.
+# Chạy: bash maestro/cph2239/run.sh [serial]
+appId: com.mindkeeper.mind_keeper
+name: CPH2239 smoke launch
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Thêm"
+    timeout: 40000
+- takeScreenshot: "cph2239_01_home"
+- assertVisible: "Thêm"
+- takeScreenshot: "cph2239_01_menu_open"
+- pressKey: back

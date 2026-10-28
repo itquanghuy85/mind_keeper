@@ -747,3 +747,12 @@ Triển khai theo 4 pha, mỗi pha có test + nghiệm thu trước khi sang pha
 5. Firebase chưa cấu hình (`google-services.json` thiếu) → quyết định gỡ hay cấu hình trước khi khai Data safety (xem `store/RELEASE_CHECKLIST.md`).
 6. Chưa quay video màn hình thật (thiết bị chặn `screenrecord`); video giới thiệu dựng từ ảnh chụp.
 7. Flutter test trên Windows có thể bị khóa `sqlite3.dll` bởi `flutter_tester` mồ côi; đã chạy test từ bản sao dự án ở thư mục tạm.
+
+## Cập nhật phiên sửa lỗi (2026-10-28)
+
+- Sửa `test/features/layout_overflow_test.dart` (WIP, 11 fail): helper `_pump()` không còn gọi `runAsync` lồng `pumpWidget` (khử "Guarded function conflict"); thay `Future.delayed` thật bằng `tester.binding.delayed` (khử TimeoutException 10 phút); mọi `_pump(...)` đều `await` đầy đủ.
+- Tạo `maestro/cph2239/01_smoke.yaml` + `run.sh`: flow launch app + màn hình chính trên CPH2239 (OPPO, Android 13).
+- `flutter analyze`: 0 error (các issue còn lại là info/deprecation pre-existing ở notification_service, settings_screen, tool/fix_entry_test).
+- Thiết bị kiểm thử hiện tại: OPPO CPH2239 (Android 13) thay thế CPH2203.
+- `flutter test` trên Windows vẫn cần workaround `tool/run_flutter_test.ps1` (kill `flutter_tester.exe` + xóa `build/native_assets/` trước mỗi lần chạy do `sqlite3.dll` bị lock).
+- Phiên này được phép commit/push (theo yêu cầu chủ).
