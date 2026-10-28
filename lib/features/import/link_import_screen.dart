@@ -22,7 +22,10 @@ import '../ai/ai_provider.dart';
 
 /// Nhập từ liên kết web: tải HTML, trích text, tạo nguồn + kiến thức.
 class LinkImportScreen extends StatefulWidget {
-  const LinkImportScreen({super.key});
+  const LinkImportScreen({super.key, this.initialUrl});
+
+  /// Liên kết điền sẵn (từ share sheet / Quick capture).
+  final String? initialUrl;
 
   @override
   State<LinkImportScreen> createState() => _LinkImportScreenState();
@@ -42,6 +45,8 @@ class _LinkImportScreenState extends State<LinkImportScreen> {
   @override
   void initState() {
     super.initState();
+    final String? initialUrl = widget.initialUrl;
+    if (initialUrl != null) _url.text = initialUrl;
     _loadTopics();
   }
 

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/services/app_bootstrap.dart';
+import '../../core/services/share_intake.dart';
+import '../capture/quick_capture_screen.dart';
 import '../../core/services/notification_router.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/theme/app_dimens.dart';
@@ -41,13 +43,31 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     // (foreground / warm start) — không chờ resume hay TodayScreen.
     AppBootstrap.instance.onNotificationOpened = _handleNotificationOpened;
     // Xử lý payload cold-start sau frame đầu tiên (navigator đã sẵn sàng).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _handlePendingPayload());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _handlePendingPayload(),
+    );
+    // Nội dung chia sẻ từ app khác (cold: đang chờ; warm: đến khi app đang chạy).
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => ShareIntake.instance.setListener(_handleShared),
+    );
+  }
+
+  /// Mở Quick capture cho văn bản/liên kết vừa chia sẻ.
+  void _handleShared(SharedPayload payload) {
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => QuickCaptureScreen(payload: payload),
+      ),
+    );
   }
 
   @override
   void dispose() {
+    ShareIntake.instance.setListener(null);
     WidgetsBinding.instance.removeObserver(this);
-    if (AppBootstrap.instance.onNotificationOpened == _handleNotificationOpened) {
+    if (AppBootstrap.instance.onNotificationOpened ==
+        _handleNotificationOpened) {
       AppBootstrap.instance.onNotificationOpened = null;
     }
     super.dispose();

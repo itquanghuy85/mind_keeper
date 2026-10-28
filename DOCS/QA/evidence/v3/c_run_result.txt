@@ -1,0 +1,12 @@
+== WARM: văn bản (app đang chạy)
+c_save_warm exit=0
+== WARM: trùng lặp (cùng văn bản)
+c_dup_warm exit=0
+== WARM: Mở đầy đủ (văn bản)
+c_open_text exit=0
+== COLD: link (app bị giết)
+c_save_cold exit=0
+== COLD: trùng link (app bị giết)
+c_dup_cold exit=0
+== WARM: Mở đầy đủ (link)
+c_open_link exit=0

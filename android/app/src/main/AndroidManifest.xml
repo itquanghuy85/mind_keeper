@@ -29,6 +29,12 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Nhận văn bản / liên kết chia sẻ từ app khác (Quick capture). -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
         </activity>
         <!-- flutter_local_notifications 22.x KHÔNG còn tự khai báo các receiver này:
              thiếu chúng thì báo thức hẹn giờ gửi broadcast tới thành phần không tồn tại và

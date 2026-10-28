@@ -1,0 +1,7 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow V3 C Luu nhanh
+Assert that "Nội dung vừa chia sẻ" is visible... COMPLETED
+Take screenshot v3_c_share_screen... COMPLETED
+Tap on "Lưu nhanh", Index: 1... COMPLETED
+Assert that "[\s\S]*Đã lưu vào[\s\S]*" is visible... COMPLETED
+Take screenshot v3_c_saved... COMPLETED

@@ -1,0 +1,7 @@
+Running on T4E6S8IFU4AQBM8L
+ > Flow V3 C Mo day du (link)
+Assert that "Nội dung vừa chia sẻ" is visible... COMPLETED
+Tap on "Mở đầy đủ"... COMPLETED
+Assert that "[\s\S]*example.com/mo-day-du[\s\S]*" is visible... COMPLETED
+Assert that "Lưu nhanh" is not visible... COMPLETED
+Take screenshot v3_c_open_link... COMPLETED

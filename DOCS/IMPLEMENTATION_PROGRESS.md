@@ -788,3 +788,10 @@ Triển khai theo 4 pha, mỗi pha có test + nghiệm thu trước khi sang pha
 - Hồ sơ → "Xem lại giới thiệu": chỉ cập nhật cấp độ/giờ nhắc, không seed lại. Thiếu quyền thông báo không chặn, tắt cờ và báo rõ.
 - Nghiệm thu CPH2325 (cài mới thật, Bỏ qua, Xem lại, người dùng cũ) + 9 test: `DOCS/QA/ONBOARDING_REPORT.md`. Thời gian: intro → Trang chủ 37,7 s (Maestro); tổng gồm khởi động lạnh 65,9 s.
 
+## Quick capture từ share sheet Android (2026-10-28)
+
+- `MainActivity` nhận `ACTION_SEND text/plain` (intent-filter trong `AndroidManifest.xml`) qua `MethodChannel('mindkeeper/share')` — không thêm package: cold start lấy intent khởi chạy một lần (`getInitialShared`), warm start đẩy qua `onNewIntent` → `onShared`; vẫn gọi `super.onNewIntent` nên cold/warm start của thông báo không đổi. Phía Dart: `ShareIntake` giữ payload chờ đến khi `AppShell` đăng ký listener (kể cả khi đang onboarding).
+- `QuickCaptureScreen`: sửa tiêu đề/nội dung, chọn chủ đề (mặc định "Hộp thư đến", tự tạo), "Lưu nhanh" (KnowledgeItem + ReviewCard due ngay; link lưu thêm `Source(type=link, reference_url)`; chống trùng theo link và nội dung), "Mở đầy đủ" (→ `LinkImportScreen`/`TextImportScreen` điền sẵn); "Tóm tắt bằng AI" chỉ hiện khi đã cấu hình AI thật, không tự gọi AI.
+- Nghiệm thu CPH2325: 6 flow Maestro (warm/cold, trùng lặp, mở đầy đủ) + share sheet hệ thống thật + hồi quy thông báo cold start; 11 test. Báo cáo: `DOCS/QA/QUICK_CAPTURE_REPORT.md`.
+- iOS (Share Extension) để sau, **chưa verify**.
+

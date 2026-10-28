@@ -25,6 +25,10 @@
 - Màn đọc mẩu khóa học / bài học: thẻ **Mẹo nhớ** (`MemoryTipCard`: icon bóng đèn + tiêu đề + 1 câu) nằm sau nội dung/tóm tắt; **ẩn hoàn toàn** khi mẹo rỗng (nội dung cũ).
 - Thông báo Android: small icon đơn sắc `ic_stat_mindkeeper` (chữ M + sao, trắng/trong suốt) và large icon logo màu `ic_notification_large` cho mọi kênh; title = tên mẩu/bài, body = ý chính ≤180 ký tự, bigText = tóm tắt + "Mẹo nhớ: …", subText = chủ đề (khóa học: khóa · cấp độ).
 
+## Quick capture (chia sẻ vào app)
+
+- Màn "Lưu nhanh" mở trên cùng khi nhận share: thẻ nội dung (tiêu đề + nội dung sửa được, dòng "Liên kết sẽ được lưu làm nguồn tham khảo" nếu có link), ô chọn chủ đề (mục đầu luôn là "Hộp thư đến"), nút chính "Lưu nhanh", nút phụ "Mở đầy đủ", nút "Tóm tắt bằng AI" chỉ khi AI đã cấu hình. Kết quả báo bằng snackbar 6 giây.
+
 ## Onboarding
 
 - Hiện trước `AppShell` khi cài mới: 3 bước, tiêu đề "Bước x/3", nút chính ở đáy (Bắt đầu → Tiếp tục → Xong), "Bỏ qua" luôn ở góc phải; chip chủ đề dùng `AppChip`, giới hạn 2–3; trạng thái quyền thông báo là văn bản rõ ràng (không chặn khi thiếu).

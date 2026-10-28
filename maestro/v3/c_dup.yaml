@@ -1,0 +1,14 @@
+# Nghiệm thu C (Quick capture). Chạy qua maestro/v3/c_run.sh: script bắn intent SEND text/plain trước flow.
+appId: com.mindkeeper.mind_keeper
+name: V3 C Chong trung
+---
+- extendedWaitUntil:
+    visible: "Nội dung vừa chia sẻ"
+    timeout: 60000
+- tapOn:
+    text: "Lưu nhanh"
+    index: 1
+- extendedWaitUntil:
+    visible: "[\\s\\S]*không lưu trùng[\\s\\S]*"
+    timeout: 15000
+- takeScreenshot: "v3_c_duplicate"
